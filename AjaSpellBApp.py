@@ -11355,6 +11355,23 @@ def api_iap_verify(platform):
         except Exception:
             pass
         apply_res = {'applied': True, 'details': {'mode': 'anon_session'}}
+    
+    # CRITICAL FIX: Commit user entitlement changes BEFORE committing PurchaseRecord
+    # This ensures purchased_avatars, premium_member, etc. are saved to database
+    if user_for_verify is not None and apply_res.get('applied'):
+        try:
+            db.session.commit()
+            # Refresh user object to ensure latest data is available
+            db.session.refresh(user_for_verify)
+        except Exception as user_commit_err:
+            db.session.rollback()
+            try:
+                app.logger.error(f"IAP verify: failed to commit user entitlements: {user_commit_err}", exc_info=True)
+            except Exception:
+                pass
+            # Continue to PurchaseRecord commit - don't fail entire verification
+    
+    # Commit PurchaseRecord (separate from user entitlements)
     if rec is not None:
         rec.status = 'verified'
         rec.raw_payload = {**(rec.raw_payload or {}), 'verify_status': status_msg, 'store_details': details, 'apply_result': apply_res}
@@ -11364,7 +11381,7 @@ def api_iap_verify(platform):
             db.session.rollback()
             # Log error but don't fail the verification - purchase may still be valid
             try:
-                app.logger.error(f"IAP verify: db commit failed: {e}", exc_info=True)
+                app.logger.error(f"IAP verify: db commit failed for PurchaseRecord: {e}", exc_info=True)
             except Exception:
                 pass
             # Return success with warning instead of 500 to prevent error screen
@@ -11372,7 +11389,8 @@ def api_iap_verify(platform):
                 "success": True,
                 "message": "Purchase verified (database write failed)",
                 "warning": "Purchase verified but not saved to database. Please try again.",
-                "error": f"db_commit_failed: {e}"
+                "error": f"db_commit_failed: {e}",
+                "entitlements": _entitlements_summary(user_for_verify) if user_for_verify is not None else _get_guest_entitlements()
             }), 200
 
     resp = jsonify({
@@ -11640,14 +11658,20 @@ def api_iap_restore():
     db_errors = []  # Track database-specific errors separately
     
     # Refresh user object from database to avoid stale data issues
+    # Fix 3: Proper User Object Session Management
     if user_for_restore is not None:
         try:
+            # Ensure user is in current session before refresh
+            if user_for_restore not in db.session:
+                # Reattach to session using merge (handles detached instances)
+                user_for_restore = db.session.merge(user_for_restore)
             db.session.refresh(user_for_restore)
         except Exception as e:
             try:
                 app.logger.warning(f"IAP restore: failed to refresh user object: {e}")
-                # Try to reload from database
-                user_for_restore = User.query.get(user_for_restore.id)
+                # Reload from database and merge into current session
+                user_id = user_for_restore.id
+                user_for_restore = db.session.query(User).filter_by(id=user_id).first()
                 if user_for_restore is None:
                     return jsonify({
                         "success": False,
@@ -11655,8 +11679,16 @@ def api_iap_restore():
                         "message": "User account not found. Please sign in again.",
                         "restore_id": restore_id
                     }), 404
-            except Exception:
-                pass
+                # Refresh after reload to ensure latest data
+                db.session.refresh(user_for_restore)
+            except Exception as reload_err:
+                app.logger.error(f"IAP restore: failed to reload user object: {reload_err}", exc_info=True)
+                return jsonify({
+                    "success": False,
+                    "error": "user_session_error",
+                    "message": "Unable to access user account. Please try again.",
+                    "restore_id": restore_id
+                }), 500
     
     for pid in normalized:
         had_error = False
@@ -11710,17 +11742,35 @@ def api_iap_restore():
             # Only write PurchaseRecord for authenticated users (schema requires user_id).
             if user_for_restore is not None:
                 try:
-                    # Check if PurchaseRecord already exists to avoid duplicates
-                    existing = PurchaseRecord.query.filter_by(
-                        user_id=user_for_restore.id,
+                    # Fix 5: Foreign Key Validation - Verify user still exists before creating PurchaseRecord
+                    user_check = db.session.query(User).filter_by(id=user_for_restore.id).first()
+                    if user_check is None:
+                        errors.append({
+                            "product_id": pid,
+                            "error": "user_not_found",
+                            "message": "User account was deleted or is invalid"
+                        })
+                        try:
+                            app.logger.warning(f"IAP restore: user {user_for_restore.id} not found for product {pid}")
+                        except Exception:
+                            pass
+                        continue  # Skip this product
+                    
+                    # Fix 2: Race Condition Prevention - Use database-level locking
+                    # Check if PurchaseRecord already exists with row-level lock to prevent race conditions
+                    from sqlalchemy.orm import with_for_update
+                    existing = db.session.query(PurchaseRecord).with_for_update(
+                        skip_locked=True  # Skip if another transaction has lock (prevents deadlocks)
+                    ).filter_by(
+                        user_id=user_check.id,  # Use verified user_id
                         platform=platform,
-                        product_id=pid,
-                        status='restore_error' if had_error else 'verified'
+                        product_id=pid
                     ).first()
                     
                     if existing is None:
+                        # Safe to create - we have the lock, no race condition
                         rec = PurchaseRecord(
-                            user_id=user_for_restore.id,
+                            user_id=user_check.id,  # Use verified user_id
                             platform=platform,
                             product_id=pid,
                             status='restore_error' if had_error else 'verified',

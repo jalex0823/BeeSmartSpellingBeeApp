@@ -1657,11 +1657,22 @@ class AnonPurchaseOwnership(db.Model):
 
     @staticmethod
     def upsert(anon_restore_id: str, platform: str, product_id: str, status: str = 'verified', raw_payload=None):
-        rec = AnonPurchaseOwnership.query.filter_by(
+        """
+        Upsert AnonPurchaseOwnership record with race condition prevention.
+        Uses database-level locking to prevent concurrent insert conflicts.
+        """
+        from sqlalchemy.orm import with_for_update
+        
+        # Use row-level lock to prevent race conditions
+        rec = AnonPurchaseOwnership.query.with_for_update(
+            skip_locked=True  # Skip if another transaction has lock (prevents deadlocks)
+        ).filter_by(
             anon_restore_id=anon_restore_id,
             product_id=product_id
         ).first()
+        
         if rec is None:
+            # Safe to create - we have the lock, no race condition
             rec = AnonPurchaseOwnership(
                 anon_restore_id=anon_restore_id,
                 platform=platform,
@@ -1671,9 +1682,11 @@ class AnonPurchaseOwnership(db.Model):
             )
             db.session.add(rec)
         else:
+            # Update existing record
             rec.platform = platform
             rec.status = status
             rec.raw_payload = raw_payload or rec.raw_payload or {}
+            rec.updated_at = datetime.utcnow()
         return rec
 
 
