@@ -7061,9 +7061,9 @@ class QuizManager {
                 // Resume mode: don't stack another intro; jump back into the quiz
                 this.quizStarted = true;
                 this.loadNextWordWithIntro();
-            } else {
-                this.showIntroAnnouncer();
+                return;
             }
+            this.showIntroAnnouncer();
         }, { once: true });
         
         // Skip voice button - disables announcer and starts quiz silently
@@ -7078,9 +7078,9 @@ class QuizManager {
             if (this.startMode === 'resume') {
                 this.quizStarted = true;
                 this.loadNextWordWithIntro();
-            } else {
-                this.loadNextWord();
+                return;
             }
+            this.loadNextWord();
         }, { once: true });
     }
 
