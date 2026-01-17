@@ -28,7 +28,10 @@ window.initializeGlobalVoice = function() {
         if (voices.length > 0) {
             window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(voices);
             window.QUIZ_VOICE_INITIALIZED = true;
-            console.log('🎤 Global voice initialized:', window.QUIZ_CACHED_VOICE?.name || 'Default');
+            console.log(
+                '🎤 Global voice initialized:',
+                (window.QUIZ_CACHED_VOICE && window.QUIZ_CACHED_VOICE.name) ? window.QUIZ_CACHED_VOICE.name : 'Default'
+            );
         }
     }
 };
@@ -38,7 +41,7 @@ function selectBestFemaleVoiceGlobal(voices) {
     if (!voices || voices.length === 0) return null;
     
     const scoredVoices = voices
-        .filter(v => v.lang?.startsWith('en'))
+        .filter(v => v && v.lang && String(v.lang).toLowerCase().indexOf('en') === 0)
         .map(voice => {
             let score = 0;
             const name = voice.name.toLowerCase();
@@ -3153,11 +3156,13 @@ if ('speechSynthesis' in window) {
 
 <script>
 // Preflight: check wordbank and quiz state before starting
+// iOS/Safari compatibility helper: nullish-coalescing replacement
+function __nn(v, fallback) { return (v === undefined || v === null) ? fallback : v; }
 async function preflightQuiz() {
     try {
         const wbResp = await fetch('/api/wordbank', { credentials: 'same-origin', cache: 'no-store' });
         const wbData = await wbResp.json();
-        const words = wbData?.words || [];
+        const words = (wbData && wbData.words) ? wbData.words : [];
         if (!Array.isArray(words) || words.length === 0) {
             console.warn('[QUIZ] No wordbank loaded. Offering sample loader.');
             const banner = document.getElementById('quiz-status-banner');
@@ -3193,7 +3198,7 @@ async function loadSampleWords() {
             body: JSON.stringify(body)
         });
         const data = await resp.json();
-        if (data?.ok) {
+        if (data && data.ok) {
             const banner = document.getElementById('quiz-status-banner');
             if (banner) {
                 banner.textContent = `Loaded ${data.count} sample words. Starting quiz...`;
@@ -3206,7 +3211,7 @@ async function loadSampleWords() {
                 await window.quizManager.loadNextWord();
             }
         } else {
-            throw new Error(data?.error || 'Upload failed');
+            throw new Error((data && data.error) ? data.error : 'Upload failed');
         }
     } catch (e) {
         console.error('[QUIZ] Sample load failed:', e);
@@ -4517,7 +4522,7 @@ class BeeSoundboard {
 
         let start = this.ctx.currentTime;
         steps.forEach((step) => {
-            const duration = step.duration ?? 0.2;
+            const duration = __nn(step.duration, 0.2);
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
 
@@ -4527,7 +4532,7 @@ class BeeSoundboard {
                 osc.frequency.linearRampToValueAtTime(step.slide, start + duration);
             }
 
-            const gainValue = Math.max(step.gain ?? 0.14, 0.0001);
+            const gainValue = Math.max(__nn(step.gain, 0.14), 0.0001);
             gain.gain.setValueAtTime(gainValue, start);
             if (step.fade) {
                 gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
@@ -4539,7 +4544,7 @@ class BeeSoundboard {
             osc.start(start);
             osc.stop(start + duration + 0.01);
 
-            start += step.delay ?? duration;
+            start += __nn(step.delay, duration);
         });
     }
 
@@ -4758,12 +4763,14 @@ class BeeDelightManager {
         const confirmExitButton = document.getElementById('confirmExitButton');
 
         // Show exit confirmation modal (matching working version - simpler approach)
-        exitButton?.addEventListener('click', () => {
-            this.showExitModal();
-        });
+        if (exitButton) {
+            exitButton.addEventListener('click', () => {
+                this.showExitModal();
+            });
+        }
 
         // Next Word button - manual advance after retry window closes
-        nextWordButton?.addEventListener('click', async () => {
+        if (nextWordButton) nextWordButton.addEventListener('click', async () => {
             console.log('⏭️ Next Word button clicked');
             // Hide the Next Word button
             if (nextWordButton) {
@@ -4773,7 +4780,9 @@ class BeeDelightManager {
             // Hide feedback area
             const feedbackArea1 = document.getElementById('feedbackArea');
             if (feedbackArea1) feedbackArea1.style.display = 'none';
-            this.soundboard?.play('button-primary');
+            if (this.soundboard && typeof this.soundboard.play === 'function') {
+                this.soundboard.play('button-primary');
+            }
             // Call loadNextWord on the global quizManager instance
             if (window.quizManager && typeof window.quizManager.loadNextWord === 'function') {
                 await window.quizManager.loadNextWord();
@@ -4793,12 +4802,14 @@ class BeeDelightManager {
         }
 
         // Confirm exit and go to menu (matching working version - simpler approach)
-        confirmExitButton?.addEventListener('click', () => {
-            this.confirmExit();
-        });
+        if (confirmExitButton) {
+            confirmExitButton.addEventListener('click', () => {
+                this.confirmExit();
+            });
+        }
 
         // Close modal on backdrop click
-        exitModal?.addEventListener('click', (e) => {
+        if (exitModal) exitModal.addEventListener('click', (e) => {
             if (e.target === exitModal) {
                 this.hideExitModal();
             }
@@ -4810,9 +4821,12 @@ class BeeDelightManager {
         const exitStats = document.getElementById('exitStats');
         
         // Update stats in the modal
-        const correctCount = document.getElementById('correctCount')?.textContent || '0';
-        const incorrectCount = document.getElementById('incorrectCount')?.textContent || '0';
-        const streakCount = document.getElementById('streakCount')?.textContent || '0';
+        const correctEl = document.getElementById('correctCount');
+        const incorrectEl = document.getElementById('incorrectCount');
+        const streakEl = document.getElementById('streakCount');
+        const correctCount = (correctEl && correctEl.textContent) ? correctEl.textContent : '0';
+        const incorrectCount = (incorrectEl && incorrectEl.textContent) ? incorrectEl.textContent : '0';
+        const streakCount = (streakEl && streakEl.textContent) ? streakEl.textContent : '0';
         
         exitStats.innerHTML = `
             <div>📝 Words spelled: ${parseInt(correctCount) + parseInt(incorrectCount)}</div>
@@ -4852,7 +4866,7 @@ class BeeDelightManager {
         
         // Add a friendly exit message (matching working version)
         const exitModal = document.getElementById('exitModal');
-        const modalContent = exitModal?.querySelector('.exit-modal-content');
+        const modalContent = exitModal ? exitModal.querySelector('.exit-modal-content') : null;
         
         if (modalContent) {
             modalContent.innerHTML = `
@@ -4957,7 +4971,7 @@ class BeeDelightManager {
             return;
         }
 
-        const total = progress.total ?? this.totalQuestions;
+        const total = __nn(progress.total, this.totalQuestions);
         if (Number.isFinite(total) && total > 0) {
             this.totalQuestions = total;
         }
@@ -4967,7 +4981,7 @@ class BeeDelightManager {
             return;
         }
 
-        const correct = Math.max(progress.correct ?? 0, 0);
+        const correct = Math.max(__nn(progress.correct, 0), 0);
         const ratio = Math.min(correct / workingTotal, 1);
         
         // Update SVG honey fill
@@ -4987,7 +5001,7 @@ class BeeDelightManager {
 
     handlePronounce(data, onEndCallback = null) {
         this.soundboard.play('speak');
-        if (data?.word) {
+        if (data && data.word) {
             // Speak a friendly prompt and say the word once (the old double-say sounded like a glitch)
             const phrase = `Spell the word ${data.word}.`;
             const rate = data.rate || 0.92; // Use provided rate or default
@@ -5071,7 +5085,7 @@ class BeeDelightManager {
             clearTimeout(this.mascotTimer);
             if (duration > 0) {
                 this.mascotTimer = setTimeout(() => {
-                    this.mascot?.classList.remove(classes[state]);
+                    if (this.mascot) this.mascot.classList.remove(classes[state]);
                 }, duration);
             }
         }
@@ -5163,7 +5177,7 @@ class QuizManager {
         
         const DEFAULT_STUDENT_NAME = 'Newbee';
         const normalizeStudentName = (raw) => {
-            const trimmed = (raw ?? '').toString().trim();
+            const trimmed = String(__nn(raw, '')).trim();
             return trimmed ? trimmed : DEFAULT_STUDENT_NAME;
         };
 
@@ -5191,7 +5205,7 @@ class QuizManager {
 
             // Store authenticated name in a dedicated key without overwriting guest names.
             try {
-                const trimmed = (rawName ?? '').toString().trim();
+                const trimmed = String(__nn(rawName, '')).trim();
                 if (trimmed) {
                     localStorage.setItem('lastAuthName', trimmed);
                 }
@@ -5919,7 +5933,7 @@ class QuizManager {
                 // Safety: always have a way to advance even if resume stalls.
                 if (forceNextBtn) {
                     forceNextBtn.addEventListener('click', () => {
-                        try { this.forceResumeAdvance?.(); } catch (e) { console.warn('forceResumeAdvance failed:', e); }
+                        try { if (typeof this.forceResumeAdvance === 'function') this.forceResumeAdvance(); } catch (e) { console.warn('forceResumeAdvance failed:', e); }
                     });
                 }
                 
@@ -6046,7 +6060,7 @@ class QuizManager {
                 const forceNextBtn = document.getElementById('forceNextBtn');
                 if (forceNextBtn && this.startMode === 'resume') {
                     forceNextBtn.addEventListener('click', () => {
-                        try { this.forceResumeAdvance?.(); } catch (e) { console.warn('forceResumeAdvance failed:', e); }
+                        try { if (typeof this.forceResumeAdvance === 'function') this.forceResumeAdvance(); } catch (e) { console.warn('forceResumeAdvance failed:', e); }
                     });
                 }
             }
@@ -6073,7 +6087,7 @@ class QuizManager {
             const forceNextBtn = document.getElementById('forceNextBtn');
             if (forceNextBtn && this.startMode === 'resume') {
                 forceNextBtn.addEventListener('click', () => {
-                    try { this.forceResumeAdvance?.(); } catch (e) { console.warn('forceResumeAdvance failed:', e); }
+                    try { if (typeof this.forceResumeAdvance === 'function') this.forceResumeAdvance(); } catch (e) { console.warn('forceResumeAdvance failed:', e); }
                 });
             }
             
@@ -6142,33 +6156,10 @@ class QuizManager {
             }
         }
     }
+    }
 
     // 🚑 Recovery: Used to break out of rare resume stalls on iOS Safari
     // Safe + idempotent: cancels speech and attempts to load the next word.
-    forceResumeAdvance() {
-        try {
-            if ('speechSynthesis' in window) {
-                try { speechSynthesis.cancel(); } catch (_e) { /* ignore */ }
-            }
-
-            const feedbackArea = document.getElementById('feedbackArea');
-            if (feedbackArea) feedbackArea.style.display = 'none';
-
-            this.voiceUnlocked = true;
-            this.quizStarted = true;
-
-            // Retry a couple times in case iOS is still waking up UI.
-            const attempt = () => {
-                if (typeof this.loadNextWordWithIntro === 'function') {
-                    try { this.loadNextWordWithIntro(); } catch (e) { console.warn('loadNextWordWithIntro failed:', e); }
-                }
-            };
-            [0, 300, 900].forEach((d) => setTimeout(attempt, d));
-        } catch (e) {
-            console.warn('forceResumeAdvance error:', e);
-        }
-    }
-    
     async loadNextWordWithIntro() {
         try {
             this.lastPronounceData = null;
@@ -6193,9 +6184,9 @@ class QuizManager {
                 return;
             }
 
-            const questionNumber = data.index ?? data.number ?? 1;
-            this.totalWords = data.total ?? this.totalWords;
-            document.getElementById('progressText').textContent = `Question ${questionNumber} of ${data.total ?? '?'}`;
+            const questionNumber = __nn(data.index, __nn(data.number, 1));
+            this.totalWords = __nn(data.total, this.totalWords);
+            document.getElementById('progressText').textContent = `Question ${questionNumber} of ${__nn(data.total, '?')}`;
 
             if (data.progress) {
                 // Use Object.assign for better compatibility
@@ -6963,7 +6954,9 @@ class QuizManager {
             if (button) {
                 // Hover sound
                 button.addEventListener('mouseenter', () => {
-                    this.soundboard?.play('buzz-hover');
+                    if (this.soundboard && typeof this.soundboard.play === 'function') {
+                        this.soundboard.play('buzz-hover');
+                    }
                 });
                 
                 // Click sound (support both mouse and touch)
@@ -6972,13 +6965,17 @@ class QuizManager {
                     // Guard against double-playing the click sound.
                     const lastTouchAt = this._lastTouchBuzzClickAt || 0;
                     if (lastTouchAt && (Date.now() - lastTouchAt) < 800) return;
-                    this.soundboard?.play('buzz-click');
+                    if (this.soundboard && typeof this.soundboard.play === 'function') {
+                        this.soundboard.play('buzz-click');
+                    }
                 });
                 
                 // 🍎 iOS FIX: Add touch event for better iOS button responsiveness
                 button.addEventListener('touchstart', (e) => {
                     this._lastTouchBuzzClickAt = Date.now();
-                    this.soundboard?.play('buzz-click');
+                    if (this.soundboard && typeof this.soundboard.play === 'function') {
+                        this.soundboard.play('buzz-click');
+                    }
                 }, { passive: true });
             }
         });
@@ -6986,7 +6983,7 @@ class QuizManager {
         if (submitButton) submitButton.addEventListener('click', () => {
             // If we just handled a touchend submit, suppress the subsequent click.
             if (this._suppressSubmitClickUntil && Date.now() < this._suppressSubmitClickUntil) return;
-            try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
+            try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('submit'); } catch (e) {}
             this.submitAnswer();
         });
         
@@ -6996,13 +6993,13 @@ class QuizManager {
                 // Don't preventDefault(): it can suppress click/navigation on iOS.
                 // Instead, suppress the follow-up click handler for a short window.
                 this._suppressSubmitClickUntil = Date.now() + 900;
-                try { window.BeeVoiceViz?.react('submit'); } catch (err) {}
+                try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('submit'); } catch (err) {}
                 this.submitAnswer();
             }
         }, { passive: true });
         if (spellingInput) spellingInput.addEventListener('keyup', (event) => {
             if (event.key === 'Enter' && !this.isAnswering) {
-                try { window.BeeVoiceViz?.react('submit'); } catch (e) {}
+                try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('submit'); } catch (e) {}
                 this.submitAnswer();
             }
         });
@@ -7010,12 +7007,15 @@ class QuizManager {
         if (speakButton) {
             speakButton.addEventListener('click', () => {
                 console.log('🔊 Pronounce button clicked');
-                try { window.BeeVoiceViz?.react('button'); } catch (e) {}
+                try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('button'); } catch (e) {}
                 // Pronounce should *repeat the spelling-bee ask*, then pronounce the word.
                 // The announce+pronounce sequence is handled inside loadNextWordWithIntro.
                 // Here we do a light-weight version: spoken prompt + pronounce.
                 try {
-                    const w = this.currentWordData?.word || this.currentWord?.word || '';
+                    const w =
+                        (this.currentWordData && this.currentWordData.word) ||
+                        (this.currentWord && this.currentWord.word) ||
+                        '';
                     if (w) {
                         this.speakAnnouncement(`Please spell: ${w}`).then(() => {
                             this.pronounceWord({ refresh: true, rate: 0.7 });
@@ -7038,11 +7038,11 @@ class QuizManager {
         } catch (_e) {}
 
         if (getHintButton) getHintButton.addEventListener('click', () => {
-            try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
+            try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('hint'); } catch (e) {}
             this.getHint();
         });
         if (skipButton) skipButton.addEventListener('click', () => {
-            try { window.BeeVoiceViz?.react('skip'); } catch (e) {}
+            try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('skip'); } catch (e) {}
             this.skipWord();
         });
         
@@ -7052,14 +7052,14 @@ class QuizManager {
         
         if (showDefinitionButton) {
             showDefinitionButton.addEventListener('click', () => {
-                try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
+                try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('hint'); } catch (e) {}
                 this.showDefinition();
             });
         }
         
         if (showSentenceButton) {
             showSentenceButton.addEventListener('click', () => {
-                try { window.BeeVoiceViz?.react('hint'); } catch (e) {}
+                try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('hint'); } catch (e) {}
                 this.showSentence();
             });
         }
@@ -7068,7 +7068,7 @@ class QuizManager {
         const toggleButtons = document.querySelectorAll('.toggle-stat');
         toggleButtons.forEach(button => {
             button.addEventListener('click', () => {
-                try { window.BeeVoiceViz?.react('button'); } catch (e) {}
+                try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('button'); } catch (e) {}
                 const stat = button.getAttribute('data-stat');
                 this.toggleStat(stat, button);
             });
@@ -7078,7 +7078,7 @@ class QuizManager {
         const retryButton = document.getElementById('retryButton');
         if (retryButton) {
             retryButton.addEventListener('click', () => {
-                try { window.BeeVoiceViz?.react('button'); } catch (e) {}
+                try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('button'); } catch (e) {}
                 this.handleRetry();
             });
         }
@@ -7128,7 +7128,7 @@ class QuizManager {
                     refreshResumeButton.style.display = '';
                 }
                 refreshResumeButton.addEventListener('click', async () => {
-                    try { window.BeeVoiceViz?.react('button'); } catch (_e) {}
+                    try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('button'); } catch (_e) {}
                     // Prefer a non-destructive advance first (break out of stalled UI)
                     if (this.startMode === 'resume' && typeof this.forceResumeAdvance === 'function') {
                         this.forceResumeAdvance();
@@ -7442,17 +7442,19 @@ class QuizManager {
             
             console.log('✅ Got next word data, processing...');
 
-            const questionNumber = data.index ?? data.number ?? 1;
-            this.totalWords = data.total ?? this.totalWords;
+            const questionNumber = __nn(data.index, __nn(data.number, 1));
+            this.totalWords = __nn(data.total, this.totalWords);
             
             // Update progress displays (both text and percentage)
-            this.updateProgressDisplays(questionNumber, data.total ?? this.totalWords);
+            this.updateProgressDisplays(questionNumber, __nn(data.total, this.totalWords));
 
             if (data.progress) {
-                this.updateScoreDisplay({ ...data.progress, total: data.total });
+                this.updateScoreDisplay(Object.assign({}, data.progress || {}, { total: data.total }));
             }
 
-            this.delight?.setTotalQuestions(data.total);
+            if (this.delight && typeof this.delight.setTotalQuestions === 'function') {
+                this.delight.setTotalQuestions(data.total);
+            }
 
             // Set the definition directly from the /api/next response - prefer explicit fields
             const defBox = document.getElementById('definitionDisplay');
@@ -7555,7 +7557,9 @@ class QuizManager {
             const feedbackArea2 = document.getElementById('feedbackArea');
             if (feedbackArea2) feedbackArea2.style.display = 'none';
             this.hideLetterHint();  // Hide letter hint for new word
-            this.delight?.clearFeedbackState();
+            if (this.delight && typeof this.delight.clearFeedbackState === 'function') {
+                this.delight.clearFeedbackState();
+            }
             
             // ⏱️ Give user mental processing time BEFORE timer announcement (800ms)
             if (this.timerEnabled && this.quizStarted) {
@@ -7718,9 +7722,13 @@ class QuizManager {
             }
             
             if (!options.silent) {
-                this.delight?.handleDefinition(data);
+                if (this.delight && typeof this.delight.handleDefinition === 'function') {
+                    this.delight.handleDefinition(data);
+                }
             } else {
-                this.delight?.handleDefinition();
+                if (this.delight && typeof this.delight.handleDefinition === 'function') {
+                    this.delight.handleDefinition();
+                }
             }
         } catch (error) {
             console.error('Error getting definition:', error);
@@ -8060,7 +8068,7 @@ class QuizManager {
                 
                 // Build a safe fallback summary so we ALWAYS show the report card, even if the server summary fetch fails.
                 const p = result.progress || {};
-                const fallbackTotal = Number(p.total ?? this.totalWords) || (Number(p.correct || 0) + Number(p.incorrect || 0)) || 1;
+                const fallbackTotal = Number(__nn(p.total, this.totalWords)) || (Number(p.correct || 0) + Number(p.incorrect || 0)) || 1;
                 const fallbackSummary = {
                     total: fallbackTotal,
                     correct: Number(p.correct) || 0,
@@ -8163,7 +8171,7 @@ class QuizManager {
                             } catch (_e) {}
                         } catch (e) {
                             console.error('❌ Completion handler crashed:', e);
-                            showCompletionFallback('completion handler crashed', e?.message);
+                            showCompletionFallback('completion handler crashed', (e && e.message) ? e.message : '');
                         }
                     })();
                 }, 1500);
@@ -8214,7 +8222,7 @@ class QuizManager {
             // path (e.g., hot-streak / bonus tracking), we never want to block
             // progression to the next word.
             console.error('❌ submitAnswer error:', error);
-            console.error('Error details:', error?.message, error?.stack);
+            console.error('Error details:', error && error.message, error && error.stack);
 
             // Re-enable input so the kid isn't stuck.
             try { this.enableInput(); } catch (_e) {}
@@ -8226,7 +8234,7 @@ class QuizManager {
             // visually continues but stalls before fetching /api/next.)
             try {
                 const feedbackArea = document.getElementById('feedbackArea');
-                const msg = (feedbackArea?.textContent || '').toLowerCase();
+                const msg = (((feedbackArea && feedbackArea.textContent) || '')).toLowerCase();
                 const looksLikeCorrectPath = msg.includes('moving to the next word');
                 if (looksLikeCorrectPath) {
                     console.warn('⚠️ Non-fatal network error during advance; continuing to next word...');
@@ -8235,7 +8243,7 @@ class QuizManager {
                             this.loadNextWord();
                         } catch (e) {
                             console.error('❌ Recovery loadNextWord failed:', e);
-                            this.showNextWordButton?.();
+                            if (this.showNextWordButton) this.showNextWordButton();
                         }
                     }, 600);
                     return;
@@ -8251,7 +8259,12 @@ class QuizManager {
     async showFeedback(result) {
         // 🎭 MorphController removed - using CSS transitions instead
         
-        try { window.BeeVoiceViz?.react(result?.correct ? 'feedback-correct' : 'feedback-incorrect'); } catch (e) {}
+        try {
+            const isCorrect = !!(result && result.correct);
+            if (window.BeeVoiceViz && window.BeeVoiceViz.react) {
+                window.BeeVoiceViz.react(isCorrect ? 'feedback-correct' : 'feedback-incorrect');
+            }
+        } catch (e) {}
         const feedbackArea = document.getElementById('feedbackArea');
         feedbackArea.style.display = 'block';
         
@@ -8275,7 +8288,7 @@ class QuizManager {
             }
             
             // Update streak
-            this.currentStreak = result.progress?.streak || this.currentStreak;
+            this.currentStreak = (result.progress && result.progress.streak) || this.currentStreak;
             if (this.currentStreak > this.maxStreak) {
                 this.maxStreak = this.currentStreak;
             }
@@ -8312,7 +8325,8 @@ class QuizManager {
             // 📚 Show educational word definition after a short delay
             if (result.definition) {
                 setTimeout(() => {
-                    showWordDefinitionPopup(result.word || this.currentWordData?.word || '', result.definition);
+                    const w = result.word || (this.currentWordData && this.currentWordData.word) || '';
+                    showWordDefinitionPopup(w, result.definition);
                 }, 2000);
             }
             
@@ -8330,7 +8344,7 @@ class QuizManager {
             this.currentStreak = 0;
             
             // Get the correct spelling from the current word data
-            const correctWord = this.currentWordData?.word || result.word || '';
+            const correctWord = (this.currentWordData && this.currentWordData.word) || result.word || '';
             
             // 🔄 RETRY LOGIC: Show choice buttons if this is first failure and retry not used
             if (!this.isRetryAttempt && !this.hasRetried) {
@@ -8410,7 +8424,9 @@ class QuizManager {
             }
         }
 
-        this.delight?.handleFeedback(result);
+        if (this.delight && typeof this.delight.handleFeedback === 'function') {
+            this.delight.handleFeedback(result);
+        }
     }
 
     hideFeedback() {
@@ -8419,14 +8435,14 @@ class QuizManager {
     }
 
     updateScoreDisplay(progress = {}) {
-        const total = progress.total ?? this.totalWords ?? 0;
+        const total = __nn(progress.total, __nn(this.totalWords, 0));
         if (Number.isFinite(total) && total > 0) {
             this.totalWords = total;
         }
 
         const correct = Number(progress.correct) || 0;
         const incorrect = Number(progress.incorrect) || 0;
-        const streak = Number(progress.streak ?? this.currentStreak) || 0;
+        const streak = Number(__nn(progress.streak, this.currentStreak)) || 0;
         
         // Ensure we never display NaN
         document.getElementById('correctCount').textContent = correct;
@@ -8475,7 +8491,9 @@ class QuizManager {
             }
         }
 
-        this.delight?.updateProgress({ ...progress, total: this.totalWords });
+        if (this.delight && typeof this.delight.updateProgress === 'function') {
+            this.delight.updateProgress(Object.assign({}, progress || {}, { total: this.totalWords }));
+        }
     }
 
     /**
@@ -8840,7 +8858,7 @@ class QuizManager {
     }
 
     showRetryInputExpired() {
-        const correctWord = this.currentWordData?.word || '';
+        const correctWord = (this.currentWordData && this.currentWordData.word) ? this.currentWordData.word : '';
         const feedbackArea = document.getElementById('feedbackArea');
         
         feedbackArea.innerHTML = `
@@ -8928,7 +8946,9 @@ class QuizManager {
                     elapsed_ms: 0
                 })
             });
-            this.delight?.handleSkip();
+            if (this.delight && typeof this.delight.handleSkip === 'function') {
+                this.delight.handleSkip();
+            }
             this.loadNextWord();
         } catch (error) {
             console.error('Error skipping word:', error);
@@ -8977,7 +8997,9 @@ class QuizManager {
                 defDisplay.style.transform = 'translateY(0)';
             }, 10);
             
-            this.soundboard?.play('button-click');
+            if (this.soundboard && typeof this.soundboard.play === 'function') {
+                this.soundboard.play('button-click');
+            }
             console.log('✅ Definition displayed successfully');
         } else {
             console.error('definitionDisplay element not found');
@@ -9024,7 +9046,9 @@ class QuizManager {
                 defDisplay.style.transform = 'translateY(0)';
             }, 10);
             
-            this.soundboard?.play('button-click');
+            if (this.soundboard && typeof this.soundboard.play === 'function') {
+                this.soundboard.play('button-click');
+            }
             console.log('✅ Sentence displayed successfully');
         } else {
             console.error('definitionDisplay element not found');
@@ -9052,17 +9076,23 @@ class QuizManager {
                     buttonElement.classList.add('stat-hidden');
                 }
                 
-                this.soundboard?.play('button-click');
+                if (this.soundboard && typeof this.soundboard.play === 'function') {
+                    this.soundboard.play('button-click');
+                }
             }
             return;
         }
         
         // Individual stat toggles
+        const correctNum = document.querySelector('.score-item .score-number.correct');
+        const incorrectNum = document.querySelector('.score-item .score-number.incorrect');
+        const streakNum = document.querySelector('.score-item .score-number.streak');
+        const pointsNum = document.querySelector('.score-item .score-number.points');
         const statElements = {
-            'correct': document.querySelector('.score-item .score-number.correct')?.parentElement,
-            'incorrect': document.querySelector('.score-item .score-number.incorrect')?.parentElement,
-            'streak': document.querySelector('.score-item .score-number.streak')?.parentElement,
-            'points': document.querySelector('.score-item .score-number.points')?.parentElement
+            'correct': correctNum ? correctNum.parentElement : null,
+            'incorrect': incorrectNum ? incorrectNum.parentElement : null,
+            'streak': streakNum ? streakNum.parentElement : null,
+            'points': pointsNum ? pointsNum.parentElement : null
         };
         
         const statElement = statElements[statType];
@@ -9083,7 +9113,9 @@ class QuizManager {
                 buttonElement.classList.add('stat-hidden');
             }
             
-            this.soundboard?.play('button-click');
+            if (this.soundboard && typeof this.soundboard.play === 'function') {
+                this.soundboard.play('button-click');
+            }
         }
     }
 
@@ -9158,7 +9190,7 @@ class QuizManager {
         
         // Get badges from session state
         const state = await this.getQuizState();
-        const badgesEarned = state?.badges_earned || [];
+        const badgesEarned = (state && state.badges_earned) ? state.badges_earned : [];
         
         // Get user's current level
         let levelHTML = '';
@@ -9467,9 +9499,15 @@ class QuizManager {
             </style>
         `;
 
-        this.delight?.setTotalQuestions(summary.total);
-        this.delight?.updateProgress({ correct: summary.correct, total: summary.total });
-        this.delight?.setMascotState('happy', 2200);
+        if (this.delight && typeof this.delight.setTotalQuestions === 'function') {
+            this.delight.setTotalQuestions(summary.total);
+        }
+        if (this.delight && typeof this.delight.updateProgress === 'function') {
+            this.delight.updateProgress({ correct: summary.correct, total: summary.total });
+        }
+        if (this.delight && typeof this.delight.setMascotState === 'function') {
+            this.delight.setMascotState('happy', 2200);
+        }
         
         // Mascot celebrates quiz completion!
         if (this.smartyBee) {
@@ -9585,6 +9623,32 @@ class QuizManager {
     }
 }
 
+// 🚑 Recovery: Used to break out of rare resume stalls on iOS Safari
+// Defined as a prototype method (avoids brittle class-body parse issues on older WebViews).
+QuizManager.prototype.forceResumeAdvance = function () {
+    try {
+        if ('speechSynthesis' in window) {
+            try { speechSynthesis.cancel(); } catch (_e) { /* ignore */ }
+        }
+
+        const feedbackArea = document.getElementById('feedbackArea');
+        if (feedbackArea) feedbackArea.style.display = 'none';
+
+        this.voiceUnlocked = true;
+        this.quizStarted = true;
+
+        // Retry a couple times in case iOS is still waking up UI.
+        const attempt = () => {
+            if (typeof this.loadNextWordWithIntro === 'function') {
+                try { this.loadNextWordWithIntro(); } catch (e) { console.warn('loadNextWordWithIntro failed:', e); }
+            }
+        };
+        [0, 300, 900].forEach((d) => setTimeout(attempt, d));
+    } catch (e) {
+        console.warn('forceResumeAdvance error:', e);
+    }
+};
+
 // 🔊 Pronounce word from report card (missed words review)
 function pronounceWordFromReport(word) {
     if (!word) return;
@@ -9598,7 +9662,7 @@ function pronounceWordFromReport(word) {
         
         // Prefer US English voice
         const enUSVoice = voices.find(v => v.lang === 'en-US') || 
-                         voices.find(v => v.lang?.startsWith('en')) || 
+                         voices.find(v => v && v.lang && String(v.lang).toLowerCase().indexOf('en') === 0) || 
                          null;
         if (enUSVoice) utterance.voice = enUSVoice;
         
@@ -9920,7 +9984,7 @@ function startLiveStatusPolling(intervalMs = 5000) {
                 session_points: data.session_points
             };
             if (typeof BeeSmart !== 'undefined') {
-                BeeSmart.sessionPoints = data.session_points ?? BeeSmart.sessionPoints;
+                BeeSmart.sessionPoints = __nn(data.session_points, BeeSmart.sessionPoints);
                 if (typeof BeeSmart.updateScoreDisplay === 'function') {
                     BeeSmart.updateScoreDisplay(progress);
                 }
@@ -9966,7 +10030,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // DEBUG gated logging helper
     
     // DEBUG gated logging helper
-    window.DEBUG_MODE = window.DEBUG_MODE ?? false; // Set to true in console to enable verbose logs
+    window.DEBUG_MODE = __nn(window.DEBUG_MODE, false); // Set to true in console to enable verbose logs
     const debugLog = (...args) => { if (window.DEBUG_MODE) console.log(...args); };
 
     try {
@@ -10004,7 +10068,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
-                const beeClass = rankData?.current_class;
+                const beeClass = (rankData && rankData.current_class) ? rankData.current_class : null;
                 if (!beeClass) {
                     debugLog('ℹ️ No current_class returned; skipping badge render');
                     return;
@@ -10020,7 +10084,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 badgeImg.src = `/static/assets/badges/${encodeURIComponent(correctedFileName)}`;
                 badgeImg.alt = beeClass.label || 'Buzz Dust Badge';
-                badgeImg.title = `${beeClass.label || 'Badge'} - ${rankData?.total_buzz_dust ?? 0} Buzz Dust`;
+                const totalBuzzDust = __nn(rankData && rankData.total_buzz_dust, 0);
+                badgeImg.title = `${beeClass.label || 'Badge'} - ${totalBuzzDust} Buzz Dust`;
 
                 debugLog('✅ Buzz Dust badge displayed', beeClass.label, correctedFileName);
             } catch (rankError) {
@@ -10116,15 +10181,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             return Promise.resolve('start_new');
         }
 
-        const cur = Number(resumePayload?.state?.current_word_index);
-        const tot = Number(resumePayload?.state?.total_words);
-        const correct = Number(resumePayload?.state?.correct);
-        const incorrect = Number(resumePayload?.state?.incorrect);
+        const state = (resumePayload && resumePayload.state) ? resumePayload.state : {};
+        const cur = Number(state.current_word_index);
+        const tot = Number(state.total_words);
+        const correct = Number(state.correct);
+        const incorrect = Number(state.incorrect);
         const hasProgress = (Number.isFinite(cur) && cur > 0) || (Number.isFinite(correct) && correct > 0) || (Number.isFinite(incorrect) && incorrect > 0);
 
         if (messageEl) {
             messageEl.textContent = hasProgress
-                ? (resumePayload?.message || 'You have an unfinished quiz. What would you like to do?')
+                ? ((resumePayload && resumePayload.message) || 'You have an unfinished quiz. What would you like to do?')
                 : 'Your quiz is ready, but you haven\'t started yet. Ready to begin?';
         }
 
@@ -10259,10 +10325,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Only offer resume if:
                 // 1) quiz state is unfinished AND
                 // 2) the saved quiz fingerprint matches the current loaded list.
-                const idx = Number(data?.state?.current_word_index ?? 0);
-                const tot = Number(data?.state?.total_words ?? 0);
+                const state = (data && data.state) ? data.state : {};
+                const idx = Number(__nn(state.current_word_index, 0));
+                const tot = Number(__nn(state.total_words, 0));
                 const unfinished = Number.isFinite(idx) && Number.isFinite(tot) && tot > 0 && idx < tot;
-                const stateFp = data?.state?.wordbank_fingerprint || '';
+                const stateFp = state.wordbank_fingerprint || '';
 
                 // Hard rule: NEVER offer Resume unless we can confidently match the list.
                 // If fingerprinting fails (common on older iOS/Safari contexts), fall back to start_new.
@@ -10539,11 +10606,14 @@ window.addEventListener('beforeunload', (event) => {
     // Save progress using sendBeacon (most reliable during unload)
     if (window.spellingQuiz) {
         const progress = window.spellingQuiz.getProgress();
+        const safeIndex = (progress && progress.currentIndex !== undefined && progress.currentIndex !== null) ? progress.currentIndex : 0;
+        const safeAnswers = (progress && Array.isArray(progress.answers)) ? progress.answers : [];
+        const safeElapsed = (progress && progress.elapsedTime !== undefined && progress.elapsedTime !== null) ? progress.elapsedTime : 0;
         const progressData = {
             quiz_id: window.currentQuizId || 'session_' + Date.now(),
-            word_index: progress?.currentIndex || 0,
-            answers: progress?.answers || [],
-            elapsed_time: progress?.elapsedTime || 0
+            word_index: safeIndex,
+            answers: safeAnswers,
+            elapsed_time: safeElapsed
         };
         const blob = new Blob([JSON.stringify(progressData)], { type: 'application/json' });
         const sent = navigator.sendBeacon('/api/save-partial-progress', blob);
@@ -10574,11 +10644,14 @@ window.addEventListener('pagehide', () => {
     // Save progress via beacon
     if (window.spellingQuiz) {
         const progress = window.spellingQuiz.getProgress();
+        const safeIndex = (progress && progress.currentIndex !== undefined && progress.currentIndex !== null) ? progress.currentIndex : 0;
+        const safeAnswers = (progress && Array.isArray(progress.answers)) ? progress.answers : [];
+        const safeElapsed = (progress && progress.elapsedTime !== undefined && progress.elapsedTime !== null) ? progress.elapsedTime : 0;
         const progressData = {
             quiz_id: window.currentQuizId || 'session_' + Date.now(),
-            word_index: progress?.currentIndex || 0,
-            answers: progress?.answers || [],
-            elapsed_time: progress?.elapsedTime || 0
+            word_index: safeIndex,
+            answers: safeAnswers,
+            elapsed_time: safeElapsed
         };
         const blob = new Blob([JSON.stringify(progressData)], { type: 'application/json' });
         navigator.sendBeacon('/api/save-partial-progress', blob);

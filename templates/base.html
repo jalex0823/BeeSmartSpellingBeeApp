@@ -823,9 +823,9 @@
         
         // Global utility functions
         window.BeeSmart = {
-            showToast: (message, type = 'info') => window.toast?.show(message, type),
-            showSuccess: (message) => window.toast?.success(message),
-            showError: (message) => window.toast?.error(message)
+            showToast: (message, type = 'info') => (window.toast && window.toast.show ? window.toast.show(message, type) : undefined),
+            showSuccess: (message) => (window.toast && window.toast.success ? window.toast.success(message) : undefined),
+            showError: (message) => (window.toast && window.toast.error ? window.toast.error(message) : undefined)
         };
     </script>
     
@@ -1066,7 +1066,7 @@
                 try {
                     const btn = document.getElementById('globalEffectsToggle');
                     if (!btn) return;
-                    const on = window.QuizCelebrations?.getEnabled ? window.QuizCelebrations.getEnabled() : true;
+                    const on = (window.QuizCelebrations && window.QuizCelebrations.getEnabled) ? window.QuizCelebrations.getEnabled() : true;
                     btn.textContent = on ? '✨ Effects On' : '✨ Effects Off';
                 } catch(_){}
             }
@@ -1076,11 +1076,11 @@
                 sync();
                 btn.addEventListener('click', function(){
                     try {
-                        const current = window.QuizCelebrations?.getEnabled ? window.QuizCelebrations.getEnabled() : true;
-                        window.QuizCelebrations?.setEnabled && window.QuizCelebrations.setEnabled(!current);
+                        const current = (window.QuizCelebrations && window.QuizCelebrations.getEnabled) ? window.QuizCelebrations.getEnabled() : true;
+                        if (window.QuizCelebrations && window.QuizCelebrations.setEnabled) window.QuizCelebrations.setEnabled(!current);
                         sync();
                         // toast feedback if available
-                        try { window.BeeSmart?.showToast(!current ? '✨ Celebrations enabled' : '✨ Celebrations disabled', 'success'); } catch(_){}
+                        try { if (window.BeeSmart && window.BeeSmart.showToast) window.BeeSmart.showToast(!current ? '✨ Celebrations enabled' : '✨ Celebrations disabled', 'success'); } catch(_){}
                     } catch(_){}
                 });
             }

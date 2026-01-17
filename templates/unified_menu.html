@@ -420,7 +420,7 @@ function showRestoreDialog(title, message, isSuccess) {
         try {
             // Scroll a specific form element into view if it exists
             const formEl = document.querySelector('.subscription-container');
-            if (formEl?.scrollIntoView) {
+            if (formEl && formEl.scrollIntoView) {
                 formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         } catch (err) {
@@ -6515,9 +6515,17 @@ function showRestoreDialog(title, message, isSuccess) {
             
             // Refresh status and show modal
             checkContentFilterStatus().then(() => {
+                const vCount =
+                    (currentFilterStatus && currentFilterStatus.violation_count_24h !== undefined && currentFilterStatus.violation_count_24h !== null)
+                        ? currentFilterStatus.violation_count_24h
+                        : 1;
+                const guardianFlag =
+                    (currentFilterStatus && currentFilterStatus.guardian_notification_triggered !== undefined && currentFilterStatus.guardian_notification_triggered !== null)
+                        ? currentFilterStatus.guardian_notification_triggered
+                        : false;
                 showContentFilterModal(title, content, true, 
-                    currentFilterStatus?.violation_count_24h || 1, 
-                    currentFilterStatus?.guardian_notification_triggered || false
+                    vCount, 
+                    guardianFlag
                 );
             });
         }
@@ -8938,8 +8946,10 @@ function showRestoreDialog(title, message, isSuccess) {
 
     function createBattle() {
             console.log('createBattle() called');
-            const battleName = document.getElementById('battleName')?.value?.trim();
-            const creatorName = document.getElementById('creatorName')?.value?.trim();
+            const battleNameEl = document.getElementById('battleName');
+            const creatorNameEl = document.getElementById('creatorName');
+            const battleName = (battleNameEl && battleNameEl.value) ? battleNameEl.value.trim() : '';
+            const creatorName = (creatorNameEl && creatorNameEl.value) ? creatorNameEl.value.trim() : '';
             
             console.log('Battle Name:', battleName);
             console.log('Creator Name:', creatorName);
@@ -19839,8 +19849,16 @@ function showRestoreDialog(title, message, isSuccess) {
                 const hasAllClasses = Array.isArray(data.all_classes) && data.all_classes.length > 0;
                 const sortedClasses = hasAllClasses
                     ? [...data.all_classes].sort((a, b) => {
-                        const amin = Number(a.min_buzz_dust ?? a.min_points ?? 0);
-                        const bmin = Number(b.min_buzz_dust ?? b.min_points ?? 0);
+                        const amin = Number(
+                            (a && a.min_buzz_dust !== undefined && a.min_buzz_dust !== null)
+                                ? a.min_buzz_dust
+                                : ((a && a.min_points !== undefined && a.min_points !== null) ? a.min_points : 0)
+                        );
+                        const bmin = Number(
+                            (b && b.min_buzz_dust !== undefined && b.min_buzz_dust !== null)
+                                ? b.min_buzz_dust
+                                : ((b && b.min_points !== undefined && b.min_points !== null) ? b.min_points : 0)
+                        );
                         return amin - bmin;
                     })
                     : null;
@@ -19853,7 +19871,11 @@ function showRestoreDialog(title, message, isSuccess) {
                 if (sortedClasses) {
                     let best = sortedClasses[0];
                     for (const c of sortedClasses) {
-                        const min = Number(c.min_buzz_dust ?? c.min_points ?? 0);
+                        const min = Number(
+                            (c && c.min_buzz_dust !== undefined && c.min_buzz_dust !== null)
+                                ? c.min_buzz_dust
+                                : ((c && c.min_points !== undefined && c.min_points !== null) ? c.min_points : 0)
+                        );
                         if (effectiveDust >= min) best = c;
                         else break;
                     }
@@ -19864,7 +19886,11 @@ function showRestoreDialog(title, message, isSuccess) {
                     effectiveAtMaxRank = !effectiveNextClass;
 
                     if (effectiveNextClass) {
-                        const nextMin = Number(effectiveNextClass.min_buzz_dust ?? effectiveNextClass.min_points ?? 0);
+                        const nextMin = Number(
+                            (effectiveNextClass && effectiveNextClass.min_buzz_dust !== undefined && effectiveNextClass.min_buzz_dust !== null)
+                                ? effectiveNextClass.min_buzz_dust
+                                : ((effectiveNextClass && effectiveNextClass.min_points !== undefined && effectiveNextClass.min_points !== null) ? effectiveNextClass.min_points : 0)
+                        );
                         effectiveDustNeeded = Math.max(0, nextMin - effectiveDust);
                     } else {
                         effectiveDustNeeded = 0;
