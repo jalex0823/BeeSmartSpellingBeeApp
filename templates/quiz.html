@@ -3117,12 +3117,17 @@ if ('speechSynthesis' in window) {
     }
 </style>
 
-{# Load heavy 3D/avatar scripts only on pages that need them (quiz does). #}
+{# Load 3D/avatar scripts needed by the quiz page. #}
 {% block three_js %}
+    <!-- Three.js core + loaders (local vendor; avoid CDN + duplicate Three.js warnings) -->
+    <script defer src="{{ url_for('static', filename='js/vendor/three.min.js') }}?v={{ timestamp }}"></script>
+    <script defer src="{{ url_for('static', filename='js/vendor/GLTFLoader.js') }}?v={{ timestamp }}"></script>
+
+    <!-- 3D mascot/avatar systems -->
+    <script defer src="{{ url_for('static', filename='js/smarty-bee-3d.js') }}?v={{ timestamp }}"></script>
+    <script defer src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v={{ timestamp }}"></script>
+
     <!-- 3D Badge Renderer for GLB rank badges -->
-    {# NOTE: the main 3D stack (Three.js + GLTFLoader + SmartyBee3D + UserAvatarLoader)
-       is already included globally by `templates/unified_menu.html`.
-       Loading it again here causes "Multiple instances of Three.js" warnings and can lead to duplicate mascot/avatar init. #}
     <script defer src="{{ url_for('static', filename='js/badge-3d-renderer.js') }}?v={{ timestamp }}"></script>
 {% endblock %}
 
@@ -10108,10 +10113,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         debugLog('🎯 Quiz page: Starting avatar initialization...');
         
-        // Ensure avatar loader exists (should be loaded from base.html)
+        // Ensure avatar loader exists (loaded via quiz page scripts).
+        // Never let 3D init failures block quiz startup.
         if (!window.userAvatarLoader) {
-            console.warn('⚠️ UserAvatarLoader not found - creating new instance');
-            window.userAvatarLoader = new UserAvatarLoader();
+            if (typeof window.UserAvatarLoader === 'function') {
+                console.warn('⚠️ UserAvatarLoader not found - creating new instance');
+                window.userAvatarLoader = new window.UserAvatarLoader();
+            } else {
+                console.warn('⚠️ UserAvatarLoader constructor not available; skipping 3D mascot init');
+                throw new Error('UserAvatarLoader not available');
+            }
         }
         
         // Wait for avatar loader to fetch user's avatar
