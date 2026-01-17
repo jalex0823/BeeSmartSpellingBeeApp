@@ -3139,7 +3139,15 @@ if ('speechSynthesis' in window) {
             background: linear-gradient(135deg,#FF6B35 0%, #F7931E 100%); color: white; border: none;
             border-radius: 14px; padding: 10px 16px; font-weight: 700; box-shadow: 0 4px 12px rgba(255,107,53,0.25);
     ">Load Sample Words</button>
-    <a href="/" class="exit-button" style="margin-left:8px;">Upload My List</a>
+    <button id="upload-my-list-btn" type="button" class="exit-button" style="margin-left:8px;" onclick="openQuizUploadPicker()">
+        Upload My List
+    </button>
+    <input
+        id="quizUploadFileInput"
+        type="file"
+        accept=".txt,.csv,.docx,.pdf,.png,.jpg,.jpeg"
+        style="display:none"
+    />
   
 </div>
 
@@ -3205,6 +3213,118 @@ async function loadSampleWords() {
         alert('Unable to load sample words. Please try uploading your own list.');
     }
 }
+
+// Upload a word list directly from the quiz page (no need to go back to menu)
+function openQuizUploadPicker() {
+    try {
+        const input = document.getElementById('quizUploadFileInput');
+        if (!input) return;
+        // Reset value so selecting the same file twice still triggers change
+        input.value = '';
+        input.click();
+    } catch (e) {
+        console.warn('[QUIZ] Failed to open upload picker:', e);
+        alert('Unable to open file picker. Please try again.');
+    }
+}
+
+async function uploadQuizWordList(file) {
+    const banner = document.getElementById('quiz-status-banner');
+    const uploadBtn = document.getElementById('upload-my-list-btn');
+
+    if (!file) return;
+
+    try {
+        if (banner) {
+            banner.textContent = `Uploading "${file.name}"...`;
+            banner.classList.remove('hidden');
+        }
+        if (uploadBtn) {
+            uploadBtn.disabled = true;
+            uploadBtn.style.opacity = '0.75';
+            uploadBtn.style.cursor = 'not-allowed';
+        }
+
+        const form = new FormData();
+        form.append('file', file, file.name);
+
+        const resp = await fetch('/api/upload', {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: form
+        });
+
+        let data = null;
+        try { data = await resp.json(); } catch (_e) {}
+
+        if (!resp.ok) {
+            const msg =
+                (data && (data.error || data.message)) ||
+                `Upload failed (${resp.status}). Please try again.`;
+
+            // If backend requires auth for image OCR, guide the user gently.
+            if (resp.status === 403 && data && data.auth_required) {
+                if (banner) banner.textContent = 'Image uploads require login. Please upload a .txt or .csv list, or log in.';
+                alert('Image uploads require login. Try uploading a .txt or .csv list, or log in first.');
+            } else {
+                if (banner) banner.textContent = msg;
+                alert(msg);
+            }
+            return;
+        }
+
+        const count = (data && (data.count || data.word_count || data.words_imported)) || null;
+        if (banner) {
+            banner.textContent = count ? `Uploaded ${count} word(s). Starting quiz...` : 'Upload complete. Starting quiz...';
+            banner.classList.remove('hidden');
+        }
+
+        // Reset quiz state to a clean start and reload the page so the inline quiz script
+        // builds its state from the newly uploaded wordbank.
+        try {
+            await fetch('/api/quiz/start', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'start_new' })
+            });
+        } catch (_e) {
+            // Non-fatal; we'll still reload to let normal preflight/constructor flow handle it.
+        }
+
+        // Reload quiz page (stays in quiz, doesn’t bounce to menu)
+        setTimeout(() => {
+            try {
+                window.location.href = '/quiz?uploaded=1';
+            } catch (_e) {
+                window.location.reload();
+            }
+        }, 250);
+    } catch (e) {
+        console.error('[QUIZ] Upload failed:', e);
+        if (banner) {
+            banner.textContent = 'Upload failed due to a network error. Please try again.';
+            banner.classList.remove('hidden');
+        }
+        alert('Upload failed due to a network error. Please try again.');
+    } finally {
+        if (uploadBtn) {
+            uploadBtn.disabled = false;
+            uploadBtn.style.opacity = '';
+            uploadBtn.style.cursor = '';
+        }
+    }
+}
+
+// Wire the hidden input to the upload function
+document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('quizUploadFileInput');
+    if (!input) return;
+    input.addEventListener('change', () => {
+        const f = input.files && input.files[0];
+        if (f) uploadQuizWordList(f);
+    });
+});
 
 // Kick off preflight on DOM ready - DISABLED to avoid race condition with main listener
 // document.addEventListener('DOMContentLoaded', async () => {
