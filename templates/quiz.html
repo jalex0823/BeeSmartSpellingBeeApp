@@ -3119,16 +3119,11 @@ if ('speechSynthesis' in window) {
 
 {# Load heavy 3D/avatar scripts only on pages that need them (quiz does). #}
 {% block three_js %}
-    <!-- Three.js for 3D GLB Avatars -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- GLTF/GLB loader for GLB avatars -->
-    <script src="{{ url_for('static', filename='js/vendor/GLTFLoader.js') }}?v={{ timestamp }}"></script>
-    <!-- SmartyBee3D class for mascot rendering -->
-    <script src="{{ url_for('static', filename='js/smarty-bee-3d.js') }}?v={{ timestamp }}"></script>
     <!-- 3D Badge Renderer for GLB rank badges -->
-    <script src="{{ url_for('static', filename='js/badge-3d-renderer.js') }}?v={{ timestamp }}"></script>
-    <!-- User Avatar System -->
-    <script src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v={{ timestamp }}"></script>
+    {# NOTE: the main 3D stack (Three.js + GLTFLoader + SmartyBee3D + UserAvatarLoader)
+       is already included globally by `templates/unified_menu.html`.
+       Loading it again here causes "Multiple instances of Three.js" warnings and can lead to duplicate mascot/avatar init. #}
+    <script defer src="{{ url_for('static', filename='js/badge-3d-renderer.js') }}?v={{ timestamp }}"></script>
 {% endblock %}
 
 <!-- Session/wordbank status banner and sample loader -->
