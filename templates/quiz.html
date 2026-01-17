@@ -15,6 +15,9 @@
 // Set flag early to prevent service worker from reloading the page
 window.__disableSwReload = true;
 
+// Build stamp (helps confirm production has the latest HTML)
+console.log('🐝 QUIZ BUILD:', '{{ timestamp }}');
+
 // 🎤 GLOBAL VOICE CACHE - Ensures consistent soft natural female voice throughout entire quiz
 window.QUIZ_CACHED_VOICE = null;
 window.QUIZ_VOICE_INITIALIZED = false;
@@ -10121,9 +10124,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.userAvatarLoader = new window.UserAvatarLoader();
             } else {
                 console.warn('⚠️ UserAvatarLoader constructor not available; skipping 3D mascot init');
-                throw new Error('UserAvatarLoader not available');
+                // Skip avatar init entirely; quiz should still run.
+                window.userAvatarLoader = null;
             }
         }
+
+        if (!window.userAvatarLoader) {
+            // Nothing else to do; keep the quiz functional even without 3D.
+            debugLog('ℹ️ Skipping mascot/avatar init (no UserAvatarLoader available)');
+        } else {
         
         // Wait for avatar loader to fetch user's avatar
         debugLog('🔄 Fetching user avatar from API...');
@@ -10159,6 +10168,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 debugLog('🐝 Quiz mascot clicked - playing themed animation');
                 playThemedAvatarEffect(resolvedAvatarId, mascotContainer);
             });
+        }
         }
     } catch (error) {
         console.error('❌ 3D mascot failed to load:', error);
