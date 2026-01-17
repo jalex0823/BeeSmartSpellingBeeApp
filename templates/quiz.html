@@ -3119,6 +3119,9 @@ if ('speechSynthesis' in window) {
         }
     }
 </style>
+<style>
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
 
 {# Load 3D/avatar scripts needed by the quiz page. #}
 {% block three_js %}
@@ -3155,6 +3158,42 @@ if ('speechSynthesis' in window) {
         style="display:none"
     />
   
+</div>
+
+<!-- Pre-quiz loader: ensure avatar is ready before starting -->
+<div id="preQuizLoadOverlay" style="
+    position: fixed; inset: 0;
+    display: none;
+    align-items: center; justify-content: center;
+    background: rgba(255, 255, 255, 0.92);
+    z-index: 10000;
+">
+    <div style="
+        width: min(92vw, 520px);
+        background: #fff;
+        border: 3px solid #FFD54F;
+        border-radius: 18px;
+        padding: 18px 16px;
+        box-shadow: 0 18px 50px rgba(0,0,0,0.18);
+        text-align: center;
+        font-weight: 800;
+        color: #5d4100;
+    ">
+        <div style="font-size: 1.15rem; margin-bottom: 10px;">🐝 Getting your avatar ready…</div>
+        <div id="preQuizLoadStatus" style="font-weight: 700; color: #7a5b00; font-size: 0.95rem;">
+            Loading…
+        </div>
+        <div style="margin-top: 14px;">
+            <div style="
+                width: 42px; height: 42px;
+                border-radius: 50%;
+                border: 5px solid rgba(255, 213, 79, 0.35);
+                border-top-color: #FFB300;
+                margin: 0 auto;
+                animation: spin 0.9s linear infinite;
+            "></div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -10111,78 +10150,101 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Bee swarm and hive removed - too distracting during quiz
     // Only keep the 3D mascot bee for companionship
     
-    // Initialize 3D Mascot with user's selected avatar
+    // Initialize mascot avatar BEFORE quiz start (hard gate)
     let smartyBee = null;
+    const overlay = document.getElementById('preQuizLoadOverlay');
+    const overlayStatus = document.getElementById('preQuizLoadStatus');
+    const setOverlay = (on, msg) => {
+        try {
+            if (overlay) overlay.style.display = on ? 'flex' : 'none';
+            if (overlayStatus && typeof msg === 'string') overlayStatus.textContent = msg;
+        } catch (_e) {}
+    };
+    const setFallbackMascotImage = () => {
+        try {
+            const c = document.getElementById('mascotBee3D');
+            if (!c) return;
+            c.innerHTML = '<img src=\"/static/assets/avatars/glb_files/AvatarThumbnails/MascotBee!.png\" alt=\"Mascot\" style=\"width: 100%; height: 100%; object-fit: contain;\" />';
+        } catch (_e) {}
+    };
+    const waitFor = async (predicate, timeoutMs) => {
+        const start = Date.now();
+        while (Date.now() - start < timeoutMs) {
+            try { if (predicate()) return true; } catch (_e) {}
+            await new Promise(r => setTimeout(r, 50));
+        }
+        return false;
+    };
+
     try {
         debugLog('🎯 Quiz page: Starting avatar initialization...');
-        
-        // Ensure avatar loader exists (loaded via quiz page scripts).
-        // Never let 3D init failures block quiz startup.
-        if (!window.userAvatarLoader) {
-            if (typeof window.UserAvatarLoader === 'function') {
-                console.warn('⚠️ UserAvatarLoader not found - creating new instance');
-                window.userAvatarLoader = new window.UserAvatarLoader();
-            } else {
-                console.warn('⚠️ UserAvatarLoader constructor not available; skipping 3D mascot init');
-                // Skip avatar init entirely; quiz should still run.
-                window.userAvatarLoader = null;
-            }
+        setOverlay(true, 'Loading avatar system…');
+
+        // Ensure constructors are present (deferred scripts should load before DOMContentLoaded, but be resilient)
+        if (typeof window.UserAvatarLoader !== 'function') {
+            await waitFor(() => typeof window.UserAvatarLoader === 'function', 4500);
+        }
+        if (typeof window.SmartyBee3D !== 'function') {
+            await waitFor(() => typeof window.SmartyBee3D === 'function', 4500);
         }
 
-        if (!window.userAvatarLoader) {
-            // Nothing else to do; keep the quiz functional even without 3D.
-            debugLog('ℹ️ Skipping mascot/avatar init (no UserAvatarLoader available)');
+        // Ensure loader instance exists
+        if (!window.userAvatarLoader && typeof window.UserAvatarLoader === 'function') {
+            window.userAvatarLoader = new window.UserAvatarLoader();
+        }
+
+        if (!window.userAvatarLoader || typeof window.userAvatarLoader.init !== 'function') {
+            console.warn('⚠️ UserAvatarLoader unavailable; using static mascot fallback');
+            setFallbackMascotImage();
         } else {
-        
-        // Wait for avatar loader to fetch user's avatar
-        debugLog('🔄 Fetching user avatar from API...');
-        await window.userAvatarLoader.init();
-        
-        // Get avatar options from loader
-        const avatarOptions = window.userAvatarLoader.getAvatarOptions({
-            width: 180,
-            height: 180,
-            autoRotate: true,
-            enableInteraction: true
-        });
-        
-    // IMPORTANT: grab the avatar id AFTER init() so we don't use a stale default
-    // (MascotBee) for logs/effects when the registered avatar is actually different.
-    const avatarId = window.userAvatarLoader.getAvatarId();
-    debugLog(`✅ Avatar options retrieved: ${avatarId}`, avatarOptions);
-        
-        // Render into mascot container using userAvatarLoader
-        // CRITICAL FIX: Pass null as avatarId (first param) to use user's registered avatar
-        // Second param is the containerId
-        await window.userAvatarLoader.loadUserAvatar(null, 'mascotBee3D');
-        
-    // Re-read post-render to keep effects/labels aligned with what actually loaded.
-    const resolvedAvatarId = window.userAvatarLoader.getAvatarId();
-    debugLog(`✨ 3D mascot successfully initialized with avatar: ${resolvedAvatarId}`);
-        
-        // Add click handler for themed animation
-        const mascotContainer = document.getElementById('mascotBee3D');
-        if (mascotContainer) {
-            mascotContainer.style.cursor = 'pointer';
-            mascotContainer.addEventListener('click', () => {
-                debugLog('🐝 Quiz mascot clicked - playing themed animation');
-                playThemedAvatarEffect(resolvedAvatarId, mascotContainer);
-            });
+            setOverlay(true, 'Fetching your avatar…');
+            // Time-box init so we never hang the quiz
+            await Promise.race([
+                window.userAvatarLoader.init(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('avatar init timeout')), 8000))
+            ]);
+
+            setOverlay(true, 'Loading your 3D mascot…');
+            await Promise.race([
+                window.userAvatarLoader.loadUserAvatar(null, 'mascotBee3D'),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('avatar load timeout')), 12000))
+            ]);
+
+            // If the 3D path failed silently, ensure at least 2D exists.
+            try {
+                const container = document.getElementById('mascotBee3D');
+                if (container && container.childElementCount === 0) {
+                    await window.userAvatarLoader.load2DFallback('mascotBee3D');
+                }
+            } catch (_e) {}
         }
-        }
-    } catch (error) {
-        console.error('❌ 3D mascot failed to load:', error);
-        console.error('Error details:', error.message, error.stack);
-        // CRITICAL FIX: Load mascot-bee as fallback instead of showing nothing
+
+        // Add click handler for themed animation (works for both 3D + 2D)
         try {
-            debugLog('🔄 Attempting 2D fallback...');
-            if (window.userAvatarLoader) {
-                await window.userAvatarLoader.load2DFallback('mascotBee3D');
-                debugLog('✅ 2D fallback loaded successfully');
+            const mascotContainer = document.getElementById('mascotBee3D');
+            if (mascotContainer) {
+                mascotContainer.style.cursor = 'pointer';
+                mascotContainer.addEventListener('click', () => {
+                    const id = (window.userAvatarLoader && window.userAvatarLoader.getAvatarId) ? window.userAvatarLoader.getAvatarId() : 'mascot-bee';
+                    debugLog('🐝 Quiz mascot clicked - playing themed animation');
+                    playThemedAvatarEffect(id, mascotContainer);
+                });
             }
-        } catch (fallbackError) {
-            console.error('❌ Fallback avatar also failed:', fallbackError);
+        } catch (_e) {}
+    } catch (error) {
+        console.error('❌ Mascot/avatar preload failed:', error);
+        // Always show *something* and continue
+        try {
+            if (window.userAvatarLoader && window.userAvatarLoader.load2DFallback) {
+                await window.userAvatarLoader.load2DFallback('mascotBee3D');
+            } else {
+                setFallbackMascotImage();
+            }
+        } catch (_e) {
+            setFallbackMascotImage();
         }
+    } finally {
+        setOverlay(false, 'Ready');
     }
 
     // Resume/start-over modal for unfinished quizzes
