@@ -10150,8 +10150,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Bee swarm and hive removed - too distracting during quiz
     // Only keep the 3D mascot bee for companionship
     
-    // Initialize mascot avatar BEFORE quiz start (hard gate)
+    // Initialize mascot avatar - quiz can start after 50% loaded
     let smartyBee = null;
+    let avatarLoadProgress = 0;
+    let quizStartTriggered = false;
     const overlay = document.getElementById('preQuizLoadOverlay');
     const overlayStatus = document.getElementById('preQuizLoadStatus');
     const setOverlay = (on, msg) => {
@@ -10166,6 +10168,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (overlayStatus && typeof msg === 'string') overlayStatus.textContent = msg;
         } catch (_e) {
             console.error('⚠️ Error setting overlay:', _e);
+        }
+    };
+    const updateAvatarProgress = (percent, msg) => {
+        avatarLoadProgress = percent;
+        if (msg) {
+            setOverlay(true, `${msg} (${Math.round(percent)}%)`);
+        }
+        // Start quiz when avatar reaches 50%
+        if (percent >= 50 && !quizStartTriggered) {
+            quizStartTriggered = true;
+            console.log('✅ Avatar at 50% - allowing quiz to start while avatar completes loading');
+            setOverlay(false, 'Quiz starting...');
         }
     };
     const setFallbackMascotImage = () => {
@@ -10204,18 +10218,69 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!window.userAvatarLoader || typeof window.userAvatarLoader.init !== 'function') {
             console.warn('⚠️ UserAvatarLoader unavailable; using static mascot fallback');
             setFallbackMascotImage();
+            updateAvatarProgress(100, 'Using fallback avatar');
         } else {
-            setOverlay(true, 'Fetching your avatar…');
+            updateAvatarProgress(5, 'Initializing avatar system…');
             // Time-box init so we never hang the quiz
             await Promise.race([
                 window.userAvatarLoader.init(),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('avatar init timeout')), 8000))
             ]);
 
-            setOverlay(true, 'Loading your 3D mascot…');
+            updateAvatarProgress(20, 'Fetching your avatar…');
+            
+            // Start loading avatar (non-blocking - will continue in background after 50%)
+            const avatarLoadPromise = window.userAvatarLoader.loadUserAvatar(null, 'mascotBee3D');
+            
+            // Monitor GLB loading progress by intercepting console logs
+            const originalConsoleLog = console.log;
+            let glbProgressStart = 20; // GLB loading starts at 20% total
+            let glbProgressMax = 80; // GLB loading completes at 80% total
+            
+            // Override console.log temporarily to catch GLB progress
+            console.log = function(...args) {
+                originalConsoleLog.apply(console, args);
+                const msg = args.join(' ');
+                // Match: "Loading GLB model: 45%"
+                const glbMatch = msg.match(/Loading GLB model:\s*(\d+)%/);
+                if (glbMatch) {
+                    const glbPercent = parseInt(glbMatch[1], 10);
+                    // Map GLB 0-100% to overall 20-80%
+                    const overallPercent = glbProgressStart + (glbPercent / 100) * (glbProgressMax - glbProgressStart);
+                    updateAvatarProgress(overallPercent, 'Loading your 3D mascot…');
+                }
+            };
+            
+            // Wait for avatar to reach at least 50%, or timeout
+            const minProgressPromise = new Promise((resolve) => {
+                const checkInterval = setInterval(() => {
+                    if (avatarLoadProgress >= 50 || quizStartTriggered) {
+                        clearInterval(checkInterval);
+                        console.log = originalConsoleLog; // Restore console.log
+                        resolve();
+                    }
+                }, 100);
+                // Safety timeout: if we don't hit 50% in 8 seconds, proceed anyway
+                setTimeout(() => {
+                    clearInterval(checkInterval);
+                    console.log = originalConsoleLog;
+                    if (avatarLoadProgress < 50) {
+                        updateAvatarProgress(50, 'Loading…');
+                    }
+                    resolve();
+                }, 8000);
+            });
+            
+            // Wait for minimum progress OR full load (whichever comes first)
             await Promise.race([
-                window.userAvatarLoader.loadUserAvatar(null, 'mascotBee3D'),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('avatar load timeout')), 12000))
+                minProgressPromise,
+                Promise.race([
+                    avatarLoadPromise,
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('avatar load timeout')), 12000))
+                ]).then(() => {
+                    console.log = originalConsoleLog; // Restore on full load
+                    updateAvatarProgress(100, 'Avatar ready');
+                })
             ]);
 
             // If the 3D path failed silently, ensure at least 2D exists.
