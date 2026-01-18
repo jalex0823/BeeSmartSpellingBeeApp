@@ -83,14 +83,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     setupSearchFilter();
     setupBundleShop();
 
-    // Safety: hide loading overlay after 10s even if some thumbnails stall
+    // Safety: hide loading overlay after 15s even if some thumbnails stall
+    // Also force-complete any remaining pending thumbnails
     setTimeout(() => {
         const overlay = document.getElementById('avatar-loading-overlay');
         if (overlay && !overlay.classList.contains('hidden')) {
-            console.warn('⚠️ Hiding loading overlay due to timeout safeguard');
-            overlay.classList.add('hidden');
+            // Force-complete any remaining pending thumbnails
+            if (pendingThumbnails.size > 0) {
+                console.warn(`⚠️ Timeout: Force-completing ${pendingThumbnails.size} pending thumbnail(s)`);
+                const pendingCount = pendingThumbnails.size;
+                pendingThumbnails.clear();
+                failedThumbnails += pendingCount;
+            }
+            console.warn('⚠️ Hiding loading overlay due to timeout safeguard (15s)');
+            updateLoadingProgress(); // Trigger final check
+            // Force hide if still visible after update
+            setTimeout(() => {
+                if (overlay && !overlay.classList.contains('hidden')) {
+                    overlay.classList.add('hidden');
+                    overlay.style.display = 'none';
+                }
+            }, 100);
         }
-    }, 10000);
+    }, 15000);
 });
 
 // Verify user authentication before loading avatars
@@ -254,12 +269,17 @@ function updateLoadingProgress(customMessage = null) {
     console.log(`📊 Loading Progress: ${percentage}% (${loadedThumbnails}/${totalThumbnails})`);
     
     // Hide overlay when complete (all thumbnails loaded OR failed)
-    const completedThumbnails = loadedThumbnails + failedThumbnails;
-    if (completedThumbnails >= totalThumbnails && totalThumbnails > 0) {
+    // Note: completedThumbnails already calculated on line 225
+    
+    // Check completion: either all thumbnails processed OR no pending thumbnails remaining
+    const allProcessed = (completedThumbnails >= totalThumbnails && totalThumbnails > 0) || (totalThumbnails === 0);
+    const noPending = pendingThumbnails.size === 0;
+    
+    if (allProcessed && noPending) {
         if (failedThumbnails > 0) {
             console.warn(`⚠️ ${failedThumbnails} thumbnail(s) failed to load, but proceeding...`);
         }
-        console.log(`✅ All thumbnails processed (${loadedThumbnails} loaded, ${failedThumbnails} failed)! Hiding overlay...`);
+        console.log(`✅ All thumbnails processed (${loadedThumbnails} loaded, ${failedThumbnails} failed, ${pendingThumbnails.size} pending)! Hiding overlay...`);
         setTimeout(() => {
             const overlay = document.getElementById('avatar-loading-overlay');
             if (overlay) {
@@ -272,6 +292,9 @@ function updateLoadingProgress(customMessage = null) {
                 }, 500);
             }
         }, 800); // Give users time to see "All Bees Ready!" message
+    } else if (allProcessed && !noPending) {
+        // Log warning if we have completed count but pending set isn't empty (sync issue)
+        console.warn(`⚠️ Loading progress mismatch: completed=${completedThumbnails}/${totalThumbnails}, but pending=${pendingThumbnails.size} thumbnails still in pending set`);
     }
 }
 
