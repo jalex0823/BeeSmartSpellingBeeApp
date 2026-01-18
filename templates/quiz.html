@@ -10215,19 +10215,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.userAvatarLoader = new window.UserAvatarLoader();
         }
 
-        if (!window.userAvatarLoader || typeof window.userAvatarLoader.init !== 'function') {
+        if (!window.userAvatarLoader || typeof window.userAvatarLoader.loadUserAvatar !== 'function') {
             console.warn('⚠️ UserAvatarLoader unavailable; using static mascot fallback');
             setFallbackMascotImage();
             updateAvatarProgress(100, 'Using fallback avatar');
         } else {
-            updateAvatarProgress(5, 'Initializing avatar system…');
-            // Time-box init so we never hang the quiz
-            await Promise.race([
-                window.userAvatarLoader.init(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('avatar init timeout')), 8000))
-            ]);
+            // Skip catalog loading - only fetch user's avatar directly
+            // This is faster than init() which counts entire catalog
+            updateAvatarProgress(10, 'Fetching your avatar…');
+            
+            // Fetch user avatar data directly (skip catalog counting in init())
+            if (!window.userAvatarLoader.userAvatar) {
+                try {
+                    const cacheBuster = Date.now();
+                    const response = await fetch(`/api/users/me/avatar?_=${cacheBuster}`, {
+                        credentials: 'same-origin',
+                        cache: 'no-store'
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.status === 'success' && data.avatar) {
+                            window.userAvatarLoader.userAvatar = data.avatar;
+                            window.userAvatarLoader.userAvatarValid = true;
+                            console.log('✅ User avatar data fetched');
+                        }
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Avatar fetch failed, will use default:', e);
+                }
+            }
 
-            updateAvatarProgress(20, 'Fetching your avatar…');
+            updateAvatarProgress(20, 'Loading your 3D mascot…');
             
             // Start loading avatar (non-blocking - will continue in background after 50%)
             const avatarLoadPromise = window.userAvatarLoader.loadUserAvatar(null, 'mascotBee3D');
