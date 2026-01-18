@@ -10156,9 +10156,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const overlayStatus = document.getElementById('preQuizLoadStatus');
     const setOverlay = (on, msg) => {
         try {
-            if (overlay) overlay.style.display = on ? 'flex' : 'none';
+            if (overlay) {
+                overlay.style.display = on ? 'flex' : 'none';
+                overlay.style.pointerEvents = on ? 'auto' : 'none';
+                if (!on) {
+                    console.log('✅ Pre-quiz overlay hidden - quiz can now start');
+                }
+            }
             if (overlayStatus && typeof msg === 'string') overlayStatus.textContent = msg;
-        } catch (_e) {}
+        } catch (_e) {
+            console.error('⚠️ Error setting overlay:', _e);
+        }
     };
     const setFallbackMascotImage = () => {
         try {
@@ -10539,6 +10547,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const startMode = (action === 'resume') ? 'resume' : 'normal';
+            
+            // CRITICAL: Ensure pre-quiz overlay is hidden before creating QuizManager
+            // This prevents the overlay from blocking quiz interaction
+            const preQuizOverlay = document.getElementById('preQuizLoadOverlay');
+            if (preQuizOverlay) {
+                preQuizOverlay.style.display = 'none';
+                preQuizOverlay.style.pointerEvents = 'none';
+                console.log('✅ Pre-quiz overlay forced hidden before QuizManager creation');
+            }
             
             // 🛡️ Prevent creating multiple QuizManager instances
             if (window.quizManager) {
