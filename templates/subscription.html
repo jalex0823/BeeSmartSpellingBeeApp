@@ -456,6 +456,17 @@
             <div class="emoji">🐝</div>
             <h1>BeeSmart Premium</h1>
             <p>Unlock unlimited spelling practice and all 39 bee avatars!</p>
+            <div id="subscription-status" style="
+                margin: 14px auto 0;
+                max-width: 640px;
+                background: rgba(255, 255, 255, 0.22);
+                border: 1px solid rgba(255, 255, 255, 0.35);
+                color: #ffffff;
+                padding: 10px 14px;
+                border-radius: 14px;
+                font-weight: 700;
+                text-shadow: 0 2px 10px rgba(0,0,0,0.20);
+            ">Checking Premium status…</div>
         </div>
 
         <!-- Pricing Cards -->
@@ -485,7 +496,7 @@
                     <li>Monthly content updates</li>
                 </ul>
 
-                <button class="cta-button" onclick="subscribe('monthly')">Start Monthly</button>
+                <button class="cta-button" id="subscribeMonthlyBtn" type="button">Start Monthly</button>
             </div>
         </div>
 
@@ -587,6 +598,17 @@
     </div>
 
     <script>
+        // -------- Premium UI state (single source of truth) --------
+        // We keep a durable in-page state so the button can be synchronously
+        // blocked (no awaits) before invoking StoreKit purchase.
+        window.__beesmartPremiumState = window.__beesmartPremiumState || {
+            active: false,
+            source: 'unknown',
+            owned: [],
+            premium_expires_at: null
+        };
+        window.__beesmartPurchaseInFlight = window.__beesmartPurchaseInFlight || false;
+
         // Lightweight fairy-dust animation (no dependencies)
         (function () {
             const canvas = document.getElementById('fairy-dust');
@@ -762,6 +784,104 @@
             return new Promise((resolve) => setTimeout(resolve, ms));
         }
 
+        function _parseDateMs(v) {
+            try {
+                if (!v) return null;
+                if (typeof v === 'number' && isFinite(v)) return v;
+                const s = String(v);
+                const ms = Date.parse(s);
+                return isFinite(ms) ? ms : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function _normalizeOwnedList(ent) {
+            try {
+                if (!ent || typeof ent !== 'object') return [];
+                if (Array.isArray(ent.owned_products)) return ent.owned_products;
+                if (Array.isArray(ent.anon_owned_products)) return ent.anon_owned_products;
+                if (Array.isArray(ent.products)) return ent.products;
+                return [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function _isPremiumActiveFromEntitlements(ent) {
+            try {
+                if (!ent || typeof ent !== 'object') return false;
+                // Prefer explicit flags
+                if (ent.premium_member === true) return true;
+                if (ent.subscription_active === true) return true;
+                // Expiry-based flags (accept a few legacy keys)
+                const exp = _parseDateMs(ent.premium_expires_at || ent.premium_until || ent.subscription_expires_at || ent.expires_at);
+                if (exp && exp > Date.now()) return true;
+                // Fallback: match against known product IDs
+                const PRODUCT_IDS = {{ (subscription_product_ids or {}) | tojson }};
+                const monthlyPid = (PRODUCT_IDS && PRODUCT_IDS.monthly) ? String(PRODUCT_IDS.monthly) : 'com.beesmart.premium.monthly';
+                const owned = _normalizeOwnedList(ent);
+                return Array.isArray(owned) && owned.some((x) => String(x || '') === monthlyPid);
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function _setPrimaryCtaState(opts) {
+            opts = opts || {};
+            const btn = document.getElementById('subscribeMonthlyBtn');
+            if (!btn) return;
+            if (opts.label != null) btn.textContent = String(opts.label);
+            if (opts.disabled === true) {
+                btn.disabled = true;
+                btn.style.cursor = 'default';
+            } else if (opts.disabled === false) {
+                btn.disabled = false;
+                btn.style.cursor = 'pointer';
+            }
+            if (opts.variant === 'active') {
+                btn.style.background = '#4CAF50';
+            } else if (opts.variant === 'loading') {
+                btn.style.background = 'linear-gradient(135deg, #F59E0B, #D97706)';
+            } else {
+                btn.style.background = 'linear-gradient(135deg, #FFB300, #FF8F00)';
+            }
+        }
+
+        function _renderPremiumStatusLine() {
+            const el = document.getElementById('subscription-status');
+            if (!el) return;
+
+            // Guests should never see "active" (account-based display).
+            if (window.IS_REAL_AUTH !== true) {
+                el.textContent = 'Sign in to see your Premium status.';
+                return;
+            }
+            if (window.__beesmartPremiumState && window.__beesmartPremiumState.active) {
+                const exp = window.__beesmartPremiumState.premium_expires_at;
+                const expMs = _parseDateMs(exp);
+                const expText = expMs ? (' (until ' + new Date(expMs).toLocaleDateString() + ')') : '';
+                el.textContent = '✅ Premium Active' + expText;
+            } else {
+                el.textContent = 'Premium not active.';
+            }
+        }
+
+        function _applyPremiumUiState() {
+            _renderPremiumStatusLine();
+            if (window.IS_REAL_AUTH !== true) {
+                // Guests can still purchase, but we don't display account status as "active".
+                _setPrimaryCtaState({ disabled: false, label: 'Start Monthly', variant: 'default' });
+                return;
+            }
+            if (window.__beesmartPremiumState && window.__beesmartPremiumState.active) {
+                // IMPORTANT: Disable purchase to prevent duplicate charges.
+                _setPrimaryCtaState({ disabled: true, label: '✓ Premium Active', variant: 'active' });
+                return;
+            }
+            _setPrimaryCtaState({ disabled: false, label: 'Start Monthly', variant: 'default' });
+        }
+
         // Keep subscription UI in sync with server-side entitlements (cookie + DB-backed guest restore).
         // This is critical for TestFlight where the native bridge can appear late.
         async function reconcileAndRefreshSubscriptionUI(reason) {
@@ -779,11 +899,13 @@
                     const subBtn = document.getElementById('subscribeMonthlyBtn');
                     if (subBtn) {
                         subBtn.disabled = false;
-                        // Restore original label if it had been swapped
-                        if (String(subBtn.textContent || '').toLowerCase().includes('premium active')) {
-                            subBtn.textContent = 'Subscribe Now';
-                        }
+                        subBtn.textContent = 'Start Monthly';
                     }
+                    // Never paint as active while logged-out
+                    try {
+                        window.__beesmartPremiumState.active = false;
+                        window.__beesmartPremiumState.source = 'not_authenticated';
+                    } catch (e) { /* ignore */ }
                     return null;
                 }
 
@@ -799,27 +921,33 @@
                 // Best-effort: if premium is active, swap the CTA to "Active".
                 // We keep this defensive because templates vary across builds.
                 const ent = (data && (data.entitlements || data)) || {};
-                const owned = (ent && ent.anon_owned_products) ? ent.anon_owned_products : [];
-                const looksPremium = Array.isArray(owned) && owned.some((x) => String(x || '').toLowerCase().includes('premium'));
+                const owned = _normalizeOwnedList(ent);
+                const looksPremium = _isPremiumActiveFromEntitlements(ent);
 
                 const statusEl = document.getElementById('subscription-status');
                 if (statusEl) {
                     statusEl.textContent = looksPremium
-                        ? '✅ Premium is active on this device.'
+                        ? '✅ Premium is active.'
                         : 'Premium is not active yet.';
                 }
 
-                // If there is an explicit subscribe button, disable it when premium is active.
-                const subBtn = document.getElementById('subscribeMonthlyBtn');
-                if (subBtn && looksPremium) {
-                    subBtn.disabled = true;
-                    subBtn.textContent = 'Premium Active';
-                }
+                try {
+                    window.__beesmartPremiumState.active = !!looksPremium;
+                    window.__beesmartPremiumState.source = 'server_reconcile';
+                    window.__beesmartPremiumState.owned = Array.isArray(owned) ? owned : [];
+                    window.__beesmartPremiumState.premium_expires_at = ent.premium_expires_at || ent.premium_until || ent.subscription_expires_at || null;
+                } catch (e) { /* ignore */ }
+
+                _applyPremiumUiState();
 
                 // Keep production console clean: no IAP diagnostics on customer-facing screens.
                 return data;
             } catch (e) {
                 // Silent (best-effort). UI is still usable even if reconcile fails.
+                try {
+                    window.__beesmartPremiumState.source = 'server_reconcile_error';
+                } catch (e2) { /* ignore */ }
+                _applyPremiumUiState();
                 return null;
             }
         }
@@ -880,6 +1008,12 @@
                     restoreBtn.disabled = true;
                 }
 
+                // Show a dedicated "Restoring…" dialog with Cancel.
+                // NOTE: We cannot cancel the OS-level restore, but Cancel must immediately
+                // exit *our* restore UI flow and return control to the user.
+                const cancelToken = { cancelled: false };
+                const progressUi = showRestoreProgressDialog(cancelToken);
+
                 const _extractEntitlements = (payload) => {
                     if (!payload) return {};
                     // native-iap-bridge.js restore() returns { restore, reconcile, unsupported }
@@ -913,9 +1047,20 @@
                 };
                 await _tryWaitBridge();
 
+                if (cancelToken.cancelled) {
+                    try { progressUi && progressUi.close && progressUi.close(); } catch (e) {}
+                    if (restoreBtn) {
+                        restoreBtn.style.background = 'rgba(0,0,0,0.12)';
+                        restoreBtn.textContent = 'Restore Purchases';
+                        restoreBtn.disabled = false;
+                    }
+                    return;
+                }
+
                 // If we don't have the native bridge, we cannot trigger Apple's restore/sync.
                 // We still do a server reconcile (guest-friendly), but messaging must be honest.
                 if (!(window.BeeSmartIAP && (typeof window.BeeSmartIAP.restore === 'function' || typeof window.BeeSmartIAP.reconcile === 'function' || typeof window.BeeSmartIAP.getOwnedProducts === 'function'))) {
+                    try { progressUi && progressUi.close && progressUi.close(); } catch (e) {}
                     if (restoreBtn) {
                         restoreBtn.style.background = 'rgba(0,0,0,0.12)';
                         restoreBtn.textContent = 'Restore Purchases';
@@ -1018,6 +1163,16 @@
                     reconcilePayload = await resp.json().catch(() => null);
                 }
 
+                if (cancelToken.cancelled) {
+                    try { progressUi && progressUi.close && progressUi.close(); } catch (e) {}
+                    if (restoreBtn) {
+                        restoreBtn.style.background = 'rgba(0,0,0,0.12)';
+                        restoreBtn.textContent = 'Restore Purchases';
+                        restoreBtn.disabled = false;
+                    }
+                    return;
+                }
+
                 const ent = _extractEntitlements(reconcilePayload);
                 const premium = _isPremiumish(ent);
                 const owned = _ownedList(ent);
@@ -1033,6 +1188,8 @@
                     restoreBtn.textContent = 'Restore Purchases';
                     restoreBtn.disabled = false;
                 }
+
+                try { progressUi && progressUi.close && progressUi.close(); } catch (e) {}
 
                 // If not logged in, do not apply subscription entitlements here.
                 // Be explicit about the next step to satisfy "restore before login" user flows.
@@ -1063,6 +1220,14 @@
                     // Instead, reconcile entitlements + update the UI in-place.
                     try { await reconcileAndRefreshSubscriptionUI('restore_success'); } catch (e) {}
                     try {
+                        const ent2 = (reconcilePayload && (reconcilePayload.entitlements || reconcilePayload)) || {};
+                        window.__beesmartPremiumState.active = _isPremiumActiveFromEntitlements(ent2) || premium;
+                        window.__beesmartPremiumState.source = 'restore_success';
+                        window.__beesmartPremiumState.owned = _normalizeOwnedList(ent2);
+                        window.__beesmartPremiumState.premium_expires_at = ent2.premium_expires_at || ent2.premium_until || ent2.subscription_expires_at || null;
+                    } catch (e2) { /* ignore */ }
+                    _applyPremiumUiState();
+                    try {
                         window.dispatchEvent(new CustomEvent('beesmart:iap-reconciled', {
                             detail: { ok: true, reason: 'subscription_restore_success', data: reconcilePayload }
                         }));
@@ -1084,6 +1249,73 @@
                 }
                 showRestoreDialog('Error', 'Restore could not be completed. Please check your connection and try again.', false);
             }
+        }
+
+        function showRestoreProgressDialog(cancelToken) {
+            // Cancel must immediately close *our* restore UI flow and return control to user.
+            // It does not cancel Apple's restore operation; we simply ignore results after cancel.
+            const existing = document.querySelector('.restore-progress-overlay');
+            if (existing) try { existing.remove(); } catch (e) {}
+
+            const overlay = document.createElement('div');
+            overlay.className = 'restore-progress-overlay';
+            overlay.style.cssText = [
+                'position:fixed',
+                'inset:0',
+                'background:rgba(0,0,0,0.45)',
+                'display:flex',
+                'align-items:center',
+                'justify-content:center',
+                'z-index:10000',
+                'padding:16px'
+            ].join(';');
+
+            const dialog = document.createElement('div');
+            dialog.style.cssText = [
+                'background:#fff',
+                'border-radius:16px',
+                'padding:22px',
+                'max-width:92%',
+                'width:360px',
+                'box-shadow:0 10px 36px rgba(0,0,0,0.28)',
+                'text-align:center'
+            ].join(';');
+
+            dialog.innerHTML = `
+                <div style="font-size:2.2rem;margin-bottom:10px;">🔄</div>
+                <div style="font-size:1.15rem;font-weight:900;color:#111827;margin-bottom:8px;">Restoring purchases…</div>
+                <div style="font-size:0.95rem;color:#4B5563;line-height:1.45;margin-bottom:16px;">
+                    If iOS needs it, it may prompt for your Apple ID. You can cancel this screen at any time.
+                </div>
+                <button type="button" id="restoreProgressCancelBtn" style="
+                    width:100%;
+                    border:none;
+                    border-radius:12px;
+                    padding:12px 14px;
+                    font-size:1rem;
+                    font-weight:800;
+                    cursor:pointer;
+                    background:linear-gradient(135deg,#E5E7EB,#D1D5DB);
+                    color:#111827;
+                ">Cancel</button>
+            `;
+
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+
+            const cancelBtn = dialog.querySelector('#restoreProgressCancelBtn');
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', function () {
+                    try { cancelToken.cancelled = true; } catch (e) {}
+                    try { overlay.remove(); } catch (e) {}
+                });
+            }
+
+            return {
+                close: function () {
+                    try { overlay.remove(); } catch (e) {}
+                }
+            };
         }
 
 function showRestoreDialog(title, message, isSuccess) {
@@ -1353,32 +1585,21 @@ function showRestoreDialog(title, message, isSuccess) {
         })();
 
         async function subscribe(plan) {
-            // First check if there's an existing subscription.
-            // If status is unknown/loading, do a quick server reconcile before we show
-            // any "No Subscription Found" messaging.
-            const subscriptionStatus = await checkExistingSubscription();
-
-            if (subscriptionStatus && subscriptionStatus.hasSubscription === true) {
-                showSubscriptionActiveDialog(subscriptionStatus.products);
-                return;
-            }
-
-            if (subscriptionStatus && subscriptionStatus.hasSubscription == null) {
-                // Try to self-heal: reconcile with the server which knows anon cookie + DB.
-                const rec = await reconcileAndRefreshSubscriptionUI('subscribe_preflight');
-                const ent = (rec && (rec.entitlements || rec)) || {};
-                const owned = (ent && ent.anon_owned_products) ? ent.anon_owned_products : [];
-                const looksPremium = Array.isArray(owned) && owned.some((x) => String(x || '').toLowerCase().includes('premium'));
-                if (looksPremium) {
-                    showSubscriptionActiveDialog(owned);
-                    return;
-                }
-            }
-
             // Use server-provided App Store Connect product IDs (source of truth).
             // Fallbacks are intentionally conservative.
             const PRODUCT_IDS = {{ (subscription_product_ids or {}) | tojson }};
             const productId = (PRODUCT_IDS && PRODUCT_IDS[plan]) ? PRODUCT_IDS[plan] : 'com.beesmart.premium.monthly';
+
+            // Synchronous guard: prevent duplicate purchases.
+            // This avoids "infinite purchase attempts" when premium is already active.
+            try {
+                if (window.IS_REAL_AUTH === true && window.__beesmartPremiumState && window.__beesmartPremiumState.active) {
+                    showSubscriptionActiveDialog(window.__beesmartPremiumState.owned || [productId]);
+                    return;
+                }
+            } catch (e) { /* ignore */ }
+
+            if (window.__beesmartPurchaseInFlight) return;
 
             // Apple requirement: subscription is tied to Apple ID, not BeeSmart email.
             // We allow purchase initiation even when logged out, but we do not apply
@@ -1392,51 +1613,84 @@ function showRestoreDialog(title, message, isSuccess) {
             }
 
             // Prefer the unified BeeSmartIAP bridge (Capacitor native plugin).
-            // Wait briefly for the bridge if we're in a native context; this reduces
-            // TestFlight false "web" fallback.
-            await _waitForIAPBridge(2000);
-
-            if (window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') {
-                Promise.resolve(window.BeeSmartIAP.purchase(productId))
-                    .then(async () => {
-                        // Purchase complete — reconcile and refresh UI.
-                        try { await reconcileAndRefreshSubscriptionUI('purchase_success'); } catch (e) {}
-
-                        // Apple Guideline 5.1.1: Registration is optional after purchase
-                        // Purchase is complete and active on this device via Apple ID
-                        // We suggest (but don't require) registration for cross-device access
-                        if (!window.IS_REAL_AUTH) {
-                            try {
-                                await showRestoreDialog(
-                                    'Purchase Complete! 🎉',
-                                    'Your subscription is now active on this device. To access your subscription on all your devices, you can register a free BeeSmart account (optional).',
-                                    true
-                                );
-                            } catch (e) {
-                                alert('Purchase complete! Your subscription is active. Register (optional) to access on all devices.');
-                            }
-                            // Don't force redirect - let user continue using the app
-                            // They can register later if they want cross-device access
-                            return;
-                        }
-
-                        // Authenticated: allow normal post-purchase routing.
-                        alert('Purchase complete!');
-                        try { window.location.href = '/app'; } catch (e) {}
-                    })
-                    .catch((e) => {
-                        // If the user already has an active subscription (common in App Review scenarios),
-                        // Apple/StoreKit may prevent repurchase. In that case, guide them to sign in so the
-                        // app can apply the existing Apple ID subscription to their BeeSmart account.
-                        // Apple Guideline 5.1.1: Don't require registration
-                        const msg = (!window.IS_REAL_AUTH)
-                            ? 'If you already have an active subscription on this Apple ID, you can try Restore Purchases. Registration is optional for cross-device access.'
-                            : 'Purchase could not be completed. Please try again.';
-                        alert(msg);
-                        // Don't force redirect to login - allow user to continue
-                    });
+            // IMPORTANT: To keep the Apple purchase sheet presentation reliable,
+            // do not await arbitrary preflight calls before invoking purchase.
+            if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function')) {
+                alert('Store is still loading. Please wait a moment and tap Start Monthly again.');
+                try { reconcileAndRefreshSubscriptionUI('purchase_bridge_missing'); } catch (e) {}
                 return;
             }
+
+            window.__beesmartPurchaseInFlight = true;
+            _setPrimaryCtaState({ disabled: true, label: 'Opening App Store…', variant: 'loading' });
+
+            try {
+                const result = await Promise.resolve(window.BeeSmartIAP.purchase(productId));
+                if (result && (result.cancelled === true)) {
+                    window.__beesmartPurchaseInFlight = false;
+                    _applyPremiumUiState();
+                    return;
+                }
+                if (result && (result.pending === true)) {
+                    // Pending transactions may complete later; keep UI usable.
+                    window.__beesmartPurchaseInFlight = false;
+                    _applyPremiumUiState();
+                    alert('Purchase is pending approval. You can keep using the app; Premium will activate once Apple confirms.');
+                    return;
+                }
+
+                // Purchase complete — reconcile and refresh UI.
+                try {
+                    if (window.BeeSmartIAP && typeof window.BeeSmartIAP.reconcile === 'function') {
+                        await Promise.resolve(window.BeeSmartIAP.reconcile('purchase_post'));
+                    }
+                } catch (e) { /* ignore */ }
+                try { await reconcileAndRefreshSubscriptionUI('purchase_success'); } catch (e) {}
+
+                // If premium is now active for authed users, lock the button immediately.
+                try {
+                    const ent = (await fetch('/api/iap/restore', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ platform: 'web', product_ids: [] })
+                    }).then(r => r.json()).catch(() => null)) || null;
+                    const ent2 = (ent && (ent.entitlements || ent)) || {};
+                    window.__beesmartPremiumState.active = _isPremiumActiveFromEntitlements(ent2);
+                    window.__beesmartPremiumState.source = 'post_purchase_server';
+                    window.__beesmartPremiumState.owned = _normalizeOwnedList(ent2);
+                    window.__beesmartPremiumState.premium_expires_at = ent2.premium_expires_at || ent2.premium_until || ent2.subscription_expires_at || null;
+                } catch (e) { /* ignore */ }
+                _applyPremiumUiState();
+
+                // Apple Guideline 5.1.1: Registration is optional after purchase
+                if (!window.IS_REAL_AUTH) {
+                    try {
+                        await showRestoreDialog(
+                            'Purchase Complete! 🎉',
+                            'Your subscription is now active on this device. To access your subscription on all your devices, you can register a free BeeSmart account (optional).',
+                            true
+                        );
+                    } catch (e) {
+                        alert('Purchase complete! Your subscription is active. Register (optional) to access on all devices.');
+                    }
+                    return;
+                }
+
+                alert('Purchase complete! Premium is active.');
+                try { window.location.href = '/app'; } catch (e) {}
+            } catch (e) {
+                const msg = (!window.IS_REAL_AUTH)
+                    ? 'Purchase could not be completed. If you already subscribed on this Apple ID, try Restore Purchases. Registration is optional for cross-device access.'
+                    : 'Purchase could not be completed. Please try again.';
+                alert(msg);
+                _applyPremiumUiState();
+            } finally {
+                window.__beesmartPurchaseInFlight = false;
+                // Keep active state locked; otherwise allow retry.
+                _applyPremiumUiState();
+            }
+            return;
             
             // Check if running in native app with iOS bridge
             if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.iapBridge) {
@@ -1642,13 +1896,13 @@ function showRestoreDialog(title, message, isSuccess) {
                 if (window.IS_REAL_AUTH !== true) return;
             } catch (e) { return; }
 
-            // Update all CTA buttons to show active status
+            // Update all CTA buttons to show active status (and disable purchase).
             const ctaButtons = document.querySelectorAll('.cta-button');
             ctaButtons.forEach(btn => {
                 btn.textContent = '✓ Active Subscription';
                 btn.style.background = '#4CAF50';
                 btn.style.cursor = 'default';
-                btn.disabled = false; // Keep clickable to show the dialog
+                btn.disabled = true;
             });
 
             // Update pricing cards to show active state
@@ -1679,6 +1933,22 @@ function showRestoreDialog(title, message, isSuccess) {
                 header.appendChild(badge);
             }
         }
+
+        // Wire up the CTA button as a real user gesture handler (better for iOS sheet presentation).
+        window.addEventListener('DOMContentLoaded', function () {
+            try {
+                const btn = document.getElementById('subscribeMonthlyBtn');
+                if (btn && !btn.__beesmartBound) {
+                    btn.__beesmartBound = true;
+                    btn.addEventListener('click', function () {
+                        subscribe('monthly');
+                    });
+                }
+            } catch (e) { /* ignore */ }
+
+            // Ensure initial UI state is coherent even before reconcile returns.
+            try { _applyPremiumUiState(); } catch (e) { /* ignore */ }
+        });
     </script>
 </body>
 </html>

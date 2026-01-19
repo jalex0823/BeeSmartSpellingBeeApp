@@ -46,26 +46,22 @@ public class BeeSmartIAPPlugin: CAPPlugin {
     // App Review expects tapping a distinct "Restore" control to trigger an OS-level restore/sync.
     @objc func restorePurchases(_ call: CAPPluginCall) {
         if #available(iOS 15.0, *) {
-            Task {
+            Task { @MainActor in
                 do {
                     try await AppStore.sync()
-                    await MainActor.run {
-                        // Always resolve success to avoid the web layer treating
-                        // transient StoreKit errors as a "restore did nothing".
-                        // The web layer will reconcile with the server and decide
-                        // whether entitlements can be applied (login-required).
-                        call.resolve(["success": true])
-                    }
+                    // Always resolve success to avoid the web layer treating
+                    // transient StoreKit errors as a "restore did nothing".
+                    // The web layer will reconcile with the server and decide
+                    // whether entitlements can be applied (login-required).
+                    call.resolve(["success": true])
                 } catch {
-                    await MainActor.run {
-                        // IMPORTANT: Still resolve to allow the web layer to continue
-                        // with server reconcile + user-visible guidance.
-                        call.resolve([
-                            "success": false,
-                            "error": "restore_error",
-                            "message": error.localizedDescription
-                        ])
-                    }
+                    // IMPORTANT: Still resolve to allow the web layer to continue
+                    // with server reconcile + user-visible guidance.
+                    call.resolve([
+                        "success": false,
+                        "error": "restore_error",
+                        "message": error.localizedDescription
+                    ])
                 }
             }
         } else {
@@ -122,13 +118,13 @@ public class BeeSmartIAPPlugin: CAPPlugin {
         }
 
         if #available(iOS 15.0, *) {
-            Task {
+            // Presenting the StoreKit purchase sheet is most reliable when executed on the main actor.
+            // This helps prevent intermittent UI presentation issues in WKWebView/Capacitor shells.
+            Task { @MainActor in
                 do {
                     let products = try await Product.products(for: [productId])
                     guard let product = products.first else {
-                        await MainActor.run {
-                            call.reject("product_not_found")
-                        }
+                        call.reject("product_not_found")
                         return
                     }
 
@@ -150,46 +146,34 @@ public class BeeSmartIAPPlugin: CAPPlugin {
                             // Keep the key name stable for the web layer.
                             payload["jws"] = String(data: transaction.jsonRepresentation, encoding: .utf8) ?? ""
 
-                            await MainActor.run {
-                                call.resolve([
-                                    "productId": transaction.productID,
-                                    "transactionId": String(transaction.id),
-                                    "payload": payload
-                                ])
-                            }
+                            call.resolve([
+                                "productId": transaction.productID,
+                                "transactionId": String(transaction.id),
+                                "payload": payload
+                            ])
 
                         case .unverified(_, let error):
-                            await MainActor.run {
-                                call.reject("unverified_transaction: \(error.localizedDescription)")
-                            }
+                            call.reject("unverified_transaction: \(error.localizedDescription)")
                         }
 
                     case .userCancelled:
-                        await MainActor.run {
-                            call.resolve([
-                                "productId": productId,
-                                "cancelled": true
-                            ])
-                        }
+                        call.resolve([
+                            "productId": productId,
+                            "cancelled": true
+                        ])
 
                     case .pending:
-                        await MainActor.run {
-                            call.resolve([
-                                "productId": productId,
-                                "pending": true
-                            ])
-                        }
+                        call.resolve([
+                            "productId": productId,
+                            "pending": true
+                        ])
 
                     @unknown default:
-                        await MainActor.run {
-                            call.reject("purchase_failed")
-                        }
+                        call.reject("purchase_failed")
                     }
 
                 } catch {
-                    await MainActor.run {
-                        call.reject("purchase_error: \(error.localizedDescription)")
-                    }
+                    call.reject("purchase_error: \(error.localizedDescription)")
                 }
             }
         } else {
