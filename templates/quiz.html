@@ -10004,7 +10004,7 @@ console.log('📚 Class definitions check:', {
 </script>
 <script>
 let __liveStatusInterval = null;
-function startLiveStatusPolling(intervalMs = 5000) {
+function startLiveStatusPolling(intervalMs = 15000) {
     if (__liveStatusInterval) return;
     const jitter = Math.floor(Math.random() * 750); // reduce thundering herd
     __liveStatusInterval = setInterval(async () => {
@@ -10062,7 +10062,7 @@ function startLiveStatusPolling(intervalMs = 5000) {
 }
 document.addEventListener('visibilitychange', () => {
     // If tab becomes visible again and polling stopped, restart it
-    if (!document.hidden && !__liveStatusInterval) {
+    if (!document.hidden && !__liveStatusInterval && window.quizManager) {
         startLiveStatusPolling();
     }
 });
@@ -10076,9 +10076,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const debugLog = (...args) => { if (window.DEBUG_MODE) console.log(...args); };
 
     try {
-        // Ensure live-status polling starts even in resume mode.
-        // If polling is already running, startLiveStatusPolling is a no-op.
-        startLiveStatusPolling();
+        // Start live-status polling after QuizManager is created (below).
         // 🎭 MorphController INTENTIONALLY REMOVED (was causing errors)
         // All morph functionality has been disabled throughout the quiz
         debugLog('🎭 Morph controller DISABLED (visualization removed)');

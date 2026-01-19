@@ -861,8 +861,20 @@ if (typeof avatarInitialized === 'undefined') {
     var avatarInitialized = false;
 }
 
+// Only auto-init avatars on pages that use the Honey Loader preboot screen.
+// The quiz page performs its own explicit avatar init and render gating; running
+// the heavy catalog-counting init in the background can cause stutters/freezes.
+function __shouldAutoInitAvatars() {
+    try {
+        return !!document.getElementById('honeyLoader');
+    } catch (_e) {
+        return false;
+    }
+}
+
 // Wait for honey loader to finish
 document.addEventListener('honeyLoaderFinished', () => {
+    if (!__shouldAutoInitAvatars()) return;
     if (!avatarInitialized) {
         console.log('🍯 Honey loader finished, initializing avatars');
         avatarInitialized = true;
@@ -875,6 +887,7 @@ document.addEventListener('honeyLoaderFinished', () => {
 // Fallback timeout
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
+        if (!__shouldAutoInitAvatars()) return;
         if (!avatarInitialized) {
             console.warn('⚠️ Honey loader timeout, initializing anyway');
             avatarInitialized = true;
