@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Account Settings - BeeSmart Spelling</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #FFD54F 0%, #FFA726 100%);
+      min-height: 100vh;
+      padding: 18px;
+      color: #111827;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; }
+    .card {
+      background: rgba(255,255,255,0.95);
+      border-radius: 22px;
+      padding: 22px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+      border: 3px solid rgba(255, 179, 0, 0.25);
+    }
+    .title {
+      font-size: 1.7rem;
+      font-weight: 900;
+      color: #5A2C15;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      font-size: 1rem;
+      color: #6B7280;
+      margin-bottom: 18px;
+      line-height: 1.4;
+    }
+    .section {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 16px;
+      border: 2px solid rgba(17, 24, 39, 0.08);
+      background: rgba(255, 251, 235, 0.7);
+    }
+    .section h2 {
+      font-size: 1.2rem;
+      font-weight: 900;
+      margin-bottom: 8px;
+      color: #111827;
+    }
+    .muted { color: #6B7280; font-size: 0.95rem; line-height: 1.45; }
+    .danger {
+      background: rgba(255, 235, 235, 0.7);
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+    label { display:block; font-weight: 800; margin: 10px 0 6px; }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 2px solid rgba(17, 24, 39, 0.14);
+      outline: none;
+      font-size: 1rem;
+      background: #fff;
+    }
+    input[type="text"]:focus { border-color: rgba(59, 130, 246, 0.55); }
+    .row {
+      display: flex;
+      gap: 12px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      appearance: none;
+      border: none;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+      min-height: 44px;
+      flex: 1 1 220px;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn.primary {
+      background: linear-gradient(135deg, #87CEEB 0%, #4FC3F7 100%);
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(79, 195, 247, 0.35);
+    }
+    .btn.secondary {
+      background: linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%);
+      color: #111827;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    }
+    .btn.danger {
+      background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%);
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35);
+    }
+    .btn[disabled] { opacity: 0.6; cursor: default; }
+    .note {
+      margin-top: 10px;
+      font-size: 0.92rem;
+      color: #6B7280;
+      line-height: 1.45;
+    }
+    .pill {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.12);
+      color: #065F46;
+      font-weight: 800;
+      font-size: 0.9rem;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="title">Settings <span class="pill">Account</span></div>
+      <div class="subtitle">
+        Manage your BeeSmart account. If you delete your account, it is permanent and cannot be undone.
+      </div>
+
+      <div class="section">
+        <h2>Account</h2>
+        <div class="muted">
+          Signed in as <strong>{{ current_user.username }}</strong>.
+        </div>
+      </div>
+
+      <div class="section danger" style="margin-top: 18px;">
+        <h2>Delete Account</h2>
+        <div class="muted">
+          This permanently deletes your BeeSmart account and associated data (quizzes, progress, badges, saved items).
+          You can’t undo this.
+        </div>
+        <div class="note">
+          Important: Deleting your BeeSmart account does <strong>not</strong> cancel an Apple subscription. To cancel, go to
+          iOS Settings → Apple ID → Subscriptions.
+        </div>
+
+        <label for="confirmText">Type <strong>DELETE</strong> to confirm</label>
+        <input id="confirmText" type="text" inputmode="text" autocomplete="off" placeholder="DELETE" />
+
+        <div class="row">
+          <button class="btn secondary" type="button" id="cancelBtn">Back</button>
+          <button class="btn danger" type="button" id="deleteBtn">Delete Account</button>
+        </div>
+        <div class="note" id="statusLine"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+      const cancelBtn = document.getElementById('cancelBtn');
+      const deleteBtn = document.getElementById('deleteBtn');
+      const confirmText = document.getElementById('confirmText');
+      const statusLine = document.getElementById('statusLine');
+      let inFlight = false;
+
+      function setStatus(msg) {
+        if (statusLine) statusLine.textContent = msg || '';
+      }
+      function setBusy(busy) {
+        inFlight = !!busy;
+        if (deleteBtn) deleteBtn.disabled = inFlight;
+        if (cancelBtn) cancelBtn.disabled = inFlight;
+      }
+
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', function () {
+          if (inFlight) return;
+          try { window.location.href = '/app'; } catch (e) {}
+        });
+      }
+
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', async function () {
+          if (inFlight) return;
+          const v = (confirmText && confirmText.value) ? String(confirmText.value).trim() : '';
+          if (v !== 'DELETE') {
+            setStatus('Please type DELETE to confirm.');
+            try { if (confirmText) confirmText.focus(); } catch (e) {}
+            return;
+          }
+
+          setBusy(true);
+          setStatus('Deleting your account…');
+          try {
+            const res = await fetch('/api/account/delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ confirm: 'DELETE' })
+            });
+            const data = await res.json().catch(function () { return {}; });
+            if (!res.ok || !data || data.success !== true) {
+              setBusy(false);
+              setStatus((data && (data.message || data.error)) ? String(data.message || data.error) : 'Delete failed. Please try again.');
+              return;
+            }
+            setStatus('Account deleted. Redirecting…');
+            setTimeout(function () {
+              try { window.location.href = (data && data.redirect) ? data.redirect : '/'; } catch (e) {}
+            }, 600);
+          } catch (e) {
+            setBusy(false);
+            setStatus('Delete failed. Please check your connection and try again.');
+          }
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
+

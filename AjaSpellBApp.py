@@ -1,4 +1,4 @@
-﻿HOME_PREVIEW_ENABLED = True  # feature flag for new honey home page preview
+HOME_PREVIEW_ENABLED = True  # feature flag for new honey home page preview
 # -*- coding: utf-8 -*-
 # Updated: 2025-12-03 - Fixed word_lists.html div structure
 import sys
@@ -16464,6 +16464,159 @@ def subscription_page():
             subscription_product_ids={'monthly': SUBSCRIPTION_PRODUCT_IDS.get('monthly')}
             if IAP_MONTHLY_ONLY else SUBSCRIPTION_PRODUCT_IDS,
         )
+
+@app.route("/settings/account")
+@app.route("/account")
+@login_required
+def account_settings_page():
+    """In-app account settings page (Apple account deletion compliance)."""
+    try:
+        return render_template("account_settings.html", current_user=current_user)
+    except Exception as e:
+        try:
+            app.logger.error(f"account_settings_page error: {e}", exc_info=True)
+        except Exception:
+            pass
+        return (
+            "<html><body><h1>Account Settings</h1>"
+            "<p>We couldn't load the settings page. Please go back and try again.</p>"
+            "<p><a href='/app'>Back to app</a></p>"
+            "</body></html>",
+            200,
+            {"Content-Type": "text/html; charset=utf-8"}
+        )
+
+
+@app.route("/api/account/delete", methods=["POST"])
+@login_required
+def api_delete_account():
+    """Permanently delete the authenticated user's account (Apple requirement)."""
+    data = request.get_json(silent=True) or {}
+    confirm = (data.get("confirm") or "").strip()
+    if confirm != "DELETE":
+        return jsonify({"success": False, "error": "confirmation_required", "message": "Type DELETE to confirm."}), 400
+
+    try:
+        uid = int(getattr(current_user, "id", 0) or 0)
+    except Exception:
+        uid = 0
+    if not uid:
+        return jsonify({"success": False, "error": "not_authenticated"}), 401
+
+    # Log out immediately so the session can't be used again.
+    try:
+        logout_user()
+    except Exception:
+        pass
+
+    def _safe_bulk_delete(model, where_clause):
+        try:
+            db.session.query(model).filter(where_clause).delete(synchronize_session=False)
+            return True
+        except Exception:
+            return False
+
+    try:
+        _ensure_db_initialized()
+        from models import (
+            User,
+            QuizResult,
+            QuizSession,
+            WordMastery,
+            Achievement,
+            PurchaseRecord,
+            PasswordResetToken,
+            SessionLog,
+            TeacherStudent,
+            WordList,
+            WordListItem,
+            ExportRequest,
+            BundleKeyRedemption,
+            BattlePlayer,
+            WordBankStorage,
+            BundleKey,
+            DynamicBundle,
+        )
+
+        # Delete dependent rows first (to satisfy FK constraints).
+        _safe_bulk_delete(QuizResult, QuizResult.user_id == uid)
+        _safe_bulk_delete(QuizSession, QuizSession.user_id == uid)
+        _safe_bulk_delete(WordMastery, WordMastery.user_id == uid)
+        _safe_bulk_delete(Achievement, Achievement.user_id == uid)
+        _safe_bulk_delete(PurchaseRecord, PurchaseRecord.user_id == uid)
+        _safe_bulk_delete(PasswordResetToken, PasswordResetToken.user_id == uid)
+        _safe_bulk_delete(SessionLog, SessionLog.user_id == uid)
+        _safe_bulk_delete(BattlePlayer, BattlePlayer.user_id == uid)
+        _safe_bulk_delete(BundleKeyRedemption, BundleKeyRedemption.user_id == uid)
+
+        _safe_bulk_delete(TeacherStudent, (TeacherStudent.teacher_user_id == uid) | (TeacherStudent.student_id == uid))
+        _safe_bulk_delete(ExportRequest, (ExportRequest.requested_by_user_id == uid) | (ExportRequest.target_user_id == uid))
+
+        # Word lists created by this user: delete items then lists
+        try:
+            wl_ids = [r[0] for r in db.session.query(WordList.id).filter(WordList.created_by_user_id == uid).all()]
+        except Exception:
+            wl_ids = []
+        if wl_ids:
+            try:
+                db.session.query(WordListItem).filter(WordListItem.word_list_id.in_(wl_ids)).delete(synchronize_session=False)
+            except Exception:
+                pass
+            try:
+                db.session.query(WordList).filter(WordList.id.in_(wl_ids)).delete(synchronize_session=False)
+            except Exception:
+                pass
+
+        # Delete wordbanks linked to this user (privacy).
+        try:
+            db.session.query(WordBankStorage).filter(WordBankStorage.user_id == uid).delete(synchronize_session=False)
+        except Exception:
+            pass
+
+        # Clear nullable references on admin-issued bundle keys/bundles.
+        try:
+            db.session.query(BundleKey).filter(BundleKey.issued_by == uid).update({"issued_by": None}, synchronize_session=False)
+        except Exception:
+            pass
+        try:
+            db.session.query(BundleKey).filter(BundleKey.redeemed_by == uid).update({"redeemed_by": None}, synchronize_session=False)
+        except Exception:
+            pass
+        try:
+            db.session.query(DynamicBundle).filter(DynamicBundle.created_by == uid).update({"created_by": None}, synchronize_session=False)
+        except Exception:
+            pass
+
+        u = db.session.query(User).get(uid)
+        if u:
+            db.session.delete(u)
+        db.session.commit()
+
+        try:
+            session.clear()
+        except Exception:
+            pass
+
+        resp = jsonify({"success": True, "redirect": "/"})
+        try:
+            resp.delete_cookie('anon_restore_id')
+            resp.delete_cookie('beesmart_anon_restore_id')
+            resp.delete_cookie('beesmart_install_id')
+            resp.delete_cookie('install_id')
+        except Exception:
+            pass
+        return resp
+    except Exception as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        try:
+            app.logger.error(f"api_delete_account error: {e}", exc_info=True)
+        except Exception:
+            pass
+        return jsonify({"success": False, "error": "server_error", "message": "Could not delete account. Please try again."}), 500
+
 
 @app.route("/api/validate-receipt", methods=["POST"])
 def validate_receipt():
