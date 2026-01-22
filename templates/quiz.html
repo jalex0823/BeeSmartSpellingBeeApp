@@ -3126,7 +3126,19 @@ if ('speechSynthesis' in window) {
 {# Load 3D/avatar scripts needed by the quiz page. #}
 {% block three_js %}
     <!-- Three.js core + loaders (local vendor; avoid CDN + duplicate Three.js warnings) -->
-    <script defer src="{{ url_for('static', filename='js/vendor/three.min.js') }}?v={{ timestamp }}"></script>
+    <!-- Guard against multiple Three.js loads -->
+    <script>
+        // Prevent duplicate Three.js loading
+        if (typeof THREE !== 'undefined') {
+            console.log('✅ Three.js already loaded, skipping duplicate load');
+        } else {
+            // Mark that we're loading Three.js to prevent other scripts from loading it
+            window.__THREE_LOADING = true;
+        }
+    </script>
+    <script defer src="{{ url_for('static', filename='js/vendor/three.min.js') }}?v={{ timestamp }}" 
+            onload="if (window.__THREE_LOADING) { window.__THREE_LOADING = false; console.log('✅ Three.js loaded successfully'); }"
+            onerror="if (window.__THREE_LOADING) { window.__THREE_LOADING = false; console.warn('⚠️ Three.js failed to load'); }"></script>
     <script defer src="{{ url_for('static', filename='js/vendor/GLTFLoader.js') }}?v={{ timestamp }}"></script>
 
     <!-- 3D mascot/avatar systems -->
@@ -5167,6 +5179,10 @@ class BeeDelightManager {
         }
     }
 }
+
+// ✅ Register BeeDelightManager on window for global access
+window.BeeDelightManager = BeeDelightManager;
+console.log('✅ BeeDelightManager registered on window');
 
 class QuizManager {
     constructor(options = {}) {
@@ -10662,6 +10678,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                             clearInterval(checkQuizManager);
                             console.log('✅ QuizManager class found, creating instance...');
                             window.quizManager = new QuizManager({ delight, smartyBee, startMode });
+                            // Trigger exit button setup after QuizManager is created
+                            setTimeout(() => {
+                                const exitButton = document.getElementById('exitQuizButton');
+                                if (exitButton && window.quizManager && window.quizManager.delight) {
+                                    if (window.quizManager.delight.setupExitQuiz && !window.quizManager.delight._exitQuizSetup) {
+                                        console.log('🔧 Setting up exit button handlers (after async QuizManager creation)...');
+                                        window.quizManager.delight.setupExitQuiz();
+                                    }
+                                }
+                            }, 100);
                         } else if (attempts >= maxAttempts) {
                             clearInterval(checkQuizManager);
                             console.error('❌ QuizManager class not found after waiting. This indicates a syntax error in the class definition.');
@@ -10675,22 +10701,46 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             
             // Ensure exit button is set up after QuizManager is created and DOM is ready
-            // Use requestAnimationFrame to ensure DOM is fully rendered
-            requestAnimationFrame(() => {
-                setTimeout(() => {
-                    const exitButton = document.getElementById('exitQuizButton');
-                    if (exitButton && window.quizManager && window.quizManager.delight) {
-                        // Setup exit quiz if not already done (setupExitQuiz is a method of BeeDelightManager)
-                        if (window.quizManager.delight.setupExitQuiz && !window.quizManager.delight._exitQuizSetup) {
-                            console.log('🔧 Setting up exit button handlers...');
-                            window.quizManager.delight.setupExitQuiz();
-                        }
-                    } else if (exitButton && !window.quizManager) {
-                        console.warn('⚠️ Exit button exists but QuizManager not ready yet');
-                    } else if (!exitButton) {
-                        console.warn('⚠️ Exit button element not found in DOM');
+            // Use a retry mechanism to wait for QuizManager to be ready
+            const setupExitButton = () => {
+                const exitButton = document.getElementById('exitQuizButton');
+                if (exitButton && window.quizManager && window.quizManager.delight) {
+                    // Setup exit quiz if not already done (setupExitQuiz is a method of BeeDelightManager)
+                    if (window.quizManager.delight.setupExitQuiz && !window.quizManager.delight._exitQuizSetup) {
+                        console.log('🔧 Setting up exit button handlers...');
+                        window.quizManager.delight.setupExitQuiz();
+                        return true; // Success
                     }
-                }, 200);
+                    return true; // Already set up
+                } else if (exitButton && !window.quizManager) {
+                    // QuizManager not ready yet, retry
+                    return false;
+                } else if (!exitButton) {
+                    // Exit button not found, might not be needed
+                    return true; // Don't retry if button doesn't exist
+                }
+                return true; // No exit button needed
+            };
+            
+            // Retry mechanism: try immediately, then retry if needed
+            let retryCount = 0;
+            const maxRetries = 20; // 2 seconds max (20 * 100ms)
+            const trySetup = () => {
+                if (setupExitButton()) {
+                    // Success or not needed
+                    return;
+                }
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    setTimeout(trySetup, 100);
+                } else {
+                    console.warn('⚠️ Exit button setup failed after retries - QuizManager may not have been created');
+                }
+            };
+            
+            // Start trying after a brief delay to ensure DOM is ready
+            requestAnimationFrame(() => {
+                setTimeout(trySetup, 200);
             });
 
             // 🛡️ REMOVED: Resume autostart logic from DOMContentLoaded
