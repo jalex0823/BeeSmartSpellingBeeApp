@@ -5962,31 +5962,13 @@ class QuizManager {
                     ${recoveryButtonHtml}
                     `;
                 }
-            } else {
-                // Android/other mobile - auto-start without requiring a tap
-                feedbackArea.innerHTML = `
-                    <div style="font-size: 1.2rem; font-weight: 700;">
-                        �🐝 Welcome to BeeSmart Spelling! 🐝
-                    </div>
-                    <div style="margin-top: 0.8rem;">
-                        🍯 I'm your announcer bee, Buzzy! 🍯
-                    </div>
-                    <div style="margin-top: 0.5rem;">
-                        🌟 Listen carefully to each word, then spell it correctly! 🌟
-                    </div>
-                    <div id="voiceStatusMessage" style="margin-top: 1rem; font-size: 0.95rem; color: #666;">
-                        Starting automatically…
-                    </div>
-                    ${recoveryButtonHtml}
-                `;
-            }
-            
-            // 🍎 iOS-specific handlers
-            if (isIOS) {
+                
+                // 🍎 iOS-specific handlers (moved inside iOS block)
+                // Get elements after HTML is set (they're created dynamically)
                 const forceNextBtn = document.getElementById('forceNextBtn');
                 const iosVoiceBtn = document.getElementById('iosVoiceBtn');
                 const iosVoiceStatus = document.getElementById('iosVoiceStatus');
-                const voiceWasEnabled = this.voiceUnlocked && this.announcerEnabled;
+                // voiceWasEnabled already declared above at line 5915
 
                 // Safety: always have a way to advance even if resume stalls.
                 if (forceNextBtn) {
@@ -6084,22 +6066,38 @@ class QuizManager {
                         speechSynthesis.speak(utterance);
                     }, { once: true });
 
-                // Auto-start the quiz shortly after showing the intro (no user action required).
-                // Only auto-start if voice was NOT enabled (user skipped voice in first modal)
-                if (!voiceWasEnabled) {
-                    setTimeout(() => {
-                        try {
-                            if (this.quizStarted) return;
-                            feedbackArea.style.display = 'none';
-                            this.quizStarted = true;
-                            this.loadNextWordWithIntro();
-                        } catch (e) {
-                            console.warn('Auto-start (iOS) failed:', e);
-                        }
-                    }, 900);
+                    // Auto-start the quiz shortly after showing the intro (no user action required).
+                    // Only auto-start if voice was NOT enabled (user skipped voice in first modal)
+                    if (!voiceWasEnabled) {
+                        setTimeout(() => {
+                            try {
+                                if (this.quizStarted) return;
+                                feedbackArea.style.display = 'none';
+                                this.quizStarted = true;
+                                this.loadNextWordWithIntro();
+                            } catch (e) {
+                                console.warn('Auto-start (iOS) failed:', e);
+                            }
+                        }, 900);
                 }
-                
             } else {
+                // Android/other mobile - auto-start without requiring a tap
+                feedbackArea.innerHTML = `
+                    <div style="font-size: 1.2rem; font-weight: 700;">
+                        �🐝 Welcome to BeeSmart Spelling! 🐝
+                    </div>
+                    <div style="margin-top: 0.8rem;">
+                        🍯 I'm your announcer bee, Buzzy! 🍯
+                    </div>
+                    <div style="margin-top: 0.5rem;">
+                        🌟 Listen carefully to each word, then spell it correctly! 🌟
+                    </div>
+                    <div id="voiceStatusMessage" style="margin-top: 1rem; font-size: 0.95rem; color: #666;">
+                        Starting automatically…
+                    </div>
+                    ${recoveryButtonHtml}
+                `;
+                
                 // Android/other mobile: auto-start after a short delay.
                 // (We don't try to autoplay speech here; mobile autoplay policies often require a gesture.)
                 setTimeout(() => {
@@ -6121,6 +6119,7 @@ class QuizManager {
                     });
                 }
             }
+        }
             
         } else {
             // Desktop: require a Play tap to begin the intro (Apple-friendly + avoids "frozen" feel).
