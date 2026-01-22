@@ -7212,6 +7212,10 @@ class QuizManager {
         modal.style.display = 'flex';
         
         // Enable voice button - unlocks voice and starts quiz with intro
+        if (!enableVoiceBtn) {
+            console.warn('⚠️ enableVoiceBtn not found');
+            return;
+        }
         enableVoiceBtn.addEventListener('click', () => {
             this.voiceUnlocked = true;
             this.announcerEnabled = true;
@@ -7229,6 +7233,10 @@ class QuizManager {
         }, { once: true });
         
         // Skip voice button - disables announcer and starts quiz silently
+        if (!skipVoiceBtn) {
+            console.warn('⚠️ skipVoiceBtn not found');
+            return;
+        }
         skipVoiceBtn.addEventListener('click', () => {
             this.voiceUnlocked = false;
             this.announcerEnabled = false;
@@ -10642,7 +10650,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (window.quizManager) {
                 console.warn('⚠️ QuizManager already exists, reusing existing instance');
             } else {
-                window.quizManager = new QuizManager({ delight, smartyBee, startMode });
+                // Ensure QuizManager class is defined before instantiating
+                if (typeof QuizManager === 'undefined') {
+                    console.error('❌ QuizManager class is not defined. Waiting for class definition...');
+                    // Wait for QuizManager to be defined (in case of script loading order issues)
+                    let attempts = 0;
+                    const maxAttempts = 50; // 5 seconds max wait
+                    const checkQuizManager = setInterval(() => {
+                        attempts++;
+                        if (typeof QuizManager !== 'undefined') {
+                            clearInterval(checkQuizManager);
+                            console.log('✅ QuizManager class found, creating instance...');
+                            window.quizManager = new QuizManager({ delight, smartyBee, startMode });
+                        } else if (attempts >= maxAttempts) {
+                            clearInterval(checkQuizManager);
+                            console.error('❌ QuizManager class not found after waiting. This indicates a syntax error in the class definition.');
+                            BeeSmart.showError('Quiz initialization failed: QuizManager class not found. Please refresh the page.');
+                            setTimeout(() => window.location.href = '/', 3000);
+                        }
+                    }, 100);
+                } else {
+                    window.quizManager = new QuizManager({ delight, smartyBee, startMode });
+                }
             }
             
             // Ensure exit button is set up after QuizManager is created and DOM is ready
