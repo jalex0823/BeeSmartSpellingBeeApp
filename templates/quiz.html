@@ -6108,7 +6108,7 @@ class QuizManager {
             }
             
         } else {
-            // Desktop gets auto-advancing intro with voice
+            // Desktop: show intro and allow immediate start
             feedbackArea.innerHTML = `
                 <div style="font-size: 1.2rem; font-weight: 700;">
                     🐝 Welcome to BeeSmart Spelling! 🐝
@@ -6122,6 +6122,11 @@ class QuizManager {
                 <div style="margin-top: 0.8rem; font-size: 1.1rem;">
                     ✨ Get ready for your first word! ✨
                 </div>
+                <div style="margin-top: 1rem; display:flex; gap: 0.75rem; justify-content:center; flex-wrap:wrap;">
+                    <button type="button" id="startNowBtn" class="action-btn primary" style="min-width: 210px;">
+                        Start Now
+                    </button>
+                </div>
                 ${recoveryButtonHtml}
             `;
 
@@ -6133,49 +6138,40 @@ class QuizManager {
                 });
             }
             
-            // Desktop voice intro
-            let introSpeechPromise = Promise.resolve();
-            if ('speechSynthesis' in window) {
-                const greeting = this.studentName ? `Hello ${this.studentName}!` : "Hello!";
-                const introMessage = `${greeting} I'm Buzzy, your announcer bee! Welcome to BeeSmart Spelling! ` +
-                                   "Listen carefully to each word, then type what you hear. " +
-                                   "Spell correctly to fill your honey jar with sweet success!";
-                
-                const speakIntro = () => {
-                    console.log('🎤 Buzzy is ready to speak! Available voices:', speechSynthesis.getVoices().length);
-                    
-                    // iOS fix: Force voice loading by creating a dummy utterance first
-                    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-                    if (isIOS) {
-                        console.log('🍎 iOS detected - preloading voices');
-                        const dummyUtterance = new SpeechSynthesisUtterance('');
-                        speechSynthesis.speak(dummyUtterance);
-                        speechSynthesis.cancel();
+            // Desktop voice intro:
+            // IMPORTANT: speakAnnouncement() already returns a Promise that resolves when speech ends.
+            const greeting = this.studentName ? `Hello ${this.studentName}!` : "Hello!";
+            const introMessage = `${greeting} I'm Buzzy, your announcer bee! Welcome to BeeSmart Spelling! ` +
+                               "Listen carefully to each word, then type what you hear. " +
+                               "Spell correctly to fill your honey jar with sweet success!";
+            const introSpeechPromise = this.speakAnnouncement(introMessage).catch((err) => {
+                console.warn('Voice intro failed:', err);
+            });
+
+            const startNowBtn = document.getElementById('startNowBtn');
+            if (startNowBtn) {
+                startNowBtn.addEventListener('click', () => {
+                    try {
+                        if (this.quizStarted) return;
+                        try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (_e) {}
+                        feedbackArea.style.display = 'none';
+                        this.quizStarted = true;
+                        this.introInProgress = false;
+                        console.log('▶️ Start Now clicked - loading first word...');
+                        this.loadNextWordWithIntro();
+                    } catch (e) {
+                        console.warn('Start Now failed:', e);
                     }
-                    
-                    this.speakAnnouncement(introMessage).catch(err => {
-                        console.warn('Voice intro failed:', err);
-                    });
-                };
-                
-                if (speechSynthesis.getVoices().length > 0) {
-                    introSpeechPromise = Promise.resolve().then(() => speakIntro());
-                } else {
-                    introSpeechPromise = new Promise((resolve) => {
-                        speechSynthesis.addEventListener('voiceschanged', () => {
-                            try { speakIntro(); } finally { resolve(); }
-                        }, { once: true });
-                    });
-                }
+                }, { once: true });
             }
 
             // Desktop: advance after the intro finishes (prevents it being cut off).
-            // Keep a safety fallback in case a browser never fires onend.
+            // Keep a safety fallback in case a browser stalls.
             if (!this._introAdvanceScheduled) {
                 this._introAdvanceScheduled = true;
                 (async () => {
                     try {
-                        const FALLBACK_MS = 14000;
+                        const FALLBACK_MS = 8000;
                         await Promise.race([
                             introSpeechPromise,
                             new Promise((resolve) => setTimeout(resolve, FALLBACK_MS))
@@ -6184,6 +6180,7 @@ class QuizManager {
                         // Ignore; we still advance.
                     }
 
+                    if (this.quizStarted) return;
                     feedbackArea.style.display = 'none';
                     this.quizStarted = true;
                     this.introInProgress = false;
@@ -6198,7 +6195,7 @@ class QuizManager {
             }
         }
     }
-    }
+
 
     // 🚑 Recovery: Used to break out of rare resume stalls on iOS Safari
     // Safe + idempotent: cancels speech and attempts to load the next word.
