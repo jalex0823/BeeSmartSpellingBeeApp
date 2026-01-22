@@ -6108,7 +6108,7 @@ class QuizManager {
             }
             
         } else {
-            // Desktop: show intro and allow immediate start
+            // Desktop: require a Play tap to begin the intro (Apple-friendly + avoids "frozen" feel).
             feedbackArea.innerHTML = `
                 <div style="font-size: 1.2rem; font-weight: 700;">
                     🐝 Welcome to BeeSmart Spelling! 🐝
@@ -6124,7 +6124,7 @@ class QuizManager {
                 </div>
                 <div style="margin-top: 1rem; display:flex; gap: 0.75rem; justify-content:center; flex-wrap:wrap;">
                     <button type="button" id="startNowBtn" class="action-btn primary" style="min-width: 210px;">
-                        Start Now
+                        Play
                     </button>
                 </div>
                 ${recoveryButtonHtml}
@@ -6138,40 +6138,34 @@ class QuizManager {
                 });
             }
             
-            // Desktop voice intro:
-            // IMPORTANT: speakAnnouncement() already returns a Promise that resolves when speech ends.
+            const startNowBtn = document.getElementById('startNowBtn');
             const greeting = this.studentName ? `Hello ${this.studentName}!` : "Hello!";
             const introMessage = `${greeting} I'm Buzzy, your announcer bee! Welcome to BeeSmart Spelling! ` +
                                "Listen carefully to each word, then type what you hear. " +
                                "Spell correctly to fill your honey jar with sweet success!";
-            const introSpeechPromise = this.speakAnnouncement(introMessage).catch((err) => {
-                console.warn('Voice intro failed:', err);
-            });
 
-            const startNowBtn = document.getElementById('startNowBtn');
-            if (startNowBtn) {
-                startNowBtn.addEventListener('click', () => {
-                    try {
-                        if (this.quizStarted) return;
-                        try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (_e) {}
-                        feedbackArea.style.display = 'none';
-                        this.quizStarted = true;
-                        this.introInProgress = false;
-                        console.log('▶️ Start Now clicked - loading first word...');
-                        this.loadNextWordWithIntro();
-                    } catch (e) {
-                        console.warn('Start Now failed:', e);
+            let startedDesktopIntro = false;
+            const startIntroFlow = async () => {
+                if (startedDesktopIntro || this.quizStarted) return;
+                startedDesktopIntro = true;
+
+                try {
+                    if (startNowBtn) {
+                        startNowBtn.disabled = true;
+                        startNowBtn.style.opacity = '0.7';
+                        startNowBtn.textContent = 'Playing…';
                     }
-                }, { once: true });
-            }
+                } catch (_e) {}
 
-            // Desktop: advance after the intro finishes (prevents it being cut off).
-            // Keep a safety fallback in case a browser stalls.
-            if (!this._introAdvanceScheduled) {
-                this._introAdvanceScheduled = true;
-                (async () => {
+                // Speak the welcome intro (best-effort) then advance.
+                const introSpeechPromise = this.speakAnnouncement(introMessage).catch((err) => {
+                    console.warn('Voice intro failed:', err);
+                });
+
+                if (!this._introAdvanceScheduled) {
+                    this._introAdvanceScheduled = true;
                     try {
-                        const FALLBACK_MS = 8000;
+                        const FALLBACK_MS = 9000;
                         await Promise.race([
                             introSpeechPromise,
                             new Promise((resolve) => setTimeout(resolve, FALLBACK_MS))
@@ -6179,19 +6173,28 @@ class QuizManager {
                     } catch (_e) {
                         // Ignore; we still advance.
                     }
+                }
 
-                    if (this.quizStarted) return;
-                    feedbackArea.style.display = 'none';
-                    this.quizStarted = true;
-                    this.introInProgress = false;
-                    console.log('🎤 Intro complete - loading first word...');
-                    try {
-                        await this.loadNextWordWithIntro();
-                    } catch (err) {
-                        console.error('Failed to load first word:', err);
-                        BeeSmart.showError('Failed to start quiz. Please refresh.');
-                    }
-                })();
+                if (this.quizStarted) return;
+                feedbackArea.style.display = 'none';
+                this.quizStarted = true;
+                this.introInProgress = false;
+                console.log('🎤 Intro complete - loading first word...');
+                try {
+                    await this.loadNextWordWithIntro();
+                } catch (err) {
+                    console.error('Failed to load first word:', err);
+                    BeeSmart.showError('Failed to start quiz. Please refresh.');
+                }
+            };
+
+            if (startNowBtn) {
+                startNowBtn.addEventListener('click', () => {
+                    try { startIntroFlow(); } catch (e) { console.warn('Play click failed:', e); }
+                });
+            } else {
+                // If button missing for some reason, fall back to auto-start.
+                setTimeout(() => { try { startIntroFlow(); } catch (_e) {} }, 450);
             }
         }
     }
