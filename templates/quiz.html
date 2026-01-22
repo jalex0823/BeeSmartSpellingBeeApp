@@ -6031,59 +6031,58 @@ class QuizManager {
                 } else if (iosVoiceBtn) {
                     // Voice not enabled - show optional button (user can skip)
                     iosVoiceBtn.addEventListener('click', () => {
-                    console.log('🍎 iOS user tapped to hear intro voice');
-                    
-                    // 🍎 CRITICAL: Unlock voice for iOS - this enables all subsequent voice announcements
-                    this.voiceUnlocked = true;
-                    console.log('✅ Voice unlocked for iOS!');
-                    
-                    iosVoiceBtn.disabled = true;
-                    iosVoiceBtn.style.opacity = '0.6';
-                    iosVoiceBtn.style.cursor = 'not-allowed';
-                    iosVoiceStatus.textContent = '🎤 Buzzy is speaking...';
-                    iosVoiceStatus.style.color = '#4CAF50';
-                    iosVoiceStatus.style.fontWeight = '600';
-                    
-                    const greeting = this.studentName ? `Hello ${this.studentName}!` : "Hello!";
-                    const introMessage = `${greeting} I'm Buzzy, your announcer bee! ` +
-                                       "Listen carefully to each word, then spell what you hear. " +
-                                       "Let's start spelling and fill that honey jar!";
-                    
-                    // 🍎 CRITICAL: Create and speak IMMEDIATELY (iOS autoplay requirement)
-                    speechSynthesis.cancel();
-                    const utterance = new SpeechSynthesisUtterance(introMessage);
-                    utterance.rate = 0.95;
-                    utterance.pitch = 1.1;
-                    utterance.volume = 0.9;
-                    
-                    utterance.onend = () => {
-                        console.log('✅ iOS intro voice completed successfully');
-                        iosVoiceStatus.textContent = '✅ Great! Starting quiz...';
+                        console.log('🍎 iOS user tapped to hear intro voice');
+                        
+                        // 🍎 CRITICAL: Unlock voice for iOS - this enables all subsequent voice announcements
+                        this.voiceUnlocked = true;
+                        console.log('✅ Voice unlocked for iOS!');
+                        
+                        iosVoiceBtn.disabled = true;
+                        iosVoiceBtn.style.opacity = '0.6';
+                        iosVoiceBtn.style.cursor = 'not-allowed';
+                        iosVoiceStatus.textContent = '🎤 Buzzy is speaking...';
                         iosVoiceStatus.style.color = '#4CAF50';
+                        iosVoiceStatus.style.fontWeight = '600';
                         
-                        setTimeout(() => {
-                            feedbackArea.style.display = 'none';
-                            this.quizStarted = true;
-                            this.loadNextWordWithIntro();
-                        }, 800);
-                    };
-                    
-                    utterance.onerror = (err) => {
-                        console.error('❌ iOS voice failed:', err);
-                        iosVoiceStatus.textContent = '⚠️ Voice unavailable - starting quiz anyway!';
-                        iosVoiceStatus.style.color = '#ff9800';
+                        const greeting = this.studentName ? `Hello ${this.studentName}!` : "Hello!";
+                        const introMessage = `${greeting} I'm Buzzy, your announcer bee! ` +
+                                           "Listen carefully to each word, then spell what you hear. " +
+                                           "Let's start spelling and fill that honey jar!";
                         
-                        setTimeout(() => {
-                            feedbackArea.style.display = 'none';
-                            this.quizStarted = true;
-                            this.loadNextWordWithIntro();
-                        }, 1500);
-                    };
-                    
-                    // 🍎 Speak immediately while in user gesture context
-                    speechSynthesis.speak(utterance);
-                    
-                }, { once: true });
+                        // 🍎 CRITICAL: Create and speak IMMEDIATELY (iOS autoplay requirement)
+                        speechSynthesis.cancel();
+                        const utterance = new SpeechSynthesisUtterance(introMessage);
+                        utterance.rate = 0.95;
+                        utterance.pitch = 1.1;
+                        utterance.volume = 0.9;
+                        
+                        utterance.onend = () => {
+                            console.log('✅ iOS intro voice completed successfully');
+                            iosVoiceStatus.textContent = '✅ Great! Starting quiz...';
+                            iosVoiceStatus.style.color = '#4CAF50';
+                            
+                            setTimeout(() => {
+                                feedbackArea.style.display = 'none';
+                                this.quizStarted = true;
+                                this.loadNextWordWithIntro();
+                            }, 800);
+                        };
+                        
+                        utterance.onerror = (err) => {
+                            console.error('❌ iOS voice failed:', err);
+                            iosVoiceStatus.textContent = '⚠️ Voice unavailable - starting quiz anyway!';
+                            iosVoiceStatus.style.color = '#ff9800';
+                            
+                            setTimeout(() => {
+                                feedbackArea.style.display = 'none';
+                                this.quizStarted = true;
+                                this.loadNextWordWithIntro();
+                            }, 1500);
+                        };
+                        
+                        // 🍎 Speak immediately while in user gesture context
+                        speechSynthesis.speak(utterance);
+                    }, { once: true });
 
                 // Auto-start the quiz shortly after showing the intro (no user action required).
                 // Only auto-start if voice was NOT enabled (user skipped voice in first modal)
