@@ -1,7 +1,7 @@
 # Avatar Monetization System - Implementation Complete
 
 ## Overview
-Implemented comprehensive avatar access control based on user type and monetization tiers, enforcing proper restrictions for guest users, registered users, and premium members.
+Implemented comprehensive avatar access control based on user type and monetization tiers, enforcing proper restrictions for guest users and registered users.
 
 ## Monetization Tiers
 
@@ -26,7 +26,7 @@ Implemented comprehensive avatar access control based on user type and monetizat
 - **Points Range**: 500 - 5,000 Honey Points
 
 ### 4. **Premium** (26 avatars)
-- **Access**: Purchase-only for registered users
+- **Access**: Earn (Honey Points) or purchase for registered users
 - **Examples**: Queen Bee, Knight Bee, Scientist Bee, etc.
 - **Unlock**: Must be purchased via IAP
 - **Price**: $0.99 per avatar (configurable)
@@ -44,7 +44,7 @@ Implemented comprehensive avatar access control based on user type and monetizat
 - Tier-based filtering:
   - Guests: Only mascot avatar shown
   - Registered: All avatars with proper lock status
-  - Admin/Premium: All avatars unlocked
+  - Admin: All avatars unlocked
 - Unlock status calculation per avatar
 
 **Code**:
@@ -145,9 +145,11 @@ if (isGuestRestriction) {
 5. **Unlock Notification**: Popup when new avatar unlocked
 
 ### Premium User Experience
-1. **Full Access**: All avatars unlocked immediately
-2. **No Restrictions**: Can select any avatar
-3. **Admin Override**: Bypass all unlock checks
+Premium membership does **not** unlock avatars automatically. Avatar unlocks come from:
+- Earning Honey Points
+- Purchasing individual avatars
+- Purchasing bundles (if configured)
+Admins still bypass all unlock checks.
 
 ## Testing Scenarios
 
@@ -177,9 +179,8 @@ if (isGuestRestriction) {
 ### Test Case 4: Premium Member
 - **Action**: User with premium subscription accesses picker
 - **Expected**:
-  - All 39 avatars unlocked
-  - No lock icons visible
-  - Can select any avatar freely
+  - Avatar lock state is still based on Honey Points / purchases
+  - Premium features may be enabled elsewhere, but avatars remain gated
 
 ### Test Case 5: IAP Purchase
 - **Action**: User purchases premium avatar via IAP

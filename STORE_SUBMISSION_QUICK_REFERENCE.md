@@ -30,7 +30,7 @@
 **5. Test Accounts for Reviewers**
 - [ ] Free account (no purchases, 500 points)
 - [ ] Paid account (some avatars purchased)
-- [ ] Premium account (all avatars unlocked)
+- [ ] Premium account (premium features enabled; avatars still require earn/purchase)
 
 ---
 

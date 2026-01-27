@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BeeSmart Premium - Unlock All Features!</title>
+    <title>BeeSmart Premium</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <script src="{{ url_for('static', filename='js/native-iap-bridge.js') }}?v={{ APP_VERSION }}" defer></script>
 
@@ -455,7 +455,7 @@
         <div class="header">
             <div class="emoji">🐝</div>
             <h1>BeeSmart Premium</h1>
-            <p>Unlock unlimited spelling practice and all 39 bee avatars!</p>
+            <p>Premium features require a paid subscription.</p>
             <div id="subscription-status" style="
                 margin: 14px auto 0;
                 max-width: 640px;
@@ -476,27 +476,69 @@
                 <div class="card-header">
                     <div class="card-icon">📅</div>
                     <h3 class="card-title">Monthly</h3>
-                    <p class="card-subtitle">Unlock everything</p>
+                    <p class="card-subtitle">Subscription</p>
                 </div>
 
                 <div class="pricing">
                     {# Prefer a dynamic server-provided value when available; fall back to $3.99 per user request. #}
                     {% set monthly_price_display = subscription_monthly_usd if subscription_monthly_usd is defined and subscription_monthly_usd else 3.99 %}
-                    <div class="price">${{ monthly_price_display | round(2) }}</div>
-                    <div class="price-period">subscription</div>
+                    <!-- Primary headline (largest text on screen) -->
+                    <div class="price">${{ monthly_price_display | round(2) }} per month</div>
+
+                    <!-- Secondary line (directly under price, smaller but visible) -->
+                    <div class="price-period">Auto-renewable subscription</div>
+
+                    {# Free trial line (only if configured/available) #}
+                    {% set trial_days = (subscription_trial_days or 0) | int %}
+                    {% if trial_days > 0 %}
+                    <div style="margin-top: 10px; font-size: 1rem; color:#6b4a00; font-weight:700;">
+                        Free trial for {{ trial_days }} days, then ${{ monthly_price_display | round(2) }} per month.
+                    </div>
+                    {% endif %}
                 </div>
 
+                <!-- Feature bullets (unchanged, optional) -->
                 <ul class="features">
-                    <li>Unlimited word lists & quizzes</li>
-                    <li>All 39 premium bee avatars</li>
-                    <li>Ad-free experience</li>
-                    <li>Speed Round mode</li>
-                    <li>Offline practice mode</li>
-                    <li>Priority support</li>
-                    <li>Monthly content updates</li>
+                    <li>Unlimited spelling practice</li>
+                    <li>Premium avatars and customization</li>
+                    <li>Access to premium modes and rewards</li>
                 </ul>
 
-                <button class="cta-button" id="subscribeMonthlyBtn" type="button">Start Monthly</button>
+                <!-- REQUIRED legal disclosure (same screen, before purchase button) -->
+                <div style="
+                    margin-top: 10px;
+                    padding: 14px 14px;
+                    background: rgba(255,255,255,0.75);
+                    border: 2px solid rgba(255, 143, 0, 0.25);
+                    border-radius: 14px;
+                    color: #3b2a00;
+                    font-size: 0.92rem;
+                    font-weight: 650;
+                    line-height: 1.35;
+                ">
+                    <div>Payment will be charged to your Apple ID account.</div>
+                    <div>Subscription automatically renews unless canceled at least 24 hours before the end of the current period.</div>
+                    <div>You can manage or cancel your subscription in your Apple ID settings.</div>
+                </div>
+
+                <!-- Purchase button (Apple-native sheet trigger) -->
+                <button class="cta-button" id="subscribeMonthlyBtn" type="button">Subscribe for ${{ monthly_price_display | round(2) }}/month</button>
+
+                <!-- Restore link (below button) -->
+                <div style="text-align:center; margin-top: 12px;">
+                    <button type="button" id="restorePurchasesBtnInline" onclick="restorePurchases()" style="
+                        background: transparent;
+                        border: none;
+                        color: #FF6B00;
+                        font-weight: 900;
+                        font-size: 1rem;
+                        text-decoration: underline;
+                        cursor: pointer;
+                        padding: 10px 12px;
+                        min-width: 44px;
+                        min-height: 44px;
+                    ">Restore Purchases</button>
+                </div>
             </div>
         </div>
 

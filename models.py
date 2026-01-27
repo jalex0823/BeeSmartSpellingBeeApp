@@ -285,6 +285,15 @@ class User(UserMixin, db.Model):
             self.admin_all_access or 
             self.premium_member
         )
+
+    def has_admin_avatar_bypass(self) -> bool:
+        """Avatar entitlement bypass: ONLY admins/admin_all_access.
+
+        Business rule (Jan 2026):
+        - Admin is the only role that has *all avatars unlocked by default*.
+        - `premium_member` is a subscription/feature flag and must NOT bypass avatar locks.
+        """
+        return bool(self.role == 'admin' or self.admin_all_access)
     
     def has_avatar_access(self, avatar_id: str) -> tuple[bool, str]:
         """
@@ -295,9 +304,9 @@ class User(UserMixin, db.Model):
         """
         from avatar_catalog import check_avatar_unlocked
         
-        # Admin/premium users bypass all restrictions
-        if self.is_admin_or_premium():
-            return True, "Admin/Premium access"
+        # Admin users bypass all restrictions (avatars only)
+        if self.has_admin_avatar_bypass():
+            return True, "Admin access"
         
         # Check via monetization system
         result = check_avatar_unlocked(
@@ -502,8 +511,8 @@ class User(UserMixin, db.Model):
         """
         from avatar_catalog import AVATAR_CATALOG, get_free_avatars
         
-        # Admin/premium gets everything
-        if self.is_admin_or_premium():
+        # Admin gets everything (avatars only)
+        if self.has_admin_avatar_bypass():
             return [a["id"] for a in AVATAR_CATALOG]
         
         # Start with free avatars

@@ -1199,11 +1199,14 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
             return {"unlocked": True, "reason": "Sufficient points", "points_needed": 0}
         return {"unlocked": False, "reason": "Earn points or purchase", "points_needed": max(unlock_points - honey_points, 0)}
 
-    # Premium tier policy:
+    # Premium tier policy (avatars):
     # - Admin: always unlocked (handled above)
-    # - Guests: locked unless purchased/restored or premium entitlement
-    # - Registered users (student/teacher/parent): unlock via Honey Points (higher thresholds)
-    #   OR purchase OR premium membership entitlement.
+    # - Guests: locked unless purchased/restored
+    # - Registered users (student/teacher/parent): unlock via Honey Points (higher thresholds) OR purchase
+    #
+    # IMPORTANT: `premium_member` is a subscription/feature flag and MUST NOT act as an
+    # "unlock all avatars" bypass. Avatar picker lock state must match the selection
+    # enforcement endpoint (/api/avatar/select), which validates via points/purchases.
     if tier == 'premium':
         # Points unlock path (gameplay). This is what makes "unlock_points" meaningful.
         if role in ('student', 'teacher', 'parent') and honey_points >= unlock_points:
@@ -1212,8 +1215,6 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
         # Non-admin, non-registered fall back to entitlement-based unlock.
         if avatar_id in purchased:
             return {"unlocked": True, "reason": "Purchased", "points_needed": 0}
-        if premium_member or anon_premium:
-            return {"unlocked": True, "reason": "Premium membership", "points_needed": 0}
         # Registered users can still earn toward premium unlock.
         if role in ('student', 'teacher', 'parent'):
             return {"unlocked": False, "reason": "Earn Honey Points or purchase", "points_needed": max(unlock_points - honey_points, 0)}
@@ -13827,6 +13828,7 @@ def api_user_session():
         if current_user.is_authenticated:
             # Check if user is an actual guest (guest_ username or no password AND guest role)
             user_is_guest = is_guest_user(current_user)
+            is_admin = bool(getattr(current_user, 'role', None) == 'admin' or getattr(current_user, 'admin_all_access', False))
             
             return jsonify({
                 'authenticated': True,
@@ -13834,7 +13836,8 @@ def api_user_session():
                 'user_id': current_user.id,
                 'role': getattr(current_user, 'role', 'user'),
                 'is_guest': user_is_guest,  # Only TRUE for actual guest users
-                'is_admin': current_user.is_admin_or_premium() if hasattr(current_user, 'is_admin_or_premium') else False,
+                # IMPORTANT: Admin UI flags must NOT be inferred from premium/subscription state.
+                'is_admin': is_admin,
                 'honey_points': getattr(current_user, 'honey_points', 0),
                 'premium_member': getattr(current_user, 'premium_member', False),
                 'purchased_avatars': list(getattr(current_user, 'purchased_avatars', []) or [])  # CRITICAL: Avatar unlock gate
@@ -13991,7 +13994,7 @@ def debug_my_permissions():
                     <strong>{' YES' if user_info['admin_all_access'] else ' NO'}</strong>
                 </li>
                 <li class="{'success' if user_info['premium_member'] else 'value'}">
-                    premium_member = All avatars unlocked
+                    premium_member = Premium features (does NOT unlock all avatars)
                     <strong>{' YES' if user_info['premium_member'] else ' NO'}</strong>
                 </li>
             </ul>
@@ -16439,6 +16442,10 @@ def subscription_page():
         
         # When IAP_MONTHLY_ONLY is enabled, ensure templates don't accidentally
         # render pricing for Yearly/Family options.
+        try:
+            subscription_trial_days = int(os.environ.get('SUBSCRIPTION_TRIAL_DAYS', '0') or 0)
+        except Exception:
+            subscription_trial_days = 0
         return render_template(
             'subscription.html',
             user_authenticated=user_authenticated,
@@ -16447,6 +16454,7 @@ def subscription_page():
             # Display price on /subscription (requested). If you later fetch live
             # prices from StoreKit / server, pass the dynamic value here.
             subscription_monthly_usd=3.99,
+            subscription_trial_days=subscription_trial_days,
             subscription_product_ids={'monthly': SUBSCRIPTION_PRODUCT_IDS.get('monthly')}
             if IAP_MONTHLY_ONLY else SUBSCRIPTION_PRODUCT_IDS,
         )
@@ -16461,6 +16469,7 @@ def subscription_page():
             current_user=None,
             iap_monthly_only=IAP_MONTHLY_ONLY,
             subscription_monthly_usd=3.99,
+            subscription_trial_days=0,
             subscription_product_ids={'monthly': SUBSCRIPTION_PRODUCT_IDS.get('monthly')}
             if IAP_MONTHLY_ONLY else SUBSCRIPTION_PRODUCT_IDS,
         )

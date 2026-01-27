@@ -121,7 +121,7 @@ All endpoints require the user to be logged in (session cookie). Responses are J
 
 Entitlements are applied server-side and are idempotent (safe to call multiple times):
 
-- `premium_member: true` for full unlock products
+- `premium_member: true` for premium feature products (does not auto-unlock avatars)
 - `purchased_avatars: ["<avatar-id>", ...]` for avatar unlocks
 - `purchased_bundles: ["<bundle-id>", ...]` with bundled avatar unlocks
 
@@ -203,9 +203,10 @@ Example list response excerpt:
 
 Defined in `AjaSpellBApp.py` as `PRODUCT_MAP` and overridable via env vars. Defaults:
 
-- Full unlock (premium)
+- Premium features (subscription / one-time)
   - `PRODUCT_FULL_UNLOCK_ID` (default: `beesmart.full_unlock`) → `premium_member=true`
   - `PRODUCT_SUBSCRIPTION_FULL_ID` (default: `beesmart.premium.monthly`; legacy `beesmart.sub.full_monthly` supported) → `premium_member=true` (subscription)
+  - Note: Avatar unlocks are tracked via `purchased_avatars` / `purchased_bundles` and Honey Points; `premium_member` does not grant avatar bypass.
 - Individual avatars
   - `PRODUCT_AVATAR_SUPERBEE_ID` (default: `beesmart.avatar.superbee`) → unlock `super-bee`
   - `PRODUCT_AVATAR_QUEEN_ID` (default: `beesmart.avatar.queen`) → unlock `queen-bee`

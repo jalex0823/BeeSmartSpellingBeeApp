@@ -129,9 +129,9 @@ def test_api_avatars_admin_all_unlocked(app_and_client, monkeypatch):
     assert len(unlocked) == len(avatars)
 
 
-@pytest.mark.parametrize("path", ["/avatar-picker", "/honeycomb-picker"])
+@pytest.mark.parametrize("path", ["/avatar-picker"])
 def test_guest_cannot_access_avatar_picker_routes(app_and_client, monkeypatch, path):
-    """Guests should be redirected away from picker UIs to register/login."""
+    """Guests should be redirected away from authenticated-only picker UIs to register/login."""
     app, client = app_and_client
 
     # Simulate logged-out guest.
@@ -150,3 +150,21 @@ def test_guest_cannot_access_avatar_picker_routes(app_and_client, monkeypatch, p
 
     # Accept either register or login redirect targets (implementation may vary).
     assert ("/auth/register" in location) or ("/auth/login" in location)
+
+
+def test_guest_can_browse_honeycomb_picker(app_and_client, monkeypatch):
+    """Guests may browse the honeycomb picker for IAP discoverability (Apple requirement)."""
+    _app, client = app_and_client
+
+    # Simulate logged-out guest.
+    from flask_login import utils as flask_login_utils
+
+    monkeypatch.setattr(
+        flask_login_utils,
+        "_get_user",
+        lambda: type("Anon", (), {"is_authenticated": False})(),
+        raising=True,
+    )
+
+    resp = client.get("/honeycomb-picker", follow_redirects=False)
+    assert resp.status_code == 200
