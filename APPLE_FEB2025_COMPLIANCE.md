@@ -4,6 +4,17 @@ Summary of changes for updated Apple guidelines: role permissions, Kids Category
 
 ---
 
+## Submission 1.1 (latest changes)
+
+- **1.1 Trial as message only:** Removed trial **buttons/links** ("Start X-day Free Trial"). Trial is now **message only**: "A 7‑day introductory offer is included in the subscription." Register button says "Register" (no trial CTA). Subscription page already showed trial as text.
+- **1.2 Guest User button removed:** Removed "Or continue as guest" and the Quick Guide line "Guest: Try the app without registering…". Users enter as guest automatically (no CTA). Backend guest sessions unchanged.
+- **1.3 "For All Ages" button removed:** Removed the "For All Ages" badge from the menu (per screenshot 3). Safety message "for learners of all ages" remains as text.
+- **2.1–2.2 Student access:** Subscription button, Restore Purchases button, Quick Help, User Guide, Admin Guide, and Support are **hidden for Student role** in the menu. Backend: `/help`, `/support`, `/guide`, `/admin-guide`, `/subscription` **redirect Students to /app**.
+- **2.3 Student controlled by Parent/Teacher:** Code feature unchanged; after applying code, Student role is active and all subscription/Help/support UI is hidden (above).
+- **2.4 Subscription-per-device:** Documented in section 5 below; WWDC 2025 Session 299 reference added. Product decision (intentional vs per-account) remains with stakeholder.
+
+---
+
 ## 0. Pre-Work: Data Reset for Testing
 
 **Task 0.1 — Clear subscription state (backend)**
@@ -106,6 +117,8 @@ Ensure App Store Connect (e.g. 7-day trial, price, product name) matches this an
 - **Option B — Per-account only:** Only the account that completed the purchase (or a designated “account manager” role) should have premium; other roles on the same device should not get premium from that one purchase. That would require backend/iOS changes (e.g. only apply entitlement to the purchasing user or to Parent/Teacher when restored by them, not to Student when restored on same device).
 
 Until the product owner confirms, treat current behavior as **as-is** and document that the “disconnect” (one subscription → all roles) is a known behavior and a product clarification item, not a bug.
+
+**Reference:** [WWDC 2025 — Session 299](https://developer.apple.com/videos/play/wwdc2025/299/) (subscription and in-app purchase guidance).
 
 ---
 

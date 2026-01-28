@@ -23,12 +23,11 @@ def test_no_kids_child_visible_in_quiz():
 
 
 def test_no_kids_child_visible_in_unified_menu():
-    """Task 1.1: No 'Kid-Safe Content' in menu; use 'For All Ages' or 'Filtered Content'."""
+    """Task 1.1: No 'Kid-Safe Content' in menu; age-neutral copy only (no 'For All Ages' button per submission 1.1)."""
     p = REPO_ROOT / "templates" / "unified_menu.html"
     txt = _read(p)
-    assert "Kid-Safe Content" not in txt, "Use 'For All Ages' or 'Filtered Content' (Apple Feb 2025)"
+    assert "Kid-Safe Content" not in txt, "No kids-specific badge (Apple Feb 2025)"
     assert "age-appropriate content" not in txt or "appropriate vocabulary" in txt
-    assert "For All Ages" in txt or "Filtered Content" in txt, "Badge should say 'For All Ages' or 'Filtered Content'"
     assert "for learners of all ages" in txt or "for all ages" in txt.lower(), "Subtext should mention all ages"
 
 

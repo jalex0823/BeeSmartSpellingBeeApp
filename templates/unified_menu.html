@@ -4616,20 +4616,10 @@ function showRestoreDialog(title, message, isSuccess) {
                     </div>
                     <div class="carousel-cta">
                         <span class="cta-text">Join the hive — pick your Bee style!</span>
-                        <a class="register-button" href="/auth/register" aria-label="Start your free trial and create your Bee Avatar" data-subscribe="1">
-                            {% if (subscription_trial_days or 0) | int > 0 %}
-                                Start {{ subscription_trial_days | int }}‑day Free Trial
-                            {% else %}
-                                Start now
-                            {% endif %}
-                        </a>
+                        <a class="register-button" href="/auth/register" aria-label="Register and create your Bee Avatar" data-subscribe="1">Register</a>
                         {% if (registration_billing_mode or 'subscription') == 'subscription' %}
                         <div style="font-size: 0.8rem; color:#5A2C15; margin-top: 0.35rem;">
-                            {% if (subscription_trial_days or 0) | int > 0 %}
-                                Then ${{ (subscription_monthly_usd or 4.49) | round(2) }}/month. Auto‑renews unless canceled during trial.
-                            {% else %}
-                                ${{ (subscription_monthly_usd or 4.49) | round(2) }}/month. Cancel anytime.
-                            {% endif %}
+                            A 7‑day introductory offer is included in the subscription. Then ${{ (subscription_monthly_usd or 4.49) | round(2) }}/month. Auto‑renews unless canceled.
                         </div>
                         {% endif %}
                     </div>
@@ -4667,7 +4657,8 @@ function showRestoreDialog(title, message, isSuccess) {
                     </button>
                 </div>
 
-                <!-- App Store compliance: explicit Restore Purchases control (requires native wrapper) -->
+                <!-- App Store compliance: Restore Purchases (hidden for Student role) -->
+                {% if (current_user.role|default('')) != 'student' %}
                 <div style="margin-top: 8px;">
                     <button id="restorePurchasesBtn" onclick="restorePurchases()" style="
                         background: linear-gradient(135deg, #1976D2 0%, #0D47A1 100%);
@@ -4684,12 +4675,8 @@ function showRestoreDialog(title, message, isSuccess) {
                         Restore Purchases
                     </button>
                 </div>
+                {% endif %}
                 
-                <!-- Filtered content badge — role-agnostic, for all ages (Apple Feb 2025) -->
-                <div class="kid-safe-badge" style="margin-top: 14px;">
-                    <span>For All Ages</span>
-                </div>
-
                 <!-- App Store compliance: Terms/EULA link must be accessible in-app -->
                 <div style="margin-top: 10px;">
                     <a href="/terms" style="
@@ -5101,27 +5088,20 @@ function showRestoreDialog(title, message, isSuccess) {
                                     text-align: center;
                                 " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 25px rgba(135, 206, 235, 0.5)'"
                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(135, 206, 235, 0.4)'">
-                                    {% if (subscription_trial_days or 0) | int > 0 %}
-                                         Start {{ subscription_trial_days | int }}‑day Free Trial
-                                    {% else %}
-                                         Register
-                                    {% endif %}
+                                    Register
                                 </a>
                             </div>
                             {% if (registration_billing_mode or 'subscription') == 'subscription' %}
                             <div style="font-size: 0.85rem; color:#5A2C15; text-align: center; margin-top: 1rem;">
-                                Auto‑renews unless canceled. Pricing shown in the App Store.
+                                A 7‑day introductory offer is included in the subscription. Auto‑renews unless canceled. Pricing shown in the App Store.
                             </div>
                             {% endif %}
-                            <div style="margin-top: 1rem; font-size: 0.85rem; color: #999; text-align: center;">
-                                Or continue as guest
-                            </div>
 
                             <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #8B4513; text-align: center;">
                                 Tip: Enter your name in the box below so the quiz announcer can cheer you on.
                             </div>
                             
-                            <!-- Instructional Information -->
+                            <!-- Instructional Information (no Guest button — users enter as guest automatically per Apple guideline) -->
                             <div style="
                                 margin-top: 0.5rem;
                                 padding: 1rem;
@@ -5139,11 +5119,8 @@ function showRestoreDialog(title, message, isSuccess) {
                                 <div style="margin-bottom: 0.5rem;">
                                     <strong> Sign In:</strong> If you have an account, sign in to access your progress, points, and badges!
                                 </div>
-                                <div style="margin-bottom: 0.5rem;">
-                                    <strong> Register:</strong> Create a free account to track your spelling journey and compete with friends!
-                                </div>
                                 <div>
-                                    <strong> Guest:</strong> Try the app without registering - perfect for your first visit! Your progress won't be saved.
+                                    <strong> Register:</strong> Create an account to track your spelling journey and compete with friends!
                                 </div>
                             </div>
                         </div>
@@ -5526,7 +5503,8 @@ function showRestoreDialog(title, message, isSuccess) {
                      Start Fresh
                 </button>
                 
-                <!-- Help & Documentation Section (full-width, consistent with tiles) -->
+                <!-- Help & Documentation Section (hidden for Student role — managed by Parent/Teacher) -->
+                {% if (current_user.role|default('')) != 'student' %}
                 <div class="help-links">
                     <a href="/help" class="action-btn info" title=" Quick help and tips" style="text-decoration: none; font-size: 0.95rem; padding: 12px 18px;">
                          Quick Help
@@ -5554,6 +5532,7 @@ function showRestoreDialog(title, message, isSuccess) {
                 " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 24px rgba(255, 143, 0, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(255, 179, 0, 0.4)';" title="⭐ Unlock all 41 avatars, unlimited quizzes, and ad-free learning!">
                     ⭐ Upgrade to Premium - ${{ '%.2f'|format(_monthly_usd_for_display) }}/month
                 </a>
+                {% endif %}
                 
                 <!-- My Word Lists button removed - use tile instead -->
                 

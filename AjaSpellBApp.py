@@ -1061,10 +1061,12 @@ def terms_page():
 
 @app.route("/support")
 def support_page():
-    """Public support/contact page.
+    """Public support/contact page. Hidden for Student role (managed by Parent/Teacher).
 
     App Store Connect requires a functional Support URL.
     """
+    if current_user.is_authenticated and getattr(current_user, "role", None) == "student":
+        return redirect(url_for("app_home"))
     try:
         return render_template("support.html")
     except Exception:
@@ -6301,12 +6303,16 @@ def battle_page(battle_code):
 
 @app.route("/help")
 def help_page():
-    """Helpful tips and onboarding guidance"""
+    """Helpful tips and onboarding guidance. Hidden for Student role (managed by Parent/Teacher)."""
+    if current_user.is_authenticated and getattr(current_user, "role", None) == "student":
+        return redirect(url_for("app_home"))
     return render_template("help.html")
 
 @app.route("/guide")
 def user_guide():
-    """Comprehensive user guide"""
+    """Comprehensive user guide. Hidden for Student role (managed by Parent/Teacher)."""
+    if current_user.is_authenticated and getattr(current_user, "role", None) == "student":
+        return redirect(url_for("app_home"))
     try:
         import markdown
         with open('BEESMART_USER_GUIDE.md', 'r', encoding='utf-8') as f:
@@ -6327,7 +6333,9 @@ def user_guide():
 
 @app.route("/admin-guide")
 def admin_guide():
-    """Technical administrator guide"""
+    """Technical administrator guide. Hidden for Student role (managed by Parent/Teacher)."""
+    if current_user.is_authenticated and getattr(current_user, "role", None) == "student":
+        return redirect(url_for("app_home"))
     try:
         import markdown
         with open('BEESMART_ADMIN_GUIDE.md', 'r', encoding='utf-8') as f:
@@ -16461,6 +16469,8 @@ def subscription_page():
             current_user = User.query.get(user_id)
             if current_user:
                 student_cannot_purchase = (getattr(current_user, 'role', None) or '') == 'student'
+                if student_cannot_purchase:
+                    return redirect(url_for("app_home"))
 
         # When IAP_MONTHLY_ONLY is enabled, ensure templates don't accidentally
         # render pricing for Yearly/Family options.
