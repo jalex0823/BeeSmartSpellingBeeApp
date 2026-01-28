@@ -11691,11 +11691,26 @@ def api_iap_restore():
                     "restore_id": restore_id
                 }), 500
     
+    student_subscription_blocked = False
     for pid in normalized:
         had_error = False
         err_msg = None
         try:
             if user_for_restore is not None:
+                # Apple Feb 2025: Student role cannot manage subscriptions; only account manager (parent/teacher) can.
+                role = getattr(user_for_restore, 'role', None) or ''
+                if role == 'student':
+                    mapping = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
+                    mtype = str((mapping or {}).get('type') or '').strip().lower()
+                    is_sub = bool(mtype in ('premium', 'subscription') or ((mapping or {}).get('subscription'))) or _looks_premiumish(pid)
+                    if is_sub:
+                        student_subscription_blocked = True
+                        errors.append({
+                            "product_id": pid,
+                            "error": "student_cannot_manage_subscription",
+                            "message": "Subscriptions can only be managed by the account manager."
+                        })
+                        continue
                 try:
                     res = _apply_entitlement(user_for_restore, pid)
                     if res and isinstance(res, dict) and res.get('applied'):
@@ -11957,6 +11972,9 @@ def api_iap_restore():
         "errors": errors,
         "entitlements": _entitlements_summary(user_for_restore) if user_for_restore is not None else _get_guest_entitlements()
     }
+    if student_subscription_blocked:
+        resp_payload["student_subscription_blocked"] = True
+        resp_payload["message"] = "Subscriptions can only be managed by the account manager."
     if debug_info is not None:
         resp_payload['debug'] = debug_info
 
@@ -16429,17 +16447,21 @@ def api_get_subscriptions():
 def subscription_page():
     """
     Subscription landing page for BeeSmart Premium
-    Shows available premium subscription options (pricing shown in the App Store purchase flow)
+    Shows available premium subscription options (pricing shown in the App Store purchase flow).
+    Apple Feb 2025: Student role cannot initiate purchases; only account manager (parent/teacher) can.
     """
     try:
         # Check if user is authenticated
         user_authenticated = 'user_id' in session
         current_user = None
-        
+        student_cannot_purchase = False
+
         if user_authenticated:
             user_id = session.get('user_id')
             current_user = User.query.get(user_id)
-        
+            if current_user:
+                student_cannot_purchase = (getattr(current_user, 'role', None) or '') == 'student'
+
         # When IAP_MONTHLY_ONLY is enabled, ensure templates don't accidentally
         # render pricing for Yearly/Family options.
         try:
@@ -16451,14 +16473,12 @@ def subscription_page():
             user_authenticated=user_authenticated,
             current_user=current_user,
             iap_monthly_only=IAP_MONTHLY_ONLY,
-            # Display price on /subscription (requested). If you later fetch live
-            # prices from StoreKit / server, pass the dynamic value here.
+            student_cannot_purchase=student_cannot_purchase,
             subscription_monthly_usd=3.99,
             subscription_trial_days=subscription_trial_days,
             subscription_product_ids={'monthly': SUBSCRIPTION_PRODUCT_IDS.get('monthly')}
             if IAP_MONTHLY_ONLY else SUBSCRIPTION_PRODUCT_IDS,
         )
-    
     except Exception as e:
         print(f" Error loading subscription page: {e}")
         import traceback
@@ -16468,6 +16488,7 @@ def subscription_page():
             user_authenticated=False,
             current_user=None,
             iap_monthly_only=IAP_MONTHLY_ONLY,
+            student_cannot_purchase=False,
             subscription_monthly_usd=3.99,
             subscription_trial_days=0,
             subscription_product_ids={'monthly': SUBSCRIPTION_PRODUCT_IDS.get('monthly')}

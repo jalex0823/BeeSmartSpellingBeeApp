@@ -2904,7 +2904,7 @@ function showRestoreDialog(title, message, isSuccess) {
             border: 2px solid rgba(46, 204, 113, 0.3);
         }
         
-        /* Kid-Safe Content Badge */
+        /* Filtered content badge (Apple Feb 2025) */
         .kid-safe-badge {
             display: inline-flex;
             align-items: center;
@@ -4685,9 +4685,9 @@ function showRestoreDialog(title, message, isSuccess) {
                     </button>
                 </div>
                 
-                <!-- Kid-Safe Content Badge -->
+                <!-- Filtered content badge — role-agnostic, for all ages (Apple Feb 2025) -->
                 <div class="kid-safe-badge" style="margin-top: 14px;">
-                    <span>Kid-Safe Content</span>
+                    <span>For All Ages</span>
                 </div>
 
                 <!-- App Store compliance: Terms/EULA link must be accessible in-app -->
@@ -4737,10 +4737,10 @@ function showRestoreDialog(title, message, isSuccess) {
             });
             </script>
             
-            <!-- Safety Message - Centered Between Button and Title -->
+            <!-- Safety Message - Centered Between Button and Title (role-agnostic, for all ages) -->
             <section class="menu-container" style="padding: 0.5rem 2rem;">
                 <div style="font-size: 0.75rem; color: rgba(0,0,0,0.5); margin: 0 auto; text-align: center; max-width: var(--content-max); width: 100%;">
-                    All words are automatically filtered for age-appropriate content
+                    All words are filtered for appropriate vocabulary — for learners of all ages.
                 </div>
             </section>
 

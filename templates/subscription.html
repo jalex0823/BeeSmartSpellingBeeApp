@@ -521,6 +521,34 @@
                     <div>You can manage or cancel your subscription in your Apple ID settings.</div>
                 </div>
 
+                {% if student_cannot_purchase is defined and student_cannot_purchase %}
+                <!-- Apple Feb 2025: Student role cannot initiate purchases; only account manager can. -->
+                <div id="student-subscription-blocked" style="
+                    margin-top: 14px;
+                    padding: 16px;
+                    background: rgba(244, 67, 54, 0.12);
+                    border: 2px solid rgba(244, 67, 54, 0.4);
+                    border-radius: 14px;
+                    color: #b71c1c;
+                    font-size: 1rem;
+                    font-weight: 700;
+                    text-align: center;
+                ">
+                    Subscriptions can only be managed by the account manager. To upgrade, use an account with that role or ask them to manage the subscription.
+                </div>
+                <button class="cta-button" id="subscribeMonthlyBtn" type="button" disabled aria-disabled="true">Subscribe for ${{ monthly_price_display | round(2) }}/month</button>
+                <div style="text-align:center; margin-top: 12px;">
+                    <button type="button" id="restorePurchasesBtnInline" disabled aria-disabled="true" style="
+                        background: transparent;
+                        border: none;
+                        color: #9e9e9e;
+                        font-weight: 600;
+                        font-size: 1rem;
+                        cursor: not-allowed;
+                        padding: 10px 12px;
+                    ">Restore Purchases</button>
+                </div>
+                {% else %}
                 <!-- Purchase button (Apple-native sheet trigger) -->
                 <button class="cta-button" id="subscribeMonthlyBtn" type="button">Subscribe for ${{ monthly_price_display | round(2) }}/month</button>
 
@@ -539,6 +567,7 @@
                         min-height: 44px;
                     ">Restore Purchases</button>
                 </div>
+                {% endif %}
             </div>
         </div>
 
@@ -1362,27 +1391,28 @@
 
 function showRestoreDialog(title, message, isSuccess) {
   return new Promise((resolve) => {
-    // Remove any existing modal overlay to ensure only one notification at a time
+    // Remove any existing modal overlay and restore scroll so page is never stuck
     const existing = document.querySelector('.restore-modal-overlay');
-    if (existing) try { existing.remove(); } catch (e) {}
+    if (existing) {
+      try {
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        existing.remove();
+      } catch (e) {}
+    }
 
     // Save the current overflow settings and scroll the page/form to the top
     const prevRootOverflow = document.documentElement.style.overflow || '';
     const prevBodyOverflow = document.body.style.overflow || '';
     try {
-      // Scroll the subscription container into view if present
       const formEl = document.querySelector('.subscription-container');
       if (formEl && typeof formEl.scrollIntoView === 'function') {
         formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-      // Also scroll the window to the top as a fallback
       if (typeof window.scrollTo === 'function') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-    } catch (e) {
-      /* ignore scroll errors */
-    }
-    // Disable scrolling on both root and body while the dialog is open
+    } catch (e) { /* ignore */ }
     document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
 
@@ -1449,47 +1479,48 @@ function showRestoreDialog(title, message, isSuccess) {
     overlay.appendChild(dialog);
     document.body.appendChild(overlay);
 
-    // Prevent all interaction with elements behind the modal
-    overlay.addEventListener('click', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-    });
-
-    // Prevent keyboard interactions from reaching elements behind the modal
-    overlay.addEventListener('keydown', (e) => {
-      e.stopPropagation();
-    });
-
-    // Block touch events from passing through
-    overlay.addEventListener('touchstart', (e) => {
-      e.stopPropagation();
-    });
-
-    // Scroll the dialog into view
-    setTimeout(() => {
-      dialog.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 100);
-
-    // Add hover effect on the OK button
-    const btn = dialog.querySelector('#restoreDialogOkay');
-    btn.addEventListener('mouseenter', () => btn.style.background = btnHoverColor);
-    btn.addEventListener('mouseleave', () => btn.style.background = btnColor);
-
-    // Handle button click
-    btn.addEventListener('click', () => {
-      // Restore the original overflow settings so scrolling works again
+    function closeAndRestoreScroll() {
       document.documentElement.style.overflow = prevRootOverflow;
       document.body.style.overflow = prevBodyOverflow;
-      // Remove overlay and resolve
-      document.body.removeChild(overlay);
+      try { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); } catch (e) {}
       resolve(true);
       if (isSuccess) {
-        // Prefer an in‑place refresh so we don't lose the user's scroll position
         setTimeout(() => {
           try { reconcileAndRefreshSubscriptionUI('restore_success_dialog'); } catch (e) {}
         }, 250);
       }
+      document.removeEventListener('keydown', onEscape);
+    }
+    function onEscape(e) {
+      if (e.key === 'Escape') closeAndRestoreScroll();
+    }
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeAndRestoreScroll();
+        return;
+      }
+      e.stopPropagation();
+      e.preventDefault();
     });
+    document.addEventListener('keydown', onEscape);
+
+    overlay.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { closeAndRestoreScroll(); return; }
+      e.stopPropagation();
+    });
+    overlay.addEventListener('touchstart', (e) => {
+      if (e.target !== overlay) e.stopPropagation();
+    });
+
+    setTimeout(() => {
+      dialog.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+
+    const btn = dialog.querySelector('#restoreDialogOkay');
+    btn.addEventListener('mouseenter', () => btn.style.background = btnHoverColor);
+    btn.addEventListener('mouseleave', () => btn.style.background = btnColor);
+    btn.addEventListener('click', closeAndRestoreScroll);
 
     // Add animations if not already present
     if (!document.getElementById('restoreDialogStyles')) {
@@ -1899,6 +1930,20 @@ function showRestoreDialog(title, message, isSuccess) {
                 try { window.location.href = '/app'; } catch (e) {}
             });
         }
+
+        // Ensure page scroll is never stuck (e.g. after back/refresh when a modal had set overflow hidden)
+        window.addEventListener('DOMContentLoaded', function restoreScrollIfNoModal() {
+            if (!document.querySelector('.restore-modal-overlay')) {
+                document.documentElement.style.overflow = '';
+                document.body.style.overflow = '';
+            }
+        });
+        window.addEventListener('pageshow', function restoreScrollOnShow(ev) {
+            if (ev.persisted && !document.querySelector('.restore-modal-overlay')) {
+                document.documentElement.style.overflow = '';
+                document.body.style.overflow = '';
+            }
+        });
 
         // Auto-select plan from URL parameter and check subscription status
         window.addEventListener('DOMContentLoaded', async () => {
