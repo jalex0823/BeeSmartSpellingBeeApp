@@ -17,6 +17,11 @@ Use this checklist to verify app behavior, UI copy, and role permissions after t
 - [ ] **Build:** Latest app build with Feb 2025 compliance changes installed (TestFlight or dev build).
 - [ ] **Accounts:** At least one **Student**, one **Teacher**, and one **Parent** (or Admin) test account available.
 
+**References for testers:**
+
+- **Clearing subscription data:** Full steps, dry run, and confirmation for QA → `SUBSCRIPTION_STATUS_AND_CLEAR.md`
+- **One subscription → all 3 roles on same device:** Product clarification (intentional vs per-account) → `APPLE_FEB2025_COMPLIANCE.md` section 5
+
 ---
 
 ## 0. Pre-Work — Data Reset (Task 0.1)

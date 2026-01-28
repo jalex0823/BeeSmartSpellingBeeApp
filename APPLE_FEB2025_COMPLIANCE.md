@@ -94,6 +94,21 @@ Ensure App Store Connect (e.g. 7-day trial, price, product name) matches this an
 
 ---
 
+## 5. One subscription → all roles on same device (product clarification)
+
+**Observed behavior:** One Apple ID subscription on one iOS device gives Parent, Teacher, and Student accounts on that device full premium access (same subscription plan for all three roles).
+
+**Technical note:** Premium is stored per user (`users.premium_member`). If the iOS app or restore flow applies the same Apple ID receipt to every BeeSmart account that restores on that device, each of those accounts gets `premium_member = True`—which explains “same subscription for all 3 roles” on the same device.
+
+**Product decision (for stakeholder):**
+
+- **Option A — Intentional (family/device sharing):** One subscription per device or per Apple ID is the intended model; all roles on that device sharing the same Apple ID (or device-level restore) are meant to have premium. No code change needed; document as intended.
+- **Option B — Per-account only:** Only the account that completed the purchase (or a designated “account manager” role) should have premium; other roles on the same device should not get premium from that one purchase. That would require backend/iOS changes (e.g. only apply entitlement to the purchasing user or to Parent/Teacher when restored by them, not to Student when restored on same device).
+
+Until the product owner confirms, treat current behavior as **as-is** and document that the “disconnect” (one subscription → all roles) is a known behavior and a product clarification item, not a bug.
+
+---
+
 ## Final Validation Checklist
 
 Before marking complete:

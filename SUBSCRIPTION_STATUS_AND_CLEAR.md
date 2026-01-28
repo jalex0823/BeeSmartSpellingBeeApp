@@ -14,6 +14,16 @@
 
   Receipt validation and webhook logic stay disabled until subscription columns exist. If the iOS app calls `/api/validate-receipt`, it will get 503 until you run the migration and re-enable the view.
 
+## Confirmation for QA (Kumari) — clearing subscription data
+
+**Is it valid per app business concept?** Yes. Clearing subscription data for these test users is valid and aligned with the app’s business: it resets their premium state in the backend so the same Sandbox/accounts can be reused for purchase and restore testing. It does not affect real paying users.
+
+**How to run:** Use the script and options below. Run it on the backend (e.g. Digital Ocean) where `DATABASE_URL` points at that environment. Dry run first with `CLEAR_SUB_DRY_RUN=1` to confirm the five users without writing.
+
+**“One subscription → all 3 roles” on same device:** This is documented in `APPLE_FEB2025_COMPLIANCE.md` (section 5). Current behavior (one Apple ID subscription on one device giving Parent, Teacher, and Student full access on that device) is **as-is** until the product owner confirms whether it’s intentional (family/device sharing) or should be limited to the purchasing account only.
+
+---
+
 ## Clearing subscription data for specific users
 
 Kumari requested clearing subscription data for these accounts (e.g. for re-testing purchase/restore):
