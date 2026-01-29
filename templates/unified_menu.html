@@ -53,8 +53,8 @@
     </style>
 
     <script>
-        // What Now? modal: open/close, trap focus, ESC, backdrop; restore body scroll on close
-        (function(){
+        // What Now? modal: attach on DOMContentLoaded so buttons/modal exist; open/close, ESC, backdrop
+        function initWhatNowModal(){
             var overlay = document.getElementById('whatNowModalOverlay');
             var openBtn = document.getElementById('whatNowBtn');
             var openBtnGuest = document.getElementById('whatNowBtnGuest');
@@ -68,7 +68,8 @@
             if(closeBtn) closeBtn.addEventListener('click', closeWhatNow);
             if(overlay) overlay.addEventListener('click', function(e){ if(e.target===overlay) closeWhatNow(); });
             document.addEventListener('keydown', function(e){ if(e.key==='Escape'&& overlay && overlay.style.display==='flex'){ closeWhatNow(); e.preventDefault(); } });
-        })();
+        }
+        document.addEventListener('DOMContentLoaded', initWhatNowModal);
         (function(){
             // Performance hard-stop: kill the diagonal/transparent overlay FX that was hurting scroll.
             // We still allow normal gradients/shadows, but disable injected sweep overlays + background FX.
@@ -1874,14 +1875,8 @@ function showRestoreDialog(title, message, isSuccess) {
             }
         }
         
-        @media (max-width: 480px) {
-            .avatar-viewer-wrapper {
-                transform: scale(0.9);
-            }
-            .spilling-letter {
-                font-size: 18px;
-            }
-            /* Mobile Home Layout (wireframe): stats 2×2, Refresh Stats pill, main actions 2×2 equal size, What Now? pill */
+        /* Wireframe layout: stats 2×2, Refresh Stats pill, main actions 2×2, What Now? pill — apply from 768px down */
+        @media (max-width: 768px) {
             .home-stats-row {
                 display: grid !important;
                 grid-template-columns: 1fr 1fr;
@@ -1936,6 +1931,14 @@ function showRestoreDialog(title, message, isSuccess) {
                 margin-left: auto;
                 margin-right: auto;
                 margin-top: 16px;
+            }
+        }
+        @media (max-width: 480px) {
+            .avatar-viewer-wrapper {
+                transform: scale(0.9);
+            }
+            .spilling-letter {
+                font-size: 18px;
             }
         }
 
