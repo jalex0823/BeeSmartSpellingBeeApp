@@ -587,7 +587,7 @@
     
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
     <!-- Fairy Animation Container -->
     <div class="fairy-container" id="fairyContainer" aria-hidden="true"></div>
     <div class="bee-swarm" id="beeSwarm" aria-hidden="true"></div>

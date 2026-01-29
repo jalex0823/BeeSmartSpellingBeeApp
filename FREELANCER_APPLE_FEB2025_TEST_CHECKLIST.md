@@ -227,6 +227,13 @@ These 5 accounts should be cleared of subscription/entitlement data before runni
 
 From repo root:
 
+**Syntax + full app + wireframe layout:**
+```bash
+pytest tests/test_smoke_syntax_and_app.py -v
+```
+Covers: app import, key template render (no Jinja/syntax errors), home/auth/subscription/help/terms/privacy routes, wireframe layout (stats 2×2, main actions 2×2, equal gap 16px, button height 56px, Start Quiz | Dashboard | Settings | Sign Out, What Now? modal).
+
+**Compliance + restore + UI polish:**
 ```bash
 pytest tests/test_apple_feb2025_compliance_smoke.py tests/test_restore_does_not_log_out.py tests/test_premium_restore_does_not_prompt_login_when_authed.py tests/test_ui_polish_smoke.py -v
 ```

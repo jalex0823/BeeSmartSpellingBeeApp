@@ -2,10 +2,17 @@
 
 {% block title %}Sign In - BeeSmart Spelling{% endblock %}
 
+{% block body_class %}login-page{% endblock %}
+
 {% block extra_css %}
 <style>
-  .page-center { min-height: 92vh; display:flex; align-items:center; justify-content:center; padding: 1.25rem; }
-  .content-card { background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,240,246,0.78)); border-radius:28px; overflow:hidden; box-shadow: 0 18px 45px rgba(255,170,200,0.28); border: 3px solid rgba(255,220,238,0.6); position:relative; animation: cardFloat 6s ease-in-out infinite; max-width: 520px; width:100%; }
+  /* Login page scroll fix: natural page scroll, no double-scroll, no 100vh lock (C) */
+  body.login-page { height: auto; overflow-y: auto; overflow-x: hidden; scroll-behavior: auto; }
+  .login-page .container { overflow: visible; min-height: 0; }
+  .login-page .page-center { min-height: 100dvh; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.25rem; overflow: visible; }
+  .login-page .content-card { overflow: visible; }
+  .page-center { min-height: 100dvh; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.25rem; }
+  .content-card { background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,240,246,0.78)); border-radius:28px; overflow: visible; box-shadow: 0 12px 28px rgba(255,170,200,0.22); border: 3px solid rgba(255,220,238,0.6); position:relative; animation: cardFloat 6s ease-in-out infinite; max-width: 520px; width:100%; }
   .content-card::before { content:''; position:absolute; inset:0; left:-100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); animation: shimmer 8s ease-in-out infinite; z-index:1; pointer-events:none; }
   @keyframes cardFloat { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-6px) } }
   @keyframes shimmer { 0%{ left:-100% } 50%{ left:100% } 100%{ left:100% } }

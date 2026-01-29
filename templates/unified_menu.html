@@ -53,6 +53,22 @@
     </style>
 
     <script>
+        // What Now? modal: open/close, trap focus, ESC, backdrop; restore body scroll on close
+        (function(){
+            var overlay = document.getElementById('whatNowModalOverlay');
+            var openBtn = document.getElementById('whatNowBtn');
+            var openBtnGuest = document.getElementById('whatNowBtnGuest');
+            var continueBtn = document.getElementById('whatNowContinueBtn');
+            var closeBtn = document.getElementById('whatNowCloseBtn');
+            function openWhatNow(){ if(overlay){ overlay.style.display='flex'; overlay.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; document.documentElement.style.overflow='hidden'; if(closeBtn) closeBtn.focus(); } }
+            function closeWhatNow(){ if(overlay){ overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); document.body.style.overflow=''; document.documentElement.style.overflow=''; var b = openBtn || openBtnGuest; if(b) b.focus(); } }
+            if(openBtn) openBtn.addEventListener('click', openWhatNow);
+            if(openBtnGuest) openBtnGuest.addEventListener('click', openWhatNow);
+            if(continueBtn) continueBtn.addEventListener('click', closeWhatNow);
+            if(closeBtn) closeBtn.addEventListener('click', closeWhatNow);
+            if(overlay) overlay.addEventListener('click', function(e){ if(e.target===overlay) closeWhatNow(); });
+            document.addEventListener('keydown', function(e){ if(e.key==='Escape'&& overlay && overlay.style.display==='flex'){ closeWhatNow(); e.preventDefault(); } });
+        })();
         (function(){
             // Performance hard-stop: kill the diagonal/transparent overlay FX that was hurting scroll.
             // We still allow normal gradients/shadows, but disable injected sweep overlays + background FX.
@@ -1864,6 +1880,62 @@ function showRestoreDialog(title, message, isSuccess) {
             }
             .spilling-letter {
                 font-size: 18px;
+            }
+            /* Mobile Home Layout (wireframe): stats 2×2, Refresh Stats pill, main actions 2×2 equal size, What Now? pill */
+            .home-stats-row {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+                margin-bottom: 1rem;
+                width: 100%;
+                max-width: min(92vw, 420px);
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .home-stats-row > div {
+                min-width: 0;
+            }
+            .home-refresh-stats-wrap {
+                width: 100%;
+                max-width: min(92vw, 420px);
+                margin-left: auto;
+                margin-right: auto;
+                margin-bottom: 16px;
+            }
+            .home-refresh-stats-wrap button#statsRefreshButton {
+                width: 100%;
+                border-radius: 999px;
+                padding: 0.5rem 1rem;
+            }
+            .home-main-actions {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+                width: 100%;
+                max-width: min(92vw, 420px);
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .home-main-actions .home-btn-dashboard { order: 2; }
+            .home-main-actions .home-btn-quiz { order: 1; }
+            .home-main-actions .home-btn-settings { order: 3; }
+            .home-main-actions .home-btn-signout { order: 4; }
+            .home-main-actions a,
+            .home-main-actions button {
+                height: 56px;
+                min-height: 56px;
+                max-width: 100%;
+                width: 100%;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                flex: none;
+            }
+            .home-what-now-wrap {
+                max-width: min(92vw, 420px);
+                margin-left: auto;
+                margin-right: auto;
+                margin-top: 16px;
             }
         }
 
@@ -4784,8 +4856,8 @@ function showRestoreDialog(title, message, isSuccess) {
                                  Welcome back, <span id="welcomeDisplayName">{{ current_user.display_name or 'Friend' }}</span>!
                             </div>
                             
-                            <!-- Stats Row -->
-                            <div style="
+                            <!-- Stats Row (2×2 grid on mobile <= 480px) -->
+                            <div class="home-stats-row" style="
                                 display: flex; 
                                 gap: 2rem; 
                                 justify-content: center; 
@@ -4912,8 +4984,8 @@ function showRestoreDialog(title, message, isSuccess) {
                             </div>
                             {% endif %}
 
-                            <!-- Manual stats refresh button (centered above Quiz button) -->
-                            <div style="
+                            <!-- Refresh Stats: full-width pill on mobile <= 480px -->
+                            <div class="home-refresh-stats-wrap" style="
                                 display: flex;
                                 justify-content: center;
                                 align-items: center;
@@ -4941,9 +5013,9 @@ function showRestoreDialog(title, message, isSuccess) {
                                 </button>
                             </div>
 
-                            <!-- Buttons (all on one line with consistent sizing) -->
-                            <div style="display: flex; flex-direction: row; gap: 0.8rem; align-items: center; justify-content: center; flex-wrap: nowrap; width: 100%;">
-                                <a href="/auth/dashboard" style="
+                            <!-- Main actions: 2×2 grid on mobile <= 480px (Start Quiz | Dashboard, Settings | Sign Out) -->
+                            <div class="home-main-actions" style="display: flex; flex-direction: row; gap: 0.8rem; align-items: center; justify-content: center; flex-wrap: nowrap; width: 100%;">
+                                <a href="/auth/dashboard" class="home-btn-dashboard" style="
                                     height: 54px;
                                     padding: 0 0.5rem;
                                     background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
@@ -4965,7 +5037,7 @@ function showRestoreDialog(title, message, isSuccess) {
                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(76, 175, 80, 0.4)'">
                                      Dashboard
                                 </a>
-                                <button type="button" class="action-btn primary" id="quickStartQuizBtn" style="
+                                <button type="button" class="action-btn primary home-btn-quiz" id="quickStartQuizBtn" style="
                                     height: 54px;
                                     padding: 0 0.5rem;
                                     background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
@@ -4986,9 +5058,9 @@ function showRestoreDialog(title, message, isSuccess) {
                                 " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(255, 215, 0, 0.5)'"
                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(255, 215, 0, 0.4)'"
                                    onclick="startQuiz()">
-                                     Quiz
+                                     Start Quiz
                                 </button>
-                                <a href="/settings/account" style="
+                                <a href="/settings/account" class="home-btn-settings" style="
                                     height: 54px;
                                     padding: 0 0.5rem;
                                     background: linear-gradient(135deg, #87CEEB 0%, #4FC3F7 100%);
@@ -5010,7 +5082,7 @@ function showRestoreDialog(title, message, isSuccess) {
                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(79, 195, 247, 0.35)'">
                                      Settings
                                 </a>
-                                <a href="/auth/logout" style="
+                                <a href="/auth/logout" class="home-btn-signout" style="
                                     height: 54px;
                                     padding: 0 0.5rem;
                                     background: linear-gradient(135deg, #FF6B6B 0%, #EE5A52 100%);
@@ -5033,6 +5105,12 @@ function showRestoreDialog(title, message, isSuccess) {
                                                   onclick="try { window.localStorage && window.localStorage.removeItem('beesmart_login_entitlements_v1'); } catch(e) {}">
                                      Sign Out
                                 </a>
+                            </div>
+                            <!-- What Now? (Help) - full-width on mobile; opens modal -->
+                            <div class="home-what-now-wrap" style="margin-top: 0.75rem; width: 100%; display: flex; justify-content: center;">
+                                <button type="button" id="whatNowBtn" class="action-btn info" style="width: 100%; max-width: 100%; min-height: 56px; font-size: 1rem; padding: 0.75rem 1rem; border-radius: 999px; white-space: nowrap;" title="Quick help — what you can do next">
+                                    What Now? (Help)
+                                </button>
                             </div>
                         </div>
                     {% else %}
@@ -5122,6 +5200,11 @@ function showRestoreDialog(title, message, isSuccess) {
                                 <div>
                                     <strong> Register:</strong> Create an account to track your spelling journey and compete with friends!
                                 </div>
+                            </div>
+                            <div class="home-what-now-wrap" style="margin-top: 0.75rem; width: 100%; display: flex; justify-content: center;">
+                                <button type="button" id="whatNowBtnGuest" class="action-btn info" style="width: 100%; max-width: 100%; min-height: 56px; font-size: 1rem; padding: 0.75rem 1rem; border-radius: 999px; white-space: nowrap;" title="Quick help — what you can do next">
+                                    What Now? (Help)
+                                </button>
                             </div>
                         </div>
                     {% endif %}
@@ -5561,6 +5644,32 @@ function showRestoreDialog(title, message, isSuccess) {
             
             <!-- Hidden file input for import -->
             <input type="file" id="importFileInput" accept=".json,.csv,.txt,.docx,.pdf,text/*" style="display: none;" onchange="handleImportFile(this)">
+        </div>
+    </div>
+
+
+    <!-- What Now? modal: no scroll, trap focus, close on backdrop/ESC -->
+    <div id="whatNowModalOverlay" role="dialog" aria-modal="true" aria-labelledby="whatNowModalTitle" aria-hidden="true" style="
+        display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.45); align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;
+    ">
+        <div id="whatNowModal" style="
+            background: linear-gradient(135deg, #FFFBF0 0%, #FFF9E6 100%); border-radius: 20px; padding: 1.5rem; max-width: min(92vw, 380px); width: 100%;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.2); border: 2px solid rgba(255, 215, 0, 0.4);
+            max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;
+        ">
+            <h2 id="whatNowModalTitle" style="margin: 0 0 1rem; font-size: 1.4rem; color: #5A2C15;">What Now?</h2>
+            <ul style="margin: 0 0 1.25rem; padding-left: 1.25rem; font-size: 0.95rem; color: #5A2C15; line-height: 1.6;">
+                <li><strong>Play as Guest</strong> — start a spelling quiz right away; your points, grades, and quiz history won't be saved.</li>
+                <li><strong>Register / Sign In</strong> — save your points, grades, and quiz history, and track your (or a family member's) progress across devices.</li>
+            </ul>
+            <div style="display: flex; gap: 12px; flex-shrink: 0;">
+                <button type="button" id="whatNowContinueBtn" style="
+                    flex: 1; height: 48px; border-radius: 12px; font-weight: 700; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #5A2C15; border: 2px solid rgba(255, 215, 0, 0.6); cursor: pointer;
+                ">Continue</button>
+                <button type="button" id="whatNowCloseBtn" style="
+                    flex: 1; height: 48px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.9); color: #5A2C15; border: 2px solid rgba(139, 69, 19, 0.25); cursor: pointer;
+                ">Close</button>
+            </div>
         </div>
     </div>
 
