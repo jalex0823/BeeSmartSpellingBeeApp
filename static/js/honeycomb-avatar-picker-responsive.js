@@ -1801,18 +1801,22 @@ function showLockedMessage(avatar) {
             </div>
         `;
     } else if (tier === 'premium' || tier === 'earn_or_buy') {
+        const inNativeApp = isProbablyNativeAppContext();
         const canPurchase = canPurchaseAvatar(avatar);
+        // In native app, show Purchase button whenever avatar has price or product_id (all commissioned avatars).
+        // Avoids "still loading" when bridge is late or product_id was missing from API.
+        const showPurchaseBtn = inNativeApp ? !!(avatar.price || avatar.product_id) : canPurchase;
         const purchaseLabel = avatar.price ? `Purchase for $${Number(avatar.price).toFixed(2)}` : 'Purchase to Unlock';
-        const notReadyMsg = isProbablyNativeAppContext()
-            ? 'In-app purchases are still loading. If you are in TestFlight, wait a few seconds and try again.'
+        const notReadyMsg = inNativeApp
+            ? 'If the Purchase button doesn\'t work yet, wait a few seconds and try again.'
             : 'Purchases are available in the BeeSmart iOS/Android app.';
         actionHtml = `
             <p style="margin-top: 1rem; color: #FFB300;">💎 This bee is available for purchase.</p>
             <div style="display:flex; gap:1rem; justify-content:center; margin-top: 1.25rem; flex-wrap: wrap;">
-                ${canPurchase ? `<button class="locked-modal-btn" onclick="purchaseLockedAvatar('${escapeAttr(avatar.slug)}')">${purchaseLabel}</button>` : ''}
+                ${showPurchaseBtn ? `<button class="locked-modal-btn" onclick="purchaseLockedAvatar('${escapeAttr(avatar.slug)}')">${purchaseLabel}</button>` : ''}
                 <button class="locked-modal-btn-secondary" onclick="this.closest('.locked-avatar-modal').remove()">Not now</button>
             </div>
-            ${!canPurchase ? `<p style="margin-top: 0.75rem; color: rgba(255,215,0,0.85); font-weight: 600;">${notReadyMsg}</p>` : ''}
+            ${!showPurchaseBtn ? `<p style="margin-top: 0.75rem; color: rgba(255,215,0,0.85); font-weight: 600;">${notReadyMsg}</p>` : ''}
         `;
     } else {
         actionHtml = `
@@ -1866,9 +1870,13 @@ function isUserAuthenticated() {
 
 function canPurchaseAvatar(avatar) {
     if (!avatar || !avatar.product_id) return false;
-    if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function')) return false;
     // Purchases require an authenticated user (server verify endpoint is login_required)
-    return isUserAuthenticated();
+    if (!isUserAuthenticated()) return false;
+    // In native app (TestFlight/Capacitor): always show Purchase button — purchase flow will wait for bridge.
+    // Avatars are commissioned for sale; don't hide the button while the IAP bridge is still loading.
+    if (isProbablyNativeAppContext()) return true;
+    // On web: only show button if bridge is present (e.g. embedded wrapper)
+    return !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function');
 }
 
 function isProbablyNativeAppContext() {

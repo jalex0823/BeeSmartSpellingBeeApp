@@ -53,23 +53,21 @@
     </style>
 
     <script>
-        // What Now? modal: attach on DOMContentLoaded so buttons/modal exist; open/close, ESC, backdrop
-        function initWhatNowModal(){
-            var overlay = document.getElementById('whatNowModalOverlay');
-            var openBtn = document.getElementById('whatNowBtn');
-            var openBtnGuest = document.getElementById('whatNowBtnGuest');
-            var continueBtn = document.getElementById('whatNowContinueBtn');
-            var closeBtn = document.getElementById('whatNowCloseBtn');
-            function openWhatNow(){ if(overlay){ overlay.style.display='flex'; overlay.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; document.documentElement.style.overflow='hidden'; if(closeBtn) closeBtn.focus(); } }
-            function closeWhatNow(){ if(overlay){ overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); document.body.style.overflow=''; document.documentElement.style.overflow=''; var b = openBtn || openBtnGuest; if(b) b.focus(); } }
-            if(openBtn) openBtn.addEventListener('click', openWhatNow);
-            if(openBtnGuest) openBtnGuest.addEventListener('click', openWhatNow);
-            if(continueBtn) continueBtn.addEventListener('click', closeWhatNow);
-            if(closeBtn) closeBtn.addEventListener('click', closeWhatNow);
-            if(overlay) overlay.addEventListener('click', function(e){ if(e.target===overlay) closeWhatNow(); });
-            document.addEventListener('keydown', function(e){ if(e.key==='Escape'&& overlay && overlay.style.display==='flex'){ closeWhatNow(); e.preventDefault(); } });
+        // About modal: attach on DOMContentLoaded; open/close, ESC, backdrop
+        function initAboutModal(){
+            var overlay = document.getElementById('aboutModalOverlay');
+            var openBtn = document.getElementById('aboutBtn');
+            var openBtnGuest = document.getElementById('aboutBtnGuest');
+            var closeBtn = document.getElementById('aboutModalCloseBtn');
+            function openAbout(){ if(overlay){ overlay.style.display='flex'; overlay.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; document.documentElement.style.overflow='hidden'; if(closeBtn) closeBtn.focus(); } }
+            function closeAbout(){ if(overlay){ overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); document.body.style.overflow=''; document.documentElement.style.overflow=''; var b = openBtn || openBtnGuest; if(b) b.focus(); } }
+            if(openBtn) openBtn.addEventListener('click', openAbout);
+            if(openBtnGuest) openBtnGuest.addEventListener('click', openAbout);
+            if(closeBtn) closeBtn.addEventListener('click', closeAbout);
+            if(overlay) overlay.addEventListener('click', function(e){ if(e.target===overlay) closeAbout(); });
+            document.addEventListener('keydown', function(e){ if(e.key==='Escape'&& overlay && overlay.style.display==='flex'){ closeAbout(); e.preventDefault(); } });
         }
-        document.addEventListener('DOMContentLoaded', initWhatNowModal);
+        document.addEventListener('DOMContentLoaded', initAboutModal);
         (function(){
             // Performance hard-stop: kill the diagonal/transparent overlay FX that was hurting scroll.
             // We still allow normal gradients/shadows, but disable injected sweep overlays + background FX.
@@ -1947,13 +1945,42 @@ function showRestoreDialog(title, message, isSuccess) {
                 margin-top: 16px;
             }
         }
+        /* Phones: reduce tile padding, font sizes, vertical spacing so stats + actions fit without scroll */
         @media (max-width: 480px) {
+            .home-stats-row {
+                gap: 10px;
+                margin-bottom: 0.75rem;
+            }
+            .home-stats-row > div {
+                padding: 0.5rem 0.6rem !important;
+                min-width: 0 !important;
+            }
+            .home-stats-row > div > div:first-child {
+                font-size: 0.75rem !important;
+            }
+            .home-stats-row > div > div:nth-child(2) {
+                font-size: 1.1rem !important;
+            }
+            .home-stats-row > div > div:last-child {
+                font-size: 0.65rem !important;
+            }
+            .home-main-actions { gap: 10px; }
+            .home-main-actions a,
+            .home-main-actions button {
+                height: 48px;
+                min-height: 48px;
+                font-size: 0.9rem;
+            }
             .avatar-viewer-wrapper {
                 transform: scale(0.9);
             }
             .spilling-letter {
                 font-size: 18px;
             }
+        }
+        /* Tablet: intentional layout (not giant mobile) */
+        @media (min-width: 481px) and (max-width: 768px) {
+            .home-stats-row > div { min-width: 0; }
         }
 
         /* Guest avatar carousel: spacing + smooth transitions */
@@ -3811,6 +3838,43 @@ function showRestoreDialog(title, message, isSuccess) {
            onclick="handleEmergencyBypass()"> Bypass</button>
     </div>
     
+    <!-- Post System Check onboarding modal: show after Tap to Start (unless "Don't show again"); mobile-first, no scroll -->
+    <div id="postCheckOnboardingOverlay" role="dialog" aria-modal="true" aria-labelledby="postCheckModalTitle" aria-hidden="true" style="
+        display: none; position: fixed; inset: 0; z-index: 10002; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;
+    ">
+        <div id="postCheckOnboardingModal" style="
+            background: linear-gradient(135deg, #FFFBF0 0%, #FFF9E6 100%); border-radius: 20px; padding: 1.25rem; max-width: min(92vw, 380px); width: 100%;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.2); border: 2px solid rgba(255, 215, 0, 0.4);
+            max-height: 85vh; overflow: hidden; display: flex; flex-direction: column;
+        ">
+            <h2 id="postCheckModalTitle" style="margin: 0 0 0.75rem; font-size: 1.35rem; color: #5A2C15;">Welcome to BeeSmart</h2>
+            <div style="margin: 0 0 0.5rem; font-size: 0.95rem; font-weight: 700; color: #5A2C15;">Play as Guest</div>
+            <ul style="margin: 0 0 0.75rem; padding-left: 1.1rem; font-size: 0.9rem; color: #5A2C15; line-height: 1.5;">
+                <li>Quick play (no account)</li>
+                <li>Progress may not sync across devices</li>
+                <li>Limited tracking features</li>
+            </ul>
+            <div style="margin: 0 0 0.5rem; font-size: 0.95rem; font-weight: 700; color: #5A2C15;">Register</div>
+            <ul style="margin: 0 0 1rem; padding-left: 1.1rem; font-size: 0.9rem; color: #5A2C15; line-height: 1.5;">
+                <li>Save progress + stats</li>
+                <li>Track a child/student (Parent/Teacher)</li>
+                <li>Access dashboards + reporting</li>
+            </ul>
+            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: #5A2C15; cursor: pointer;">
+                <input type="checkbox" id="postCheckDontShowAgain" style="min-width: 18px; min-height: 18px;">
+                Don't show again
+            </label>
+            <div style="display: flex; gap: 12px; flex-shrink: 0;">
+                <button type="button" id="postCheckContinueBtn" style="
+                    flex: 1; min-height: 48px; border-radius: 12px; font-weight: 700; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #5A2C15; border: 2px solid rgba(255, 215, 0, 0.6); cursor: pointer; font-size: 1rem;
+                ">Continue</button>
+                <button type="button" id="postCheckSkipBtn" style="
+                    flex: 1; min-height: 48px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.9); color: #5A2C15; border: 2px solid rgba(139, 69, 19, 0.25); cursor: pointer; font-size: 1rem;
+                ">Skip</button>
+            </div>
+        </div>
+    </div>
+    
     <script>
         // Emergency bypass handler
         function handleEmergencyBypass() {
@@ -3833,6 +3897,74 @@ function showRestoreDialog(title, message, isSuccess) {
                 }
             }
         }
+        // Post System Check onboarding: show after Tap to Start unless "Don't show again" was set
+        function openPostCheckOnboarding() {
+            var overlay = document.getElementById('postCheckOnboardingOverlay');
+            var continueBtn = document.getElementById('postCheckContinueBtn');
+            var skipBtn = document.getElementById('postCheckSkipBtn');
+            var dontShow = document.getElementById('postCheckDontShowAgain');
+            if (!overlay) return;
+            overlay.style.display = 'flex';
+            overlay.setAttribute('aria-hidden', 'false');
+            if (continueBtn) continueBtn.focus();
+            function closeAndDismiss() {
+                try { if (dontShow && dontShow.checked) localStorage.setItem('hidePostCheckModal', 'true'); } catch (e) {}
+                overlay.style.display = 'none';
+                overlay.setAttribute('aria-hidden', 'true');
+                if (window.loadingSystem && typeof window.loadingSystem.dismissLoader === 'function') window.loadingSystem.dismissLoader();
+            }
+            if (continueBtn) continueBtn.onclick = closeAndDismiss;
+            if (skipBtn) skipBtn.onclick = closeAndDismiss;
+            overlay.onclick = function(e) { if (e.target === overlay) closeAndDismiss(); };
+            document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { closeAndDismiss(); document.removeEventListener('keydown', esc); } });
+        }
+        // Difficulty feel: gentle | standard | challenge — persisted in localStorage and user.preferences
+        window.getDifficultyFeel = function() {
+            try {
+                var s = localStorage.getItem('beesmart_difficulty_feel');
+                if (s && /^(gentle|standard|challenge)$/i.test(s)) return s.toLowerCase();
+            } catch (e) {}
+            return 'standard';
+        };
+        window.setDifficultyFeel = function(feel) {
+            var v = (feel || '').toLowerCase();
+            if (v !== 'gentle' && v !== 'standard' && v !== 'challenge') return;
+            try { localStorage.setItem('beesmart_difficulty_feel', v); } catch (e) {}
+            document.querySelectorAll('.difficulty-feel-btn').forEach(function(btn) {
+                var active = (btn.getAttribute('data-feel') || '').toLowerCase() === v;
+                btn.classList.toggle('active', active);
+                btn.style.background = active ? 'linear-gradient(135deg, #FFE082 0%, #FFD54F 100%)' : 'rgba(255,255,255,0.7)';
+                btn.style.borderColor = active ? 'rgba(255, 215, 0, 0.8)' : 'rgba(139, 69, 19, 0.3)';
+            });
+            fetch('/api/users/me', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preferences: { difficulty_feel: v } }) }).catch(function() {});
+        };
+        window.appendFeelToQuizUrl = function(url) {
+            if (!url || typeof url !== 'string') return url;
+            var feel = window.getDifficultyFeel ? window.getDifficultyFeel() : 'standard';
+            var sep = url.indexOf('?') >= 0 ? '&' : '?';
+            return url + sep + 'feel=' + encodeURIComponent(feel);
+        };
+        // Quiz Quick Instructions: show before navigating to quiz; both Start Quiz and Skip proceed to quiz
+        window.showQuizInstructionsModal = function(targetUrl) {
+            var overlay = document.getElementById('quizInstructionsOverlay');
+            var startBtn = document.getElementById('quizInstructionsStartBtn');
+            var skipBtn = document.getElementById('quizInstructionsSkipBtn');
+            if (!overlay || !targetUrl) { if (targetUrl) window.location.href = window.appendFeelToQuizUrl ? window.appendFeelToQuizUrl(targetUrl) : targetUrl; return; }
+            window.__quizInstructionsTargetUrl = window.appendFeelToQuizUrl ? window.appendFeelToQuizUrl(targetUrl) : targetUrl;
+            overlay.style.display = 'flex';
+            overlay.setAttribute('aria-hidden', 'false');
+            if (startBtn) startBtn.focus();
+            function goToQuiz() {
+                var url = window.__quizInstructionsTargetUrl;
+                overlay.style.display = 'none';
+                overlay.setAttribute('aria-hidden', 'true');
+                if (url) window.location.href = url;
+            }
+            if (startBtn) startBtn.onclick = goToQuiz;
+            if (skipBtn) skipBtn.onclick = goToQuiz;
+            overlay.onclick = function(e) { if (e.target === overlay) goToQuiz(); };
+            document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { goToQuiz(); document.removeEventListener('keydown', esc); } });
+        };
     </script>
     
     <style>
@@ -4493,6 +4625,10 @@ function showRestoreDialog(title, message, isSuccess) {
                     width: 100%;
                     margin: 0 auto;
                 ">
+                <!-- About button above avatar (mobile-friendly, no clutter) -->
+                <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">
+                    <button type="button" id="aboutBtn" class="action-btn info" style="min-height: 44px; padding: 0.5rem 1rem; font-size: 0.95rem; border-radius: 999px;" title="About BeeSmart" aria-label="About BeeSmart">About</button>
+                </div>
                 <!-- Avatar Display - NEW clean container for controls -->
                 <div id="avatarFxHost" style="position: relative; width: 100%; margin: 0 auto; padding: 20px 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
                     <div class="avatar-stage" id="avatarStage" data-avatar-name="{{ current_user.get_avatar_data().name }}">
@@ -5128,12 +5264,6 @@ function showRestoreDialog(title, message, isSuccess) {
                                      Sign Out
                                 </a>
                             </div>
-                            <!-- What Now? (Help) - full-width on mobile; opens modal -->
-                            <div class="home-what-now-wrap" style="margin-top: 0.75rem; width: 100%; display: flex; justify-content: center;">
-                                <button type="button" id="whatNowBtn" class="action-btn info" style="width: 100%; max-width: 100%; min-height: 56px; font-size: 1rem; padding: 0.75rem 1rem; border-radius: 999px; white-space: nowrap;" title="Quick help — what you can do next">
-                                    What Now? (Help)
-                                </button>
-                            </div>
                         </div>
                     {% else %}
                         <!-- Guest View -->
@@ -5223,10 +5353,8 @@ function showRestoreDialog(title, message, isSuccess) {
                                     <strong> Register:</strong> Create an account to track your spelling journey and compete with friends!
                                 </div>
                             </div>
-                            <div class="home-what-now-wrap" style="margin-top: 0.75rem; width: 100%; display: flex; justify-content: center;">
-                                <button type="button" id="whatNowBtnGuest" class="action-btn info" style="width: 100%; max-width: 100%; min-height: 56px; font-size: 1rem; padding: 0.75rem 1rem; border-radius: 999px; white-space: nowrap;" title="Quick help — what you can do next">
-                                    What Now? (Help)
-                                </button>
+                            <div style="margin-top: 0.5rem; display: flex; justify-content: center;">
+                                <button type="button" id="aboutBtnGuest" class="action-btn info" style="min-height: 44px; padding: 0.5rem 1rem; font-size: 0.95rem; border-radius: 999px;" title="About BeeSmart" aria-label="About BeeSmart">About</button>
                             </div>
                         </div>
                     {% endif %}
@@ -5582,10 +5710,10 @@ function showRestoreDialog(title, message, isSuccess) {
                         try {
                             if (typeof startQuiz === 'function') { startQuiz(); return; }
                             if (typeof showRandomPlayInterface === 'function') { showRandomPlayInterface(); return; }
-                            // Fallback: navigate to quiz route if available
-                            window.location.href = '/quiz';
+                            // Fallback: show quiz instructions then navigate
+                            if (typeof showQuizInstructionsModal === 'function') { showQuizInstructionsModal('/quiz'); } else { window.location.href = (window.appendFeelToQuizUrl && window.appendFeelToQuizUrl('/quiz')) || '/quiz'; }
                         } catch(e) {
-                            window.location.href = '/quiz';
+                            if (typeof showQuizInstructionsModal === 'function') { showQuizInstructionsModal('/quiz'); } else { window.location.href = (window.appendFeelToQuizUrl && window.appendFeelToQuizUrl('/quiz')) || '/quiz'; }
                         }
                     }
                     const quickBtn2 = document.getElementById('quickStartQuizBtn');
@@ -5593,6 +5721,34 @@ function showRestoreDialog(title, message, isSuccess) {
                     // Optional: support a generic Start button if present
                     const startBtn = document.getElementById('startBtn');
                     if (startBtn) startBtn.addEventListener('click', function(){ if(!this.disabled) gotoQuiz(); });
+                    // Difficulty feel: load from API or localStorage, wire buttons
+                    (function() {
+                        var row = document.getElementById('difficultyFeelRow');
+                        if (!row) return;
+                        var btns = row.querySelectorAll('.difficulty-feel-btn');
+                        var getFeel = window.getDifficultyFeel || function() { return 'standard'; };
+                        var setFeel = window.setDifficultyFeel;
+                        function initFeel() {
+                            fetch('/api/users/me', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+                                .then(function(r) { return r.ok ? r.json() : null; })
+                                .then(function(data) {
+                                    var feel = 'standard';
+                                    if (data && data.user && data.user.preferences && data.user.preferences.difficulty_feel)
+                                        feel = data.user.preferences.difficulty_feel;
+                                    else
+                                        feel = getFeel();
+                                    if (setFeel) setFeel(feel);
+                                })
+                                .catch(function() { if (setFeel) setFeel(getFeel()); });
+                        }
+                        initFeel();
+                        btns.forEach(function(btn) {
+                            btn.addEventListener('click', function() {
+                                var feel = (btn.getAttribute('data-feel') || '').toLowerCase();
+                                if (feel && setFeel) setFeel(feel);
+                            });
+                        });
+                    })();
                 });
                 </script>
                 <button type="button" class="action-btn secondary js-export-list" onclick="event.stopPropagation(); exportWordList();" title=" Save your word list with definitions">
@@ -5640,6 +5796,27 @@ function showRestoreDialog(title, message, isSuccess) {
                 {% endif %}
                 
                 <!-- My Word Lists button removed - use tile instead -->
+
+                <!-- Difficulty feel: Gentle (more time, retry) | Standard | Challenge Me (less time, no retry). Persisted in localStorage. -->
+                <div id="difficultyFeelRow" style="
+                    margin-bottom: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: center;
+                ">
+                    <span style="font-size: 0.9rem; font-weight: 600; color: #5A2C15;">Difficulty feel:</span>
+                    <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                        <button type="button" class="difficulty-feel-btn" data-feel="gentle" title="More time (90s), retry allowed" style="
+                            padding: 6px 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; border: 2px solid rgba(139, 69, 19, 0.3);
+                            background: rgba(255,255,255,0.7); color: #5A2C15; cursor: pointer; transition: all 0.2s;
+                        ">Gentle</button>
+                        <button type="button" class="difficulty-feel-btn" data-feel="standard" title="60s, one retry per word" style="
+                            padding: 6px 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; border: 2px solid rgba(255, 215, 0, 0.6);
+                            background: linear-gradient(135deg, #FFE082 0%, #FFD54F 100%); color: #5A2C15; cursor: pointer; transition: all 0.2s;
+                        ">Standard</button>
+                        <button type="button" class="difficulty-feel-btn" data-feel="challenge" title="30s, no retry" style="
+                            padding: 6px 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; border: 2px solid rgba(139, 69, 19, 0.3);
+                            background: rgba(255,255,255,0.7); color: #5A2C15; cursor: pointer; transition: all 0.2s;
+                        ">Challenge Me</button>
+                    </div>
+                </div>
                 
                 <!-- Start Quiz Button Container with white semi-translucent background -->
                 <div style="
@@ -5670,27 +5847,52 @@ function showRestoreDialog(title, message, isSuccess) {
     </div>
 
 
-    <!-- What Now? modal: no scroll, trap focus, close on backdrop/ESC -->
-    <div id="whatNowModalOverlay" role="dialog" aria-modal="true" aria-labelledby="whatNowModalTitle" aria-hidden="true" style="
+    <!-- About modal: no scroll, trap focus, close on backdrop/ESC -->
+    <div id="aboutModalOverlay" role="dialog" aria-modal="true" aria-labelledby="aboutModalTitle" aria-hidden="true" style="
         display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.45); align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;
     ">
-        <div id="whatNowModal" style="
-            background: linear-gradient(135deg, #FFFBF0 0%, #FFF9E6 100%); border-radius: 20px; padding: 1.5rem; max-width: min(92vw, 380px); width: 100%;
+        <div id="aboutModal" style="
+            background: linear-gradient(135deg, #FFFBF0 0%, #FFF9E6 100%); border-radius: 20px; padding: 1.25rem; max-width: min(92vw, 380px); width: 100%;
             box-shadow: 0 12px 40px rgba(0,0,0,0.2); border: 2px solid rgba(255, 215, 0, 0.4);
-            max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;
+            max-height: 85vh; overflow: hidden; display: flex; flex-direction: column;
         ">
-            <h2 id="whatNowModalTitle" style="margin: 0 0 1rem; font-size: 1.4rem; color: #5A2C15;">What Now?</h2>
-            <ul style="margin: 0 0 1.25rem; padding-left: 1.25rem; font-size: 0.95rem; color: #5A2C15; line-height: 1.6;">
-                <li><strong>Play as Guest</strong> — start a spelling quiz right away; your points, grades, and quiz history won't be saved.</li>
-                <li><strong>Register / Sign In</strong> — save your points, grades, and quiz history, and track your (or a family member's) progress across devices.</li>
+            <h2 id="aboutModalTitle" style="margin: 0 0 0.75rem; font-size: 1.35rem; color: #5A2C15;">About BeeSmart</h2>
+            <p style="margin: 0 0 0.75rem; font-size: 0.9rem; color: #5A2C15; line-height: 1.5;">Spelling practice with avatars, voice input, and progress tracking for learners of all ages.</p>
+            <ul style="margin: 0 0 1rem; padding-left: 1.1rem; font-size: 0.9rem; color: #5A2C15; line-height: 1.5;">
+                <li>Upload words or use Random Words</li>
+                <li>Take quizzes with hints and sentences</li>
+                <li>Track points, grades, and history (when signed in)</li>
+            </ul>
+            <div style="flex-shrink: 0;">
+                <button type="button" id="aboutModalCloseBtn" style="
+                    width: 100%; min-height: 48px; border-radius: 12px; font-weight: 700; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #5A2C15; border: 2px solid rgba(255, 215, 0, 0.6); cursor: pointer; font-size: 1rem;
+                ">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quiz Quick Instructions modal: show before navigating to quiz; mobile-first, no scroll -->
+    <div id="quizInstructionsOverlay" role="dialog" aria-modal="true" aria-labelledby="quizInstructionsTitle" aria-hidden="true" style="
+        display: none; position: fixed; inset: 0; z-index: 99998; background: rgba(0,0,0,0.45); align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;
+    ">
+        <div id="quizInstructionsModal" style="
+            background: linear-gradient(135deg, #FFFBF0 0%, #FFF9E6 100%); border-radius: 20px; padding: 1.25rem; max-width: min(92vw, 380px); width: 100%;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.2); border: 2px solid rgba(255, 215, 0, 0.4);
+            max-height: 85vh; overflow: hidden; display: flex; flex-direction: column;
+        ">
+            <h2 id="quizInstructionsTitle" style="margin: 0 0 0.75rem; font-size: 1.35rem; color: #5A2C15;">Quick Quiz Tips</h2>
+            <ul style="margin: 0 0 1rem; padding-left: 1.1rem; font-size: 0.9rem; color: #5A2C15; line-height: 1.5;">
+                <li><strong>Show in Sentence</strong> — hear the word used in a sentence for context.</li>
+                <li><strong>Honey Hint</strong> — get a clue (definition or partial hint); may be limited per quiz.</li>
+                <li><strong>Menu</strong> — pause, exit, restart, or open settings during the quiz.</li>
             </ul>
             <div style="display: flex; gap: 12px; flex-shrink: 0;">
-                <button type="button" id="whatNowContinueBtn" style="
-                    flex: 1; height: 48px; border-radius: 12px; font-weight: 700; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #5A2C15; border: 2px solid rgba(255, 215, 0, 0.6); cursor: pointer;
-                ">Continue</button>
-                <button type="button" id="whatNowCloseBtn" style="
-                    flex: 1; height: 48px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.9); color: #5A2C15; border: 2px solid rgba(139, 69, 19, 0.25); cursor: pointer;
-                ">Close</button>
+                <button type="button" id="quizInstructionsStartBtn" style="
+                    flex: 1; min-height: 48px; border-radius: 12px; font-weight: 700; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #5A2C15; border: 2px solid rgba(255, 215, 0, 0.6); cursor: pointer; font-size: 1rem;
+                ">Start Quiz</button>
+                <button type="button" id="quizInstructionsSkipBtn" style="
+                    flex: 1; min-height: 48px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.9); color: #5A2C15; border: 2px solid rgba(139, 69, 19, 0.25); cursor: pointer; font-size: 1rem;
+                ">Skip</button>
             </div>
         </div>
     </div>
@@ -7620,10 +7822,10 @@ function showRestoreDialog(title, message, isSuccess) {
                         // Force immediate visual update
                         btn.offsetHeight; // Trigger reflow
                         
-                        // Auto-navigate to quiz after successful manual entry
+                        // Auto-navigate to quiz after successful manual entry (show instructions first)
                         setTimeout(() => {
                             console.log('Auto-navigating to quiz with', data.count, 'words');
-                            window.location.href = '/quiz';
+                            if (typeof showQuizInstructionsModal === 'function') { showQuizInstructionsModal('/quiz'); } else { window.location.href = (window.appendFeelToQuizUrl && window.appendFeelToQuizUrl('/quiz')) || '/quiz'; }
                         }, 1200); // Short delay to show success message
                     } else {
                         console.warn(' startQuizBtn not found; quiz-ready UI tweaks skipped');
@@ -7893,9 +8095,9 @@ function showRestoreDialog(title, message, isSuccess) {
                                 });
                                 
                                 if (choice) {
-                                    // User chose Resume - go to quiz page
+                                    // User chose Resume - show quiz instructions then go to quiz page
                                     console.log('User chose to resume quiz');
-                                    window.location.href = '/quiz';
+                                    if (typeof showQuizInstructionsModal === 'function') { showQuizInstructionsModal('/quiz'); } else { window.location.href = (window.appendFeelToQuizUrl && window.appendFeelToQuizUrl('/quiz')) || '/quiz'; }
                                 } else {
                                     // User chose Restart - reload list with force flag
                                     console.log(' User chose to restart - reloading list from scratch');
@@ -7909,7 +8111,7 @@ function showRestoreDialog(title, message, isSuccess) {
                                     if (restartData.ok) {
                                         await WordBankManager.updateAllDisplays(true);
                                         showSuccessMessage(` Restarted "${restartData.loaded.name}" (${restartData.loaded.word_count} words)`);
-                                        setTimeout(() => window.location.href = '/quiz', 800);
+                                        setTimeout(() => { if (typeof showQuizInstructionsModal === 'function') { showQuizInstructionsModal('/quiz'); } else { window.location.href = (window.appendFeelToQuizUrl && window.appendFeelToQuizUrl('/quiz')) || '/quiz'; } }, 800);
                                     } else {
                                         showErrorMessage(restartData.error || 'Failed to restart');
                                     }
@@ -7925,9 +8127,9 @@ function showRestoreDialog(title, message, isSuccess) {
                                 
                                 showSuccessMessage(` Loaded "${data.loaded.name}" (${data.loaded.word_count} words). Starting quiz…`);
                                 
-                                // Short delay to show success message
+                                // Short delay then show quiz instructions and navigate
                                 setTimeout(() => {
-                                    window.location.href = '/quiz';
+                                    if (typeof showQuizInstructionsModal === 'function') { showQuizInstructionsModal('/quiz'); } else { window.location.href = (window.appendFeelToQuizUrl && window.appendFeelToQuizUrl('/quiz')) || '/quiz'; }
                                 }, 800);
                             } else {
                                 showErrorMessage(data.error || 'Failed to load list');
@@ -9276,7 +9478,7 @@ function showRestoreDialog(title, message, isSuccess) {
                                 <p style="margin-bottom: 1rem;">You're in! Battle Code: <strong>${joinedCode}</strong></p>
                                 <p style="margin-top: 0.5rem; font-size: 0.95rem;">Choose what to do next:</p>
                                 <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: center; flex-wrap: wrap;">
-                                    <button onclick="window.location.href='/quiz?battle_code=${joinedCode}&player_name=${encodeURIComponent(playerName)}'" style="
+                                    <button onclick="(function(){ var u='/quiz?battle_code=${joinedCode}&player_name=${encodeURIComponent(playerName)}'; if(typeof showQuizInstructionsModal==='function') showQuizInstructionsModal(u); else window.location.href=u; })()" style="
                                         background: linear-gradient(135deg, #FF4500 0%, #DC143C 100%);
                                         color: white;
                                         border: none;
@@ -10416,10 +10618,10 @@ function showRestoreDialog(title, message, isSuccess) {
                         // Note: Start Quiz button is now updated by WordBankManager.updateAllDisplays() above
                         console.log('Quiz button enabled after text upload, word count:', data.count);
                         
-                        // Auto-navigate to quiz after successful upload
+                        // Auto-navigate to quiz after successful upload (show instructions first)
                         setTimeout(() => {
                             console.log('Auto-navigating to quiz with', data.count, 'words');
-                            window.location.href = '/quiz';
+                            if (typeof showQuizInstructionsModal === 'function') { showQuizInstructionsModal('/quiz'); } else { window.location.href = (window.appendFeelToQuizUrl && window.appendFeelToQuizUrl('/quiz')) || '/quiz'; }
                         }, 1200); // Short delay to show success message
                         
                         // Force immediate visual update
@@ -11084,7 +11286,8 @@ function showRestoreDialog(title, message, isSuccess) {
                                 await fetch('/api/quiz/resume', { method: 'POST', credentials: 'same-origin' });
                             } catch(e) { console.warn('Resume API failed (continuing to quiz):', e); }
                             const quizUrl = `/quiz?t=${Date.now()}&resume=1`;
-                            setTimeout(() => { window.location.href = quizUrl; }, 150);
+                            hideLoadingMessage();
+                            if (typeof showQuizInstructionsModal === 'function') { showQuizInstructionsModal(quizUrl); } else { window.location.href = (window.appendFeelToQuizUrl && window.appendFeelToQuizUrl(quizUrl)) || quizUrl; }
                             return; // Stop further processing
                         }
                         // Else fall through to normal start behavior below
@@ -11147,10 +11350,9 @@ function showRestoreDialog(title, message, isSuccess) {
                         if (window.magicalEffects) {
                             window.magicalEffects.playChimeSounds();
                         }
-                        showLoadingMessage(' Getting your spelling adventure ready...');
-                        
+                        hideLoadingMessage();
                         const quizUrl = `/quiz?t=${Date.now()}&words=${finalWordCount}`;
-                        setTimeout(() => { window.location.href = quizUrl; }, 150);
+                        if (typeof showQuizInstructionsModal === 'function') { showQuizInstructionsModal(quizUrl); } else { window.location.href = (window.appendFeelToQuizUrl && window.appendFeelToQuizUrl(quizUrl)) || quizUrl; }
                     };
 
                     if (wordCount > 0) {
@@ -17215,7 +17417,19 @@ function showRestoreDialog(title, message, isSuccess) {
                 // Fallback override in case inline animation persists
                 btn.style.animation = 'readyFlash 1s ease-in-out infinite';
                 btn.setAttribute('title', 'All systems ready — tap to start!');
-                btn.addEventListener('click', () => this.dismissLoader());
+                btn.addEventListener('click', () => {
+                    try {
+                        if (localStorage.getItem('hidePostCheckModal') === 'true') {
+                            this.dismissLoader();
+                            return;
+                        }
+                    } catch (e) {}
+                    if (typeof openPostCheckOnboarding === 'function') {
+                        openPostCheckOnboarding();
+                    } else {
+                        this.dismissLoader();
+                    }
+                });
             }
 
             _dispatchHoneyLoaderFinishedOnce() {

@@ -60,7 +60,7 @@ from models import SpeedRoundConfig, SpeedRoundScore
 from models import Avatar, BattleSession, PurchaseRecord, BundleKey, DynamicBundle, BundleKeyRedemption
 from models import WordBankStorage  # Single source of truth for all word operations
 from datetime import date
-from avatar_skus import AVATAR_SKUS, build_product_entitlements  # Avatar monetization mapping
+from avatar_skus import AVATAR_SKUS, build_product_entitlements, sku_for_slug  # Avatar monetization mapping
 try:
     from bundle_skus import build_bundle_product_entitlements, bundle_sku_for_id  # Bundle monetization mapping
 except Exception:
@@ -1470,13 +1470,16 @@ def api_avatars():
         obj_file = entry.get('obj_file') or ''
         # GLB avatars are in glb_files folder, not individual avatar folders
         glb_url = f"/static/assets/avatars/glb_files/{obj_file}" if obj_file else None
-        # Optional: stable product id for store purchase flows
+        # Optional: stable product id for store purchase flows (required for IAP in app)
         product_id = None
         try:
             tier_norm = (entry.get('tier') or '').lower()
             avatar_id = str(entry.get('id') or '').strip().lower()
             if tier_norm in ('earn_or_buy', 'premium') and avatar_id:
                 product_id = avatar_sku_lookup.get(avatar_id)
+                # Fallback: derive SKU so locked avatars are always purchasable in app
+                if not product_id:
+                    product_id = sku_for_slug(avatar_id)
         except Exception:
             product_id = None
 
@@ -2101,6 +2104,41 @@ def _blank_word(text, word):
         result = re.sub(rf"\b{re.escape(variation)}\b", "_____", result, flags=re.IGNORECASE)
     
     return result
+
+
+def _edit_distance(a: str, b: str) -> int:
+    """Levenshtein distance between two strings (for near-miss detection)."""
+    if not a:
+        return len(b)
+    if not b:
+        return len(a)
+    n, m = len(a), len(b)
+    prev = list(range(m + 1))
+    for i in range(1, n + 1):
+        curr = [i] + [0] * m
+        for j in range(1, m + 1):
+            curr[j] = min(
+                prev[j] + 1,
+                curr[j - 1] + 1,
+                prev[j - 1] + (0 if a[i - 1] == b[j - 1] else 1)
+            )
+        prev = curr
+    return prev[m]
+
+
+def is_near_miss(user_normalized: str, correct_normalized: str) -> bool:
+    """True if user spelling is close (edit distance <= 2 for longer words, 1 for short)."""
+    if not user_normalized or not correct_normalized:
+        return False
+    if user_normalized == correct_normalized:
+        return False
+    dist = _edit_distance(user_normalized, correct_normalized)
+    max_len = max(len(user_normalized), len(correct_normalized))
+    if max_len <= 3:
+        return dist == 1
+    if max_len <= 6:
+        return dist <= 1
+    return dist <= 2
 
 
 def build_honey_hint_pattern(word: str) -> str:
@@ -9048,8 +9086,24 @@ def api_live_status():
         "hints_used_current_word": state.get("hints_used_current_word", 0)
     })
 
+def _simple_syllable_hint(word: str) -> str:
+    """Return a simple syllable-style hint (e.g. 'spel-ling') for Honey Hint level 3."""
+    w = (word or "").strip().lower()
+    if not w or len(w) <= 4:
+        return w
+    # Simple heuristic: break at vowel-consonant boundaries for longer words
+    import re
+    # Insert hyphen before consonant clusters that start after a vowel (rough syllable break)
+    parts = re.split(r"(?<=[aeiou])(?=[^aeiou]+[aeiou])|(?<=[^aeiou])(?=[aeiou])", w, flags=re.IGNORECASE)
+    return "-".join(p for p in parts if p) if len(parts) > 1 else w
+
+
 @app.route("/api/hint", methods=["POST"])
 def api_hint():
+    """
+    Progressive Honey Hint: Level 1 = definition/sentence, Level 2 = first letter, Level 3 = letters pattern or syllable.
+    User must use prior hint to unlock next; level = hints_used_current_word (1-based).
+    """
     state = get_quiz_state()
     wb = get_wordbank()
     if not wb or state is None:
@@ -9060,20 +9114,59 @@ def api_hint():
     if idx >= len(order):
         return jsonify({"error": "Quiz finished"}), 400
 
-    # Track hint usage for points calculation
+    # Track hint usage (this is the "level" for progressive unlock)
     state["hints_used_current_word"] = state.get("hints_used_current_word", 0) + 1
     state["hints_used_total"] = state.get("hints_used_total", 0) + 1
+    level = state["hints_used_current_word"]
     session[QUIZ_STATE_KEY] = state
 
     word_rec = wb[order[idx]]
-    current_word = word_rec.get("word", "")
-    # 🍯 Honey Hint: reveal 1st, 3rd, and last letters (no definition/sentence).
-    pattern = build_honey_hint_pattern(str(current_word or ""))
+    current_word = str(word_rec.get("word", "") or "").strip()
+    hint_text = ""
+    sentence_text = ""
+    hint_type = "definition"
+
+    if level == 1:
+        # Level 1: Definition (and sentence if available)
+        definition = (word_rec.get("definition") or "").strip()
+        sentence_text = (word_rec.get("sentence") or "").strip()
+        if definition:
+            definition = sanitize_kid_friendly_text(_blank_word(definition, current_word))
+        if sentence_text:
+            sentence_text = sanitize_kid_friendly_text(_blank_word(sentence_text, current_word))
+        if not definition:
+            try:
+                enriched = get_word_info(current_word)
+                if enriched and "Fill in the blank:" in enriched:
+                    before, after = enriched.split("Fill in the blank:", 1)
+                    definition = sanitize_kid_friendly_text(_blank_word(before.strip(), current_word))
+                    sentence_text = sentence_text or sanitize_kid_friendly_text(_blank_word(after.strip(), current_word))
+                else:
+                    definition = sanitize_kid_friendly_text(_blank_word((enriched or "").strip(), current_word))
+            except Exception:
+                definition = "Listen carefully and spell the word you hear."
+        hint_text = definition or "Listen carefully and spell the word you hear."
+        hint_type = "definition"
+    elif level == 2:
+        # Level 2: First letter only
+        first = current_word[0].upper() if current_word else ""
+        hint_text = f"The word starts with: {first}" if first else ""
+        hint_type = "first_letter"
+    else:
+        # Level 3+: Letters pattern (1st, 3rd, last) or syllable-style
+        pattern = build_honey_hint_pattern(current_word)
+        syllable_hint = _simple_syllable_hint(current_word)
+        hint_text = f"Letters: {pattern}. Sounds like: {syllable_hint}" if syllable_hint != current_word else pattern
+        if not hint_text.strip():
+            hint_text = pattern
+        hint_type = "honey_letters"
+
     return jsonify({
-        "hint": pattern,
-        "type": "honey_letters",
-        "word_length": len(str(current_word or "")),
-        "sentence": ""  # keep key for frontend compatibility; intentionally blank
+        "hint": hint_text,
+        "type": hint_type,
+        "hint_level": level,
+        "word_length": len(current_word),
+        "sentence": sentence_text
     })
 
 # ---  LEVEL PROGRESSION SYSTEM ------------------------------------------
@@ -9421,6 +9514,13 @@ def api_answer():
     print(f"")
 
     is_correct = False if skip_requested else normalized_input == normalized_correct
+    almost_right = False
+    if not is_correct and not skip_requested and user_input:
+        almost_right = is_near_miss(normalized_input, normalized_correct)
+        if almost_right:
+            # Softer feedback and reduced penalty: partial points, don't reset streak
+            is_correct = False  # still counts as incorrect for accuracy
+            print(f" ALMOST RIGHT (near-miss): '{user_input}' vs '{correct_spelling}'")
 
     #  HONEY POINTS CALCULATION
     points_earned = 0
@@ -9478,6 +9578,13 @@ def api_answer():
             points_earned += 25
         
         print(f" Points earned: {points_earned} (breakdown: {points_breakdown})")
+
+    # Almost right: partial points (reduced penalty), don't reset streak
+    if almost_right:
+        points_earned = 25
+        points_breakdown["almost_right"] = 25
+        state["session_points"] = state.get("session_points", 0) + points_earned
+        print(f" Almost right: +25 partial points (streak preserved)")
 
     # Update stats and advance index for any completed attempt
     if is_correct:
@@ -9552,7 +9659,8 @@ def api_answer():
                 db.session.rollback()
     else:
         state["incorrect"] += 1
-        state["streak"] = 0
+        if not almost_right:
+            state["streak"] = 0
 
     #  ADVANCE INDEX AFTER RECORDING ANSWER - This is the correct place for advancement
     # /api/next shows current word, /api/answer records result and advances to next
@@ -9607,7 +9715,7 @@ def api_answer():
                 correct_spelling=correct_spelling,
                 time_taken_seconds=(elapsed_ms / 1000.0) if elapsed_ms else None,
                 input_method=method,
-                points_earned=points_earned if is_correct else 0,
+                points_earned=points_earned if (is_correct or almost_right) else 0,
                 base_points=points_breakdown.get("base", 0) if is_correct else 0,
                 time_bonus=points_breakdown.get("time_bonus", 0) if is_correct else 0,
                 streak_bonus=points_breakdown.get("streak_bonus", 0) if is_correct else 0,
@@ -9662,7 +9770,9 @@ def api_answer():
         phonetic_spelling = build_phonetic_spelling(correct_spelling)
 
     feedback_message = "Great job!" if is_correct else (
-        "Skipping this word. Let's try a new one!" if skip_requested else f"Try again! The word is spelled: {correct_spelling}"
+        "Skipping this word. Let's try a new one!" if skip_requested else (
+            "So close! One small change — try the next word." if almost_right else f"Try again! The word is spelled: {correct_spelling}"
+        )
     )
 
     # Next index position for UI progress (1-based).
@@ -10140,6 +10250,7 @@ def api_answer():
 
     return jsonify({
         "correct": is_correct,
+        "almost_right": almost_right,
         "word": correct_spelling,  # Add word for frontend reference
         "expected": correct_spelling,
         "skipped": skip_requested,
@@ -17395,16 +17506,25 @@ def api_get_current_user():
                 }), 401
 
             data = request.get_json(silent=True) or {}
+            # Optional: update preferences (e.g. difficulty_feel: gentle | standard | challenge)
+            prefs_data = data.get("preferences")
+            if isinstance(prefs_data, dict):
+                prefs = dict(current_user.preferences or {})
+                if "difficulty_feel" in prefs_data:
+                    v = (prefs_data.get("difficulty_feel") or "").strip().lower()
+                    if v in ("gentle", "standard", "challenge"):
+                        prefs["difficulty_feel"] = v
+                current_user.preferences = prefs
             new_name = (data.get("display_name") or "").strip()
-            if not new_name:
+            if new_name:
+                if len(new_name) > 40:
+                    new_name = new_name[:40].strip()
+                current_user.display_name = new_name
+            if not new_name and not isinstance(prefs_data, dict):
                 return jsonify({
                     "status": "error",
-                    "message": "display_name is required"
+                    "message": "display_name or preferences is required"
                 }), 400
-            # Keep it kid-friendly + safe for headers/UI.
-            if len(new_name) > 40:
-                new_name = new_name[:40].strip()
-            current_user.display_name = new_name
             db.session.commit()
             try:
                 db.session.refresh(current_user)
@@ -17437,24 +17557,28 @@ def api_get_current_user():
                 print(f"WARNING /api/users/me: Failed to auto-refresh GPA/accuracy: {_e}")
 
 
+            user_payload = {
+                'id': current_user.id,
+                'username': current_user.username,
+                'display_name': getattr(current_user, 'display_name', current_user.username),
+                'email': getattr(current_user, 'email', None),
+                'role': getattr(current_user, 'role', 'student'),
+                #  Extended real-time progress fields
+                'total_quizzes_completed': getattr(current_user, 'total_quizzes_completed', 0),
+                'total_lifetime_points': getattr(current_user, 'total_lifetime_points', 0),
+                'honey_points': getattr(current_user, 'honey_points', 0),
+                'cumulative_gpa': getattr(current_user, 'cumulative_gpa', 0.0),
+                'average_accuracy': getattr(current_user, 'average_accuracy', 0.0),
+                'best_grade': getattr(current_user, 'best_grade', None),
+                'best_streak': getattr(current_user, 'best_streak', 0)
+            }
+            prefs = getattr(current_user, 'preferences', None) or {}
+            if isinstance(prefs, dict):
+                user_payload['preferences'] = prefs
             resp = jsonify({
                 'status': 'success',
                 'authenticated': True,
-                'user': {
-                    'id': current_user.id,
-                    'username': current_user.username,
-                    'display_name': getattr(current_user, 'display_name', current_user.username),
-                    'email': getattr(current_user, 'email', None),
-                    'role': getattr(current_user, 'role', 'student'),
-                    #  Extended real-time progress fields
-                    'total_quizzes_completed': getattr(current_user, 'total_quizzes_completed', 0),
-                    'total_lifetime_points': getattr(current_user, 'total_lifetime_points', 0),
-                    'honey_points': getattr(current_user, 'honey_points', 0),
-                    'cumulative_gpa': getattr(current_user, 'cumulative_gpa', 0.0),
-                    'average_accuracy': getattr(current_user, 'average_accuracy', 0.0),
-                    'best_grade': getattr(current_user, 'best_grade', None),
-                    'best_streak': getattr(current_user, 'best_streak', 0)
-                }
+                'user': user_payload
             })
             try:
                 resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'

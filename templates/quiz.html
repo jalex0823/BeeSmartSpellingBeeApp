@@ -1521,6 +1521,17 @@ if ('speechSynthesis' in window) {
         color: #bf360c;
     }
 
+    .feedback-area.feedback-almost {
+        background: rgba(255, 193, 7, 0.12);
+        border: 2px solid rgba(255, 152, 0, 0.5);
+        color: #E65100;
+    }
+
+    .quiz-feedback.almost-right {
+        border-color: rgba(255, 152, 0, 0.5);
+        box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2);
+    }
+
     /* Retry Countdown Timer Styling */
     .retry-countdown-timer {
         background: linear-gradient(135deg, rgba(255, 152, 0, 0.25), rgba(255, 193, 7, 0.2));
@@ -5075,7 +5086,7 @@ class BeeDelightManager {
             return;
         }
 
-        this.quizCard.classList.remove('correct', 'incorrect');
+        this.quizCard.classList.remove('correct', 'incorrect', 'almost-right');
         this.quizCard.classList.add('quiz-feedback');
 
         if (result.correct) {
@@ -5086,11 +5097,15 @@ class BeeDelightManager {
                 this.createSparkleBurst(this.inputWrapper || this.quizCard, 8);
             }
             this.showPhonetic('');
+        } else if (result.almost_right) {
+            this.quizCard.classList.add('almost-right');
+            this.soundboard.play('incorrect');
+            this.setMascotState('speaking', 1200);
+            this.showPhonetic('');
         } else {
             this.quizCard.classList.add('incorrect');
             this.soundboard.play(result.skipped ? 'skip' : 'incorrect');
             this.setMascotState(result.skipped ? 'speaking' : 'sad', result.skipped ? 1000 : 1400);
-            // ❌ DO NOT show phonetic on first attempt - user hasn't chosen yet
             this.showPhonetic('');
         }
     }
@@ -5117,7 +5132,7 @@ class BeeDelightManager {
 
     clearFeedbackState() {
         if (this.quizCard) {
-            this.quizCard.classList.remove('quiz-feedback', 'correct', 'incorrect');
+            this.quizCard.classList.remove('quiz-feedback', 'correct', 'incorrect', 'almost-right');
         }
     }
 
@@ -5214,6 +5229,25 @@ class QuizManager {
         this.timerMode = 'normal'; // 'easy' (90s), 'normal' (60s), 'challenge' (30s), 'dynamic'
         this.timerStrictMode = true; // Auto-advance when time expires (changed from false)
         this.countdownTimer = null;
+        // Difficulty feel from menu: gentle (90s, retry) | standard (60s, one retry) | challenge (30s, no retry)
+        this.retryPolicy = 'one';
+        try {
+            const params = new URLSearchParams(window.location.search || '');
+            let feel = (params.get('feel') || '').toLowerCase();
+            if (!feel) {
+                try { feel = (localStorage.getItem('beesmart_difficulty_feel') || '').toLowerCase(); } catch (e) {}
+            }
+            if (feel === 'gentle') {
+                this.timerMode = 'easy';
+                this.retryPolicy = 'allowed';
+            } else if (feel === 'challenge') {
+                this.timerMode = 'challenge';
+                this.retryPolicy = 'none';
+            } else if (feel === 'standard') {
+                this.timerMode = 'normal';
+                this.retryPolicy = 'one';
+            }
+        } catch (e) {}
         
         // 🏆 Points System Settings
         this.pointsEnabled = true; // Enable points tracking
@@ -8117,13 +8151,14 @@ class QuizManager {
             
             this.updateScoreDisplay(result.progress);
             
-            // 🔄 CRITICAL FIX: If answer was INCORRECT, STOP HERE and wait for user choice
-            if (!result.correct) {
+            // 🔄 If answer was INCORRECT (and not "almost right"), STOP and wait for user choice
+            if (!result.correct && !result.almost_right) {
                 console.log('❌ INCORRECT - Halting auto-advance. Waiting for user to click Retry or Show Answer...');
-                // DON'T load next word - wait for user to make a choice via retry buttons
                 this.isAnswering = false;
-                // Note: Next Word button will be shown by showRetryUI if retry window closes
-                return;  // ⬅️ STOP HERE - DON'T CONTINUE
+                return;
+            }
+            if (result.almost_right) {
+                console.log('🍯 Almost right - partial credit, advancing to next word.');
             }
             
             // 🏆 Check if quiz is complete and show badges/level-up
@@ -8325,15 +8360,16 @@ class QuizManager {
         
         try {
             const isCorrect = !!(result && result.correct);
+            const isAlmostRight = !!(result && result.almost_right);
             if (window.BeeVoiceViz && window.BeeVoiceViz.react) {
-                window.BeeVoiceViz.react(isCorrect ? 'feedback-correct' : 'feedback-incorrect');
+                window.BeeVoiceViz.react(isCorrect ? 'feedback-correct' : (isAlmostRight ? 'feedback-incorrect' : 'feedback-incorrect'));
             }
         } catch (e) {}
         const feedbackArea = document.getElementById('feedbackArea');
         feedbackArea.style.display = 'block';
         
-        // Use randomized feedback instead of server message
-        const randomMessage = this.getRandomFeedback(result.correct);
+        // Use randomized feedback instead of server message (or server message for almost_right)
+        const randomMessage = result.almost_right ? (result.feedback_message || 'So close! One small change.') : this.getRandomFeedback(result.correct);
         
     // Get audio announcement (may be a string or an object {phrase, name, pauseMs})
     const audioAnnouncement = this.getRandomAudioAnnouncement(result.correct);
@@ -8403,6 +8439,21 @@ class QuizManager {
             
             // Visual explosion effect!
             this.createExplosion();
+        } else if (result.almost_right) {
+            // Almost right: supportive message, partial points, advance to next word (no retry)
+            const pointsData = result.points || {};
+            const earnedPoints = pointsData.earned || 0;
+            const breakdown = pointsData.breakdown || {};
+            this.currentStreak = (result.progress && result.progress.streak) || this.currentStreak;
+            feedbackArea.className = 'feedback-area feedback-almost';
+            feedbackArea.innerHTML = `
+                <div style="font-size: 1.1rem; font-weight: 700; color: #E65100;">${randomMessage}</div>
+                <div style="margin-top: 0.4rem; font-size: 0.95rem;">Moving to the next word...</div>
+            `;
+            if (earnedPoints > 0) {
+                this.showPointsPopup(earnedPoints, breakdown);
+            }
+            playThemedSound('incorrect'); // softer than full wrong
         } else {
             // Reset streak on incorrect answer
             this.currentStreak = 0;
@@ -8410,8 +8461,9 @@ class QuizManager {
             // Get the correct spelling from the current word data
             const correctWord = (this.currentWordData && this.currentWordData.word) || result.word || '';
             
-            // 🔄 RETRY LOGIC: Show choice buttons if this is first failure and retry not used
-            if (!this.isRetryAttempt && !this.hasRetried) {
+            // 🔄 RETRY LOGIC: Show choice buttons if this is first failure and retry not used (and feel !== challenge)
+            const offerRetry = !this.isRetryAttempt && !this.hasRetried && this.retryPolicy !== 'none';
+            if (offerRetry) {
                 // This is first failure - offer choice
                 // 🔴 CRITICAL: Show ABSOLUTELY NOTHING except buttons!
                 // NO feedback message, NO phonetic, NO hints - JUST the choice buttons
@@ -9361,6 +9413,25 @@ class QuizManager {
             `;
         }
         
+        // One Win: single positive takeaway before stats (BeeSmart P0)
+        const sessionPoints = Number(summary.session_points) || 0;
+        const maxStreak = Number(summary.max_streak) || 0;
+        let oneWinText = '';
+        if (total > 0 && correct === total) {
+            oneWinText = "One win: You got every word right! 🌟";
+        } else if (maxStreak >= 3) {
+            oneWinText = "One win: Your best streak was " + maxStreak + " words in a row! 🔥";
+        } else if (sessionPoints > 0) {
+            oneWinText = "One win: You earned " + sessionPoints.toLocaleString() + " Buzz Dust this round! ✨";
+        } else if (correct > 0) {
+            oneWinText = correct === 1
+                ? "One win: You spelled 1 word correctly! 🐝"
+                : "One win: You spelled " + correct + " words correctly! ✅";
+        } else {
+            oneWinText = "One win: You showed up and practiced — that's what matters! 💪";
+        }
+        const oneWinHTML = oneWinText ? '<div class="one-win-banner" role="status">' + oneWinText + '</div>' : '';
+
         document.getElementById('completionStats').innerHTML = `
             <div class="report-card">
                 <div class="report-header">
@@ -9371,6 +9442,7 @@ class QuizManager {
                     })()}</h2>
                     <p class="sub">Great job practicing your spelling!</p>
                 </div>
+                ${oneWinHTML}
 
                 <div class="grade-block">
                     <div class="grade-bubble" style="background: linear-gradient(135deg, ${gradeColor} 0%, ${gradeColor}dd 100%);">
@@ -9480,6 +9552,15 @@ class QuizManager {
                 .report-header h2 { margin: 0; font-size: 1.4rem; color: #5A2C15; }
                 .report-header .sub { margin: 0.35rem 0 0; color: #7A4A2A; font-weight: 600; font-size: 0.95rem; opacity: 0.9; }
 
+                .one-win-banner {
+                    text-align: center; margin: 0.75rem 0 1rem; padding: 0.85rem 1rem;
+                    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+                    border-radius: 16px; border: 2px solid rgba(76, 175, 80, 0.5);
+                    font-size: 1.05rem; font-weight: 700; color: #2E7D32;
+                    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+                    animation: slideInDown 0.5s ease backwards;
+                }
+
                 .grade-block { text-align: center; margin: 0.75rem 0 1.25rem; }
                 .grade-bubble {
                     display: inline-flex; align-items: center; justify-content: center;
@@ -9555,6 +9636,17 @@ class QuizManager {
                     }
                     to {
                         transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+
+                @keyframes slideInDown {
+                    from {
+                        transform: translateY(-24px);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateY(0);
                         opacity: 1;
                     }
                 }
