@@ -4562,6 +4562,11 @@ function showRestoreDialog(title, message, isSuccess) {
                     " />
                 </div>
 
+                <!-- About button between logo and avatar (per user request) -->
+                <div style="display: flex; justify-content: center; margin: 0.5rem 0 0.75rem;">
+                    <button type="button" id="aboutBtn" class="action-btn info" style="min-height: 44px; padding: 0.5rem 1rem; font-size: 0.95rem; border-radius: 999px;" title="About BeeSmart" aria-label="About BeeSmart">About</button>
+                </div>
+
                 {% if current_user.is_authenticated %}
                 <!-- Combined Rank + Name Badge (authenticated users only) -->
                 <div id="student-buzz-dust-rank" class="rank-pill-pulse" style="
@@ -4625,10 +4630,6 @@ function showRestoreDialog(title, message, isSuccess) {
                     width: 100%;
                     margin: 0 auto;
                 ">
-                <!-- About button above avatar (mobile-friendly, no clutter) -->
-                <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">
-                    <button type="button" id="aboutBtn" class="action-btn info" style="min-height: 44px; padding: 0.5rem 1rem; font-size: 0.95rem; border-radius: 999px;" title="About BeeSmart" aria-label="About BeeSmart">About</button>
-                </div>
                 <!-- Avatar Display - NEW clean container for controls -->
                 <div id="avatarFxHost" style="position: relative; width: 100%; margin: 0 auto; padding: 20px 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
                     <div class="avatar-stage" id="avatarStage" data-avatar-name="{{ current_user.get_avatar_data().name }}">
@@ -5352,9 +5353,6 @@ function showRestoreDialog(title, message, isSuccess) {
                                 <div>
                                     <strong> Register:</strong> Create an account to track your spelling journey and compete with friends!
                                 </div>
-                            </div>
-                            <div style="margin-top: 0.5rem; display: flex; justify-content: center;">
-                                <button type="button" id="aboutBtnGuest" class="action-btn info" style="min-height: 44px; padding: 0.5rem 1rem; font-size: 0.95rem; border-radius: 999px;" title="About BeeSmart" aria-label="About BeeSmart">About</button>
                             </div>
                         </div>
                     {% endif %}
