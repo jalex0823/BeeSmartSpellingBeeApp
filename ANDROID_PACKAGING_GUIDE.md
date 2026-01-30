@@ -1,5 +1,21 @@
 # Android Studio Packaging Guide - BeeSmart Spelling Bee
 
+**Android package files** for Google Play (Play Console) live in the **`mobile/android/`** folder. Use this guide to build and submit the app bundle (.aab).
+
+## Where the Android files are
+
+| Purpose | Path |
+|--------|------|
+| **Android project root** | `mobile/android/` |
+| **Version & package (for Play Console)** | `mobile/android/app/build.gradle` → `versionCode`, `versionName`, `applicationId` |
+| **App manifest** | `mobile/android/app/src/main/AndroidManifest.xml` |
+| **Signing (release)** | `mobile/android/keystore.properties` + `mobile/android/upload-keystore.jks` (create per ANDROID_PACKAGING_GUIDE) |
+| **Capacitor config (server URL)** | `mobile/capacitor.config.ts` |
+
+See also: **`GOOGLE_PLAY_ANDROID_FILES.md`** (quick reference for which files to update per release) and **`store/Release_1.7_Checklist.md`**, **`store/PlayStoreListing.md`**, **`mobile/STORE_CHECKLIST.md`**.
+
+---
+
 ## Prerequisites Checklist
 ✅ Android Studio installed (downloading now)
 ✅ Capacitor project structure exists (`mobile/` folder)
@@ -24,7 +40,7 @@
 
 3. **Set Environment Variables** (PowerShell as Admin):
 ```powershell
-# Add to your system PATH
+# Add to your system PATH (adjust path if your SDK is elsewhere)
 $androidHome = "C:\Users\jeff\AppData\Local\Android\Sdk"
 [Environment]::SetEnvironmentVariable("ANDROID_HOME", $androidHome, "User")
 $path = [Environment]::GetEnvironmentVariable("Path", "User")
@@ -41,14 +57,14 @@ adb --version
 
 ### Option A: Via Command Line
 ```powershell
-cd "c:\Users\jeff\Dropbox\BeeSmartSpellingBeeApp\mobile"
+cd "c:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile"
 npm run cap:open:android
 ```
 
 ### Option B: Via Android Studio
 1. Open Android Studio
 2. **File → Open**
-3. Navigate to: `c:\Users\jeff\Dropbox\BeeSmartSpellingBeeApp\mobile\android`
+3. Navigate to: `mobile\android` inside your repo (e.g. `BeeSmartSpellingBeeApp\mobile\android`)
 4. Click **OK** (Android Studio will recognize it as a Gradle project)
 
 ---

@@ -942,6 +942,16 @@ function showRestoreDialog(title, message, isSuccess) {
             display: none !important;
         }
         
+        /* Mobile/touch: always hide decorative layers to prevent stuck or sticky scroll (desktop mouse works; touch does not) */
+        @media (max-width: 768px), (pointer: coarse) {
+            .magic-background,
+            .fairy-container,
+            .bee-swarm-container {
+                display: none !important;
+                pointer-events: none !important;
+            }
+        }
+        
         .sparkle {
             position: absolute;
             width: 4px;
@@ -1901,6 +1911,10 @@ function showRestoreDialog(title, message, isSuccess) {
                 width: 100%;
                 border-radius: 999px;
                 padding: 0.5rem 1rem;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.25rem;
             }
             .home-main-actions {
                 display: grid !important;
@@ -3806,6 +3820,10 @@ function showRestoreDialog(title, message, isSuccess) {
                     // Keep Matrix rain running behind the menu; do not stop on bypass.
                     document.body.style.visibility = 'visible';
                     document.body.style.opacity = '1';
+                    document.body.style.overflow = 'auto';
+                    document.body.style.position = '';
+                    document.body.style.width = '';
+                    document.documentElement.style.overflow = '';
                     loader.style.pointerEvents = 'none';
                     loader.style.opacity = '0';
                     loader.style.visibility = 'hidden';
@@ -5008,6 +5026,7 @@ function showRestoreDialog(title, message, isSuccess) {
                                             cursor: pointer;
                                             display: inline-flex;
                                             align-items: center;
+                                            justify-content: center;
                                             gap: 0.25rem;
                                         "
                                         title="Refresh your stats from the server">
@@ -17233,9 +17252,13 @@ function showRestoreDialog(title, message, isSuccess) {
                 // We stop it in `finalize()` (end of loader exit) so it doesn't
                 // disappear early while the loader is still on-screen.
                 
-                // Show the body content
+                // Show the body content and restore scroll (fix mobile stuck scroll after load)
                 document.body.style.visibility = 'visible';
                 document.body.style.opacity = '1';
+                document.body.style.overflow = 'auto';
+                document.body.style.position = '';
+                document.body.style.width = '';
+                document.documentElement.style.overflow = '';
                 
                 // Smooth, Safari-safe exit animation. Use a class so we don't fight inline styles.
                 // Also stop pointer events immediately so interaction feels instant.
@@ -17593,14 +17616,17 @@ function showRestoreDialog(title, message, isSuccess) {
             
             console.log(' Emergency timeout set for', LOADING_EMERGENCY_TIMEOUT, 'ms');
             
-            // FAILSAFE: Ensure pointer events are always enabled after page fully loads
+            // FAILSAFE: Ensure pointer events and scroll are always restored after page fully loads (fix mobile stuck scroll)
             window.addEventListener('load', () => {
                 setTimeout(() => {
                     document.body.style.pointerEvents = 'auto';
                     document.body.style.visibility = 'visible';
                     document.body.style.opacity = '1';
                     document.body.style.overflow = 'auto';
-                    console.log('✅ FAILSAFE: Pointer events and visibility restored to body');
+                    document.body.style.position = '';
+                    document.body.style.width = '';
+                    document.documentElement.style.overflow = '';
+                    console.log('✅ FAILSAFE: Pointer events, visibility, and scroll restored to body');
                     
                     // Also check for any lingering overlays
                     const loader = document.getElementById('honeyLoader');
