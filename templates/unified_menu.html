@@ -3943,7 +3943,9 @@ function showRestoreDialog(title, message, isSuccess) {
                 btn.style.background = active ? 'linear-gradient(135deg, #FFE082 0%, #FFD54F 100%)' : 'rgba(255,255,255,0.7)';
                 btn.style.borderColor = active ? 'rgba(255, 215, 0, 0.8)' : 'rgba(139, 69, 19, 0.3)';
             });
-            fetch('/api/users/me', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preferences: { difficulty_feel: v } }) }).catch(function() {});
+            fetch('/api/users/me', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preferences: { difficulty_feel: v } }) })
+                .then(function(r) { if (!r.ok && r.status !== 401) console.warn('Failed to save difficulty feel preference'); })
+                .catch(function() {}); // Silently ignore network errors and 401s (guest users can't save preferences)
         };
         window.appendFeelToQuizUrl = function(url) {
             if (!url || typeof url !== 'string') return url;
@@ -7630,6 +7632,11 @@ function showRestoreDialog(title, message, isSuccess) {
                                     body: JSON.stringify({ display_name: name })
                                 });
                                 if (!r.ok) {
+                                    // 401 means not authenticated (guest user) - this is expected, don't show error
+                                    if (r.status === 401) {
+                                        if (statusEl) statusEl.textContent = 'Login to save name';
+                                        return;
+                                    }
                                     if (statusEl) statusEl.textContent = 'Could not save name (offline?)';
                                     return;
                                 }
