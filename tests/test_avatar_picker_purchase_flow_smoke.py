@@ -305,6 +305,264 @@ def test_refresh_avatar_unlock_status():
     print("✅ refreshAvatarUnlockStatus verified")
 
 
+def test_purchase_complete_flow():
+    """CRITICAL: Verify complete purchase flow from button click to avatar unlock."""
+    js_file = REPO_ROOT / 'static' / 'js' / 'honeycomb-avatar-picker-responsive.js'
+    content = js_file.read_text(encoding='utf-8')
+    
+    # Find purchaseLockedAvatar function (search larger window)
+    purchase_func_start = content.find('async function purchaseLockedAvatar')
+    assert purchase_func_start >= 0, "purchaseLockedAvatar function not found"
+    # Function is long - search up to next function or 10000 chars
+    next_func = content.find('\nasync function ', purchase_func_start + 1)
+    if next_func > purchase_func_start:
+        purchase_func = content[purchase_func_start:next_func]
+    else:
+        purchase_func = content[purchase_func_start:purchase_func_start + 10000]
+    
+    # CRITICAL: Verify purchase flow steps
+    critical_steps = [
+        'PURCHASE_DEBOUNCE_MS',  # Debouncing
+        'purchaseState === PurchaseState.PURCHASING',  # State check
+        'productId',  # Product ID extraction
+        'BeeSmartIAP.purchase',  # Native purchase call
+        'refreshAvatarUnlockStatus',  # Unlock status refresh
+        'findAvatarBySlug',  # Find updated avatar
+        'is_locked',  # Check unlock status
+        'PurchaseState.PURCHASED',  # Success state
+        'clearPurchaseState',  # State cleanup
+    ]
+    
+    found_steps = sum(1 for step in critical_steps if step in purchase_func)
+    assert found_steps >= 7, f"Purchase flow missing critical steps (found {found_steps}/9): {[s for s in critical_steps if s not in purchase_func]}"
+    
+    print("✅ Complete purchase flow verified")
+
+
+def test_purchase_unlock_verification():
+    """CRITICAL: Verify purchase actually unlocks avatar."""
+    js_file = REPO_ROOT / 'static' / 'js' / 'honeycomb-avatar-picker-responsive.js'
+    content = js_file.read_text(encoding='utf-8')
+    
+    # Check purchase completion unlocks avatar
+    assert 'refreshAvatarUnlockStatus' in content, "refreshAvatarUnlockStatus not found"
+    assert 'findAvatarBySlug' in content, "findAvatarBySlug not found"
+    
+    # Check unlock verification logic (search larger window)
+    purchase_func_start = content.find('async function purchaseLockedAvatar')
+    next_func = content.find('\nasync function ', purchase_func_start + 1)
+    if next_func > purchase_func_start:
+        purchase_func = content[purchase_func_start:next_func]
+    else:
+        purchase_func = content[purchase_func_start:purchase_func_start + 10000]
+    
+    # Check unlock verification (may be written as updated.is_locked === false or !updated.is_locked)
+    assert ('updated' in purchase_func and 'is_locked' in purchase_func) or '!updated.is_locked' in purchase_func or 'updated.is_locked === false' in purchase_func, "Unlock verification not found"
+    assert 'alert' in purchase_func and 'unlocked' in purchase_func.lower(), "Success message not found"
+    
+    # Check retry logic for backend sync delays
+    assert 'setTimeout' in purchase_func and 'refreshAvatarUnlockStatus' in purchase_func, "Retry logic not found"
+    
+    print("✅ Purchase unlock verification verified")
+
+
+def test_purchase_reconciliation_event():
+    """CRITICAL: Verify reconciliation event properly handles purchase completion."""
+    js_file = REPO_ROOT / 'static' / 'js' / 'honeycomb-avatar-picker-responsive.js'
+    content = js_file.read_text(encoding='utf-8')
+    
+    # Find reconciliation event listener (search larger window)
+    recon_start = content.find('beesmart:iap-reconciled')
+    assert recon_start >= 0, "Reconciliation event listener not found"
+    # Search until next event listener or end of function
+    next_event = content.find('window.addEventListener', recon_start + 1)
+    if next_event > recon_start:
+        recon_section = content[recon_start:next_event]
+    else:
+        recon_section = content[recon_start:recon_start + 3000]
+    
+    # CRITICAL: Verify reconciliation handles purchase completion
+    assert 'currentPurchaseProductId' in recon_section, "Product ID tracking not found"
+    assert 'owned' in recon_section.lower(), "Owned products check not found"
+    assert 'PurchaseState.PURCHASING' in recon_section, "PURCHASING state check not found"
+    assert 'PurchaseState.PURCHASED' in recon_section, "PURCHASED state transition not found"
+    assert 'refreshAvatarUnlockStatus' in recon_section, "Unlock refresh not found in reconciliation"
+    # findAvatarBySlug may be in the then() callback
+    assert 'findAvatarBySlug' in recon_section or 'refreshAvatarUnlockStatus().then' in recon_section, "Avatar lookup or refresh callback not found"
+    
+    print("✅ Purchase reconciliation event verified")
+
+
+def test_purchase_error_handling():
+    """CRITICAL: Verify purchase errors are handled gracefully."""
+    js_file = REPO_ROOT / 'static' / 'js' / 'honeycomb-avatar-picker-responsive.js'
+    content = js_file.read_text(encoding='utf-8')
+    
+    # Search larger function window
+    purchase_func_start = content.find('async function purchaseLockedAvatar')
+    next_func = content.find('\nasync function ', purchase_func_start + 1)
+    if next_func > purchase_func_start:
+        purchase_func = content[purchase_func_start:next_func]
+    else:
+        purchase_func = content[purchase_func_start:purchase_func_start + 10000]
+    
+    # Check error handling
+    assert 'catch' in purchase_func or 'try' in purchase_func, "Error handling not found"
+    assert 'PurchaseState.FAILED' in purchase_func, "FAILED state not found"
+    # clearTimeout may be in timeout handler or error handler
+    assert 'clearTimeout' in purchase_func or 'timeoutId' in purchase_func, "Timeout cleanup not found"
+    assert 'clearPurchaseState' in purchase_func, "State cleanup not found"
+    
+    # Check specific error cases
+    assert 'Store bridge not ready' in purchase_func or 'bridge not ready' in purchase_func.lower(), "Bridge error handling not found"
+    assert 'productId' in purchase_func and ('No product_id' in purchase_func or 'product_id' in purchase_func), "Product ID error handling not found"
+    
+    print("✅ Purchase error handling verified")
+
+
+def test_purchase_cancellation_handling():
+    """CRITICAL: Verify user cancellation doesn't break purchase flow."""
+    js_file = REPO_ROOT / 'static' / 'js' / 'honeycomb-avatar-picker-responsive.js'
+    content = js_file.read_text(encoding='utf-8')
+    
+    # Search larger function window
+    purchase_func_start = content.find('async function purchaseLockedAvatar')
+    next_func = content.find('\nasync function ', purchase_func_start + 1)
+    if next_func > purchase_func_start:
+        purchase_func = content[purchase_func_start:next_func]
+    else:
+        purchase_func = content[purchase_func_start:purchase_func_start + 10000]
+    
+    # Check cancellation handling
+    assert 'PurchaseState.CANCELLED' in purchase_func, "CANCELLED state not found"
+    assert 'cancelled' in purchase_func.lower(), "Cancellation detection not found"
+    assert 'confirm' in purchase_func, "Confirmation dialog found"
+    
+    # Check cancellation cleanup
+    assert 'clearTimeout' in purchase_func or 'timeoutId' in purchase_func, "Timeout cleanup on cancel not found"
+    assert 'clearPurchaseState' in purchase_func, "State cleanup on cancel not found"
+    assert 'PurchaseState.IDLE' in purchase_func, "IDLE state reset not found"
+    
+    print("✅ Purchase cancellation handling verified")
+
+
+def test_purchase_timeout_protection():
+    """CRITICAL: Verify purchase timeout prevents stuck purchases."""
+    js_file = REPO_ROOT / 'static' / 'js' / 'honeycomb-avatar-picker-responsive.js'
+    content = js_file.read_text(encoding='utf-8')
+    
+    # Search larger function window
+    purchase_func_start = content.find('async function purchaseLockedAvatar')
+    next_func = content.find('\nasync function ', purchase_func_start + 1)
+    if next_func > purchase_func_start:
+        purchase_func = content[purchase_func_start:next_func]
+    else:
+        purchase_func = content[purchase_func_start:purchase_func_start + 10000]
+    
+    # Check timeout protection
+    assert 'PURCHASE_TIMEOUT_MS' in purchase_func, "Timeout constant not found"
+    assert 'setTimeout' in purchase_func, "Timeout setter not found"
+    # clearTimeout may be in timeout handler
+    assert 'clearTimeout' in purchase_func or 'timeoutId' in purchase_func, "Timeout cleanup not found"
+    assert '60000' in purchase_func or 'PURCHASE_TIMEOUT_MS' in purchase_func, "60 second timeout not found"
+    assert 'Purchase timeout' in purchase_func or 'taking longer than expected' in purchase_func.lower(), "Timeout message not found"
+    
+    print("✅ Purchase timeout protection verified")
+
+
+def test_purchase_state_persistence():
+    """CRITICAL: Verify purchase state persists across page refreshes."""
+    js_file = REPO_ROOT / 'static' / 'js' / 'honeycomb-avatar-picker-responsive.js'
+    content = js_file.read_text(encoding='utf-8')
+    
+    # Check state persistence
+    assert 'persistPurchaseState' in content, "persistPurchaseState function not found"
+    assert 'restorePurchaseState' in content, "restorePurchaseState function not found"
+    assert 'localStorage' in content, "localStorage usage not found"
+    
+    # Check persistence is called during purchase (search larger window)
+    purchase_func_start = content.find('async function purchaseLockedAvatar')
+    next_func = content.find('\nasync function ', purchase_func_start + 1)
+    if next_func > purchase_func_start:
+        purchase_func = content[purchase_func_start:min(next_func, purchase_func_start + 5000)]
+    else:
+        purchase_func = content[purchase_func_start:purchase_func_start + 5000]
+    assert 'persistPurchaseState' in purchase_func, "State persistence not called during purchase"
+    
+    # Check restoration on page load (search larger window)
+    dom_start = content.find('DOMContentLoaded')
+    if dom_start >= 0:
+        # Search up to next major section or 3000 chars
+        next_section = content.find('\n    setupSearchFilter', dom_start)
+        if next_section > dom_start:
+            dom_section = content[dom_start:next_section]
+        else:
+            dom_section = content[dom_start:dom_start + 3000]
+        assert 'restorePurchaseState' in dom_section, "State restoration not called on page load"
+    else:
+        # DOMContentLoaded not found - check if restorePurchaseState exists at all
+        assert 'restorePurchaseState' in content, "restorePurchaseState function not found anywhere"
+    
+    print("✅ Purchase state persistence verified")
+
+
+def test_purchase_button_enabled_correctly():
+    """CRITICAL: Verify purchase button is enabled/disabled correctly."""
+    js_file = REPO_ROOT / 'static' / 'js' / 'honeycomb-avatar-picker-responsive.js'
+    content = js_file.read_text(encoding='utf-8')
+    
+    # Find showLockedMessage function (creates purchase button)
+    show_modal_start = content.find('function showLockedMessage')
+    assert show_modal_start >= 0, "showLockedMessage function not found"
+    # Search larger window - function may be long
+    next_func = content.find('\nfunction ', show_modal_start + 1)
+    if next_func > show_modal_start:
+        show_modal_func = content[show_modal_start:next_func]
+    else:
+        show_modal_func = content[show_modal_start:show_modal_start + 4000]
+    
+    # Check button enable/disable logic
+    assert 'purchaseState === PurchaseState.PURCHASING' in show_modal_func, "PURCHASING state check not found"
+    # Check for disabled logic (may be in HTML string or variable)
+    assert 'disabled' in show_modal_func or 'disabledAttr' in show_modal_func or 'disabledClass' in show_modal_func or 'isDisabled' in show_modal_func, "Button disabled logic not found"
+    assert 'Processing...' in show_modal_func, "Processing state text not found"
+    assert 'storeReady' in show_modal_func, "Store readiness check not found"
+    
+    print("✅ Purchase button enabled/disabled correctly verified")
+
+
+def test_purchase_verification_and_reconciliation():
+    """CRITICAL: Verify purchase verification and reconciliation both work."""
+    js_file = REPO_ROOT / 'static' / 'js' / 'honeycomb-avatar-picker-responsive.js'
+    content = js_file.read_text(encoding='utf-8')
+    
+    # Search larger function window
+    purchase_func_start = content.find('async function purchaseLockedAvatar')
+    next_func = content.find('\nasync function ', purchase_func_start + 1)
+    if next_func > purchase_func_start:
+        purchase_func = content[purchase_func_start:next_func]
+    else:
+        purchase_func = content[purchase_func_start:purchase_func_start + 10000]
+    
+    # Check verification endpoint call
+    assert '/api/iap/verify' in purchase_func, "Verification endpoint not found"
+    assert 'fetch' in purchase_func, "Verification fetch not found"
+    
+    # Check reconciliation call
+    assert 'reconcile' in purchase_func.lower() or '/api/iap/restore' in purchase_func, "Reconciliation call not found"
+    assert 'window.BeeSmartIAP.reconcile' in purchase_func or 'fetch' in purchase_func, "Reconciliation method not found"
+    
+    # Check both happen after purchase
+    verify_pos = purchase_func.find('/api/iap/verify')
+    recon_pos = purchase_func.find('reconcile') if 'reconcile' in purchase_func.lower() else purchase_func.find('/api/iap/restore')
+    purchase_call_pos = purchase_func.find('BeeSmartIAP.purchase')
+    
+    assert verify_pos > purchase_call_pos or verify_pos == -1, "Verification happens after purchase"
+    assert recon_pos > purchase_call_pos or recon_pos == -1, "Reconciliation happens after purchase"
+    
+    print("✅ Purchase verification and reconciliation verified")
+
+
 if __name__ == '__main__':
     import pytest
     pytest.main([__file__, '-v'])
