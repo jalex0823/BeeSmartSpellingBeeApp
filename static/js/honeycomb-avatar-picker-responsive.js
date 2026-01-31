@@ -239,10 +239,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // CRITICAL: ALL avatar loading MUST happen during system checks
     // Picker NEVER loads avatars - only uses pre-loaded data
+    const overlay = document.getElementById('avatar-loading-overlay');
+    
     if (!window.preloadedAvatars || !Array.isArray(window.preloadedAvatars) || window.preloadedAvatars.length === 0) {
         console.error('❌ CRITICAL: Avatars not pre-loaded during system checks!');
         console.error('❌ Picker cannot load avatars - this should never happen.');
-        const overlay = document.getElementById('avatar-loading-overlay');
+        
+        // CRITICAL: Hide overlay immediately with error message
         if (overlay) {
             overlay.innerHTML = `
                 <div style="text-align: center; padding: 2rem; color: #FFD700;">
@@ -251,11 +254,19 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <div style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.8;">Please refresh the page</div>
                 </div>
             `;
+            // Hide after showing error
+            setTimeout(() => {
+                if (overlay) {
+                    overlay.classList.add('hidden');
+                    overlay.style.display = 'none';
+                }
+            }, 3000);
         }
         return; // STOP - don't try to load anything
     }
     
     console.log('✅ Using pre-loaded avatars from system checks:', window.preloadedAvatars.length);
+    
     // Use pre-loaded avatars immediately - NO loading, NO API calls
     avatarsData = window.preloadedAvatars.map(avatar => ({
         ...avatar,
@@ -269,44 +280,38 @@ document.addEventListener('DOMContentLoaded', async function() {
     failedThumbnails = avatarsData.length - loadedThumbnails;
     pendingThumbnails.clear();
     
+    // CRITICAL: Update progress to 100% immediately (all thumbnails pre-loaded)
+    const progressBar = document.getElementById('loading-progress');
+    const loadingText = document.getElementById('loading-text');
+    const loadingContent = document.getElementById('loading-status');
+    const loadingDetail = document.getElementById('loading-detail');
+    
+    if (progressBar) progressBar.style.width = '100%';
+    if (loadingText) loadingText.textContent = '100%';
+    if (loadingContent) loadingContent.textContent = 'All Bees Ready! 🎉';
+    if (loadingDetail) loadingDetail.textContent = `Ready to choose your bee! (${loadedThumbnails}/${totalThumbnails} loaded)`;
+    
     updateDynamicMarquee(avatarsData);
     renderAvatarGrid();
     
-    // Hide loading overlay immediately (thumbnails already loaded)
-    const overlay = document.getElementById('avatar-loading-overlay');
+    // CRITICAL: Hide loading overlay IMMEDIATELY (thumbnails already loaded)
     if (overlay) {
-        overlay.classList.add('hidden');
-        overlay.style.display = 'none';
+        // Update to show completion
+        overlay.style.transition = 'opacity 0.5s ease, visibility 0.5s ease';
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            if (overlay) {
+                overlay.classList.add('hidden');
+                overlay.style.display = 'none';
+                console.log('✅ Loading overlay hidden - picker ready instantly');
+            }
+        }, 500);
     }
     
     console.log(`✅ Picker loaded instantly: ${loadedThumbnails}/${totalThumbnails} thumbnails pre-loaded`);
     
     setupSearchFilter();
     setupBundleShop();
-
-    // Safety: hide loading overlay after 15s even if some thumbnails stall
-    // Also force-complete any remaining pending thumbnails
-    setTimeout(() => {
-        const overlay = document.getElementById('avatar-loading-overlay');
-        if (overlay && !overlay.classList.contains('hidden')) {
-            // Force-complete any remaining pending thumbnails
-            if (pendingThumbnails.size > 0) {
-                console.warn(`⚠️ Timeout: Force-completing ${pendingThumbnails.size} pending thumbnail(s)`);
-                const pendingCount = pendingThumbnails.size;
-                pendingThumbnails.clear();
-                failedThumbnails += pendingCount;
-            }
-            console.warn('⚠️ Hiding loading overlay due to timeout safeguard (15s)');
-            updateLoadingProgress(); // Trigger final check
-            // Force hide if still visible after update
-            setTimeout(() => {
-                if (overlay && !overlay.classList.contains('hidden')) {
-                    overlay.classList.add('hidden');
-                    overlay.style.display = 'none';
-                }
-            }, 100);
-        }
-    }, 15000);
 });
 
 // Verify user authentication before loading avatars

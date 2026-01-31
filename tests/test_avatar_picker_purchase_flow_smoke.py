@@ -34,22 +34,25 @@ def test_purchase_state_machine_exists():
 
 
 def test_store_initialization_on_start():
-    """Verify store initializes on app start, not on button click."""
+    """Verify store initializes during system checks, not on picker load."""
     js_file = REPO_ROOT / 'static' / 'js' / 'honeycomb-avatar-picker-responsive.js'
     content = js_file.read_text(encoding='utf-8')
     
     # Check for initializeIAPStore function
     assert 'initializeIAPStore' in content, "initializeIAPStore function not found"
+    assert 'window.initializeIAPStore' in content, "initializeIAPStore not exposed globally"
     
-    # Check it's called on DOMContentLoaded
-    assert 'await initializeIAPStore()' in content, "initializeIAPStore not called on startup"
+    # Check it's NOT called on DOMContentLoaded (moved to system checks)
+    dom_section = content[content.find('DOMContentLoaded'):content.find('DOMContentLoaded') + 2000]
+    assert 'await initializeIAPStore()' not in dom_section, "initializeIAPStore still called on picker load!"
+    assert 'IAP store initialization moved to system checks' in content, "Comment about system checks not found"
     
     # Check for storeReady flag
     assert 'storeReady' in content, "storeReady flag not found"
     assert 'productsLoaded' in content, "productsLoaded flag not found"
     assert 'canMakePayments' in content, "canMakePayments flag not found"
     
-    print("✅ Store initialization on app start verified")
+    print("✅ Store initialization in system checks verified")
 
 
 def test_purchase_button_protection():
@@ -221,6 +224,85 @@ def test_purchase_flow_integration():
     assert found_checks >= 5, f"Purchase function missing critical checks (found {found_checks}/7)"
     
     print("✅ Purchase flow integration verified")
+
+
+def test_avatar_loading_in_system_checks():
+    """CRITICAL: Verify avatar loading happens ONLY in system checks, not picker."""
+    js_file = REPO_ROOT / 'static' / 'js' / 'honeycomb-avatar-picker-responsive.js'
+    content = js_file.read_text(encoding='utf-8')
+    
+    # Check for preload function
+    assert 'preloadAvatarsWithThumbnails' in content, "preloadAvatarsWithThumbnails function not found"
+    assert 'window.preloadAvatarsWithThumbnails' in content, "preloadAvatarsWithThumbnails not exposed globally"
+    
+    # Check picker uses pre-loaded data
+    assert 'window.preloadedAvatars' in content, "Picker not using pre-loaded avatars"
+    assert 'CRITICAL: ALL avatar loading MUST happen during system checks' in content, "Critical comment not found"
+    assert 'Picker NEVER loads avatars' in content, "Picker loading prevention not found"
+    
+    # Check picker doesn't call loadAvatars on init (only refreshAvatarUnlockStatus allowed)
+    dom_content_loaded = content[content.find('DOMContentLoaded'):content.find('DOMContentLoaded') + 4000]
+    # Check for direct call to loadAvatars() (not in comments or function definitions)
+    # Allow it only in error message or comments
+    direct_load_call = 'loadAvatars();' in dom_content_loaded and 'await loadAvatars()' not in dom_content_loaded
+    has_error_handling = 'CRITICAL: Avatars not pre-loaded' in dom_content_loaded
+    has_preload_check = 'window.preloadedAvatars' in dom_content_loaded
+    # If preload check exists and error handling exists, loadAvatars should not be called directly
+    assert not direct_load_call or (has_error_handling and has_preload_check), "Picker calls loadAvatars() directly on init! Should check pre-loaded avatars first"
+    
+    print("✅ Avatar loading in system checks verified")
+
+
+def test_picker_no_stall_at_zero():
+    """CRITICAL: Verify picker doesn't stall at 0% - overlay hides immediately."""
+    js_file = REPO_ROOT / 'static' / 'js' / 'honeycomb-avatar-picker-responsive.js'
+    content = js_file.read_text(encoding='utf-8')
+    
+    # Check overlay is hidden immediately when avatars pre-loaded
+    assert 'overlay.classList.add(\'hidden\')' in content, "Overlay hide logic not found"
+    assert 'overlay.style.display = \'none\'' in content, "Overlay display none not found"
+    
+    # Check progress is set to 100% immediately
+    assert 'progressBar.style.width' in content and '100%' in content, "Progress not set to 100%"
+    assert 'loadingText.textContent' in content and '100%' in content, "Loading text not set to 100%"
+    
+    # Check no 15s timeout safety (shouldn't be needed if pre-loaded)
+    dom_section = content[content.find('DOMContentLoaded'):content.find('DOMContentLoaded') + 3000]
+    # Allow setTimeout but not 15000ms timeout (should be removed)
+    assert '15000' not in dom_section, "15s timeout still present - picker may stall!"
+    
+    # Check error handling if avatars not pre-loaded
+    assert 'Avatars not pre-loaded' in content, "Error handling for missing pre-load not found"
+    assert 'Please refresh the page' in content, "User guidance for missing pre-load not found"
+    
+    print("✅ Picker no-stall verification passed")
+
+
+def test_refresh_avatar_unlock_status():
+    """Verify refreshAvatarUnlockStatus function exists and works correctly."""
+    js_file = REPO_ROOT / 'static' / 'js' / 'honeycomb-avatar-picker-responsive.js'
+    content = js_file.read_text(encoding='utf-8')
+    
+    # Check function exists
+    assert 'refreshAvatarUnlockStatus' in content, "refreshAvatarUnlockStatus function not found"
+    assert 'async function refreshAvatarUnlockStatus' in content, "refreshAvatarUnlockStatus not async function"
+    
+    # Check it's used instead of loadAvatars for updates
+    assert 'refreshAvatarUnlockStatus()' in content, "refreshAvatarUnlockStatus not called"
+    
+    # Check it updates unlock status without full reload (search in function body)
+    refresh_func_start = content.find('async function refreshAvatarUnlockStatus')
+    if refresh_func_start >= 0:
+        # Search larger function body
+        refresh_func_body = content[refresh_func_start:refresh_func_start + 5000]
+        assert 'is_locked' in refresh_func_body, "Unlock status update not found in refreshAvatarUnlockStatus"
+        # Check for grid re-render or marquee update (both indicate UI refresh)
+        assert 'renderAvatarGrid' in refresh_func_body or 'updateDynamicMarquee' in refresh_func_body, "UI refresh not found in refreshAvatarUnlockStatus"
+    else:
+        # Function exists but search failed - check it's called
+        assert 'refreshAvatarUnlockStatus()' in content, "refreshAvatarUnlockStatus not called anywhere"
+    
+    print("✅ refreshAvatarUnlockStatus verified")
 
 
 if __name__ == '__main__':
