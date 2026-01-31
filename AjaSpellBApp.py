@@ -1108,27 +1108,64 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
     """Compute lock state and reason for an avatar entry based on role and user state.
 
     Returns dict with keys: unlocked (bool), reason (str), points_needed (int|None)
+    
+    Locking Rules:
+    - Admin: ALL avatars unlocked (bypass all checks)
+    - Guest: Only mascot_free tier unlocked (unless purchased/restored)
+    - Registered users (student/teacher/parent):
+      - default_free/mascot_free: Always unlocked
+      - earn_or_buy: Unlocked if points >= unlock_points OR purchased
+      - premium: Unlocked if points >= unlock_points OR purchased (NOT free)
     """
-    # Admin: always unlocked
+    # Admin: always unlocked - ONLY role with all avatars available
     if role == 'admin':
         return {"unlocked": True, "reason": "Admin access", "points_needed": None}
 
-    # Guest: normally limited; in App Review / demo mode allow reviewers to explore
+    # Get avatar properties
+    tier = (entry.get('tier') or '').lower()
+    is_default_free = bool(entry.get('is_default_free'))
+    unlock_points = int(entry.get('unlock_points') or 0)
+    avatar_id = entry.get('id')
+
+    # Guest: normally limited to mascot only; in App Review / demo mode allow reviewers to explore
     if role == 'guest':
         try:
             if APP_REVIEW_MODE or bool(session.get('app_review_mode')):
                 return {"unlocked": True, "reason": "App Review mode", "points_needed": 0}
         except Exception:
             pass
-        return {"unlocked": False, "reason": "Guest access limited", "points_needed": None}
+        
+        # Guests can only access mascot_free tier avatars
+        if tier == 'mascot_free' or (avatar_id and str(avatar_id).strip().lower() in ('mascot-bee', 'honey-comb', 'honeycomb')):
+            return {"unlocked": True, "reason": "Mascot avatar (guest access)", "points_needed": 0}
+        
+        # Check for guest entitlements (anon-owned purchases)
+        anon_owned = []
+        try:
+            ent = _get_guest_entitlements()
+            ao = ent.get('anon_owned_products', []) if isinstance(ent, dict) else []
+            anon_owned = ao if isinstance(ao, list) else []
+        except Exception:
+            anon_owned = []
+        
+        # If guest owns this avatar via purchase/restore, unlock it
+        if anon_owned:
+            try:
+                avatar_id_norm = str(avatar_id or '').strip().lower().replace('_', '-')
+                for pid in anon_owned:
+                    m = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
+                    if isinstance(m, dict) and m.get('type') == 'avatar':
+                        m_avatar_id = str(m.get('avatar_id') or '').strip().lower().replace('_', '-')
+                        if m_avatar_id == avatar_id_norm:
+                            return {"unlocked": True, "reason": "Restored purchase", "points_needed": 0}
+            except Exception:
+                pass
+        
+        # All other avatars locked for guests
+        return {"unlocked": False, "reason": "Guest access limited - register to unlock", "points_needed": None}
 
-    # Registered users (student/teacher/parent)
-    tier = (entry.get('tier') or '').lower()
-    is_default_free = bool(entry.get('is_default_free'))
-    unlock_points = int(entry.get('unlock_points') or 0)
-    avatar_id = entry.get('id')
-
-    # Defaults for missing user
+    # Registered users (student/teacher/parent) - NOT admin, NOT guest
+    # Get user's unlock status
     honey_points = 0
     purchased = []
     premium_member = False
@@ -1146,102 +1183,42 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
         except Exception:
             premium_member = False
 
-    # Default free tiers are unlocked
+    # Default free tiers are unlocked for registered users
     if tier in ('default_free', 'mascot_free') or is_default_free:
         return {"unlocked": True, "reason": "Default free avatar", "points_needed": 0}
 
-    # Guest entitlement support (Apple Guideline 5.1.1): allow anon-owned SKUs to
-    # unlock premium and avatar purchases without requiring login.
-    anon_owned = []
-    anon_premium = False
-    if role == 'guest' and user is None:
-        try:
-            ent = _get_guest_entitlements()
-            ao = ent.get('anon_owned_products', []) if isinstance(ent, dict) else []
-            anon_owned = ao if isinstance(ao, list) else []
-        except Exception:
-            anon_owned = []
-
-        # Treat any premium/subscription SKU as premium entitlement for guests.
-        # Note: In this codebase, subscriptions are mapped as type 'premium' with
-        # subscription=True (not as type 'subscription').
-        try:
-            for pid in anon_owned:
-                try:
-                    mapping = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
-                except Exception:
-                    mapping = None
-                if isinstance(mapping, dict):
-                    t = str(mapping.get('type') or '').strip().lower()
-                    if t == 'premium' and bool(mapping.get('subscription')):
-                        anon_premium = True
-                        break
-                    if t == 'premium':
-                        # One-time premium unlock also counts
-                        anon_premium = True
-                        break
-            if not anon_premium:
-                for pid in anon_owned:
-                    p = (pid or '').lower()
-                    if any(k in p for k in ('premium', 'subscription', 'monthly', 'yearly', 'family')):
-                        anon_premium = True
-                        break
-        except Exception:
-            anon_premium = False
-
-    # Earn-or-buy tier: unlock by points or purchase (normalize slugs for comparison)
+    # Earn-or-buy tier: unlock by points OR purchase (normalize slugs for comparison)
     if tier == 'earn_or_buy':
         purchased_norm_eb = {str(x or '').strip().lower().replace('_', '-') for x in purchased}
         avatar_id_norm_eb = str(avatar_id or '').strip().lower().replace('_', '-')
+        
+        # Check if purchased
         if avatar_id_norm_eb in purchased_norm_eb:
             return {"unlocked": True, "reason": "Purchased", "points_needed": 0}
-        # Guest restore/purchase unlock
-        if role == 'guest' and user is None and anon_owned:
-            try:
-                for pid in anon_owned:
-                    m = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
-                    if isinstance(m, dict) and m.get('type') == 'avatar':
-                        if str(m.get('avatar_id') or '').strip().lower() == avatar_id:
-                            return {"unlocked": True, "reason": "Restored purchase", "points_needed": 0}
-            except Exception:
-                pass
+        
+        # Check if unlocked via points
         if honey_points >= unlock_points:
             return {"unlocked": True, "reason": "Sufficient points", "points_needed": 0}
+        
+        # Still locked - need more points or purchase
         return {"unlocked": False, "reason": "Earn points or purchase", "points_needed": max(unlock_points - honey_points, 0)}
 
-    # Premium tier policy (avatars):
-    # - Admin: always unlocked (handled above)
-    # - Guests: locked unless purchased/restored
-    # - Registered users (student/teacher/parent): unlock via Honey Points (higher thresholds) OR purchase
-    #
-    # Subscription unlocks premium features and optionally the premium avatar set.
-    # Non-consumable avatar purchases still unlock individually without subscription.
+    # Premium tier policy:
+    # - Unlock via Honey Points (higher thresholds) OR purchase
+    # - Premium subscription does NOT auto-unlock avatars (avatars must be earned/purchased individually)
     if tier == 'premium':
-        if premium_member:
-            return {"unlocked": True, "reason": "Included with Premium", "points_needed": 0}
-        # Points unlock path (gameplay). This is what makes "unlock_points" meaningful.
-        if role in ('student', 'teacher', 'parent') and honey_points >= unlock_points:
-            return {"unlocked": True, "reason": "Sufficient points", "points_needed": 0}
-
-        # Non-admin, non-registered fall back to entitlement-based unlock.
+        # Check if purchased first
         purchased_norm = {str(x or '').strip().lower().replace('_', '-') for x in purchased}
         avatar_id_norm = str(avatar_id or '').strip().lower().replace('_', '-')
         if avatar_id_norm in purchased_norm:
             return {"unlocked": True, "reason": "Purchased", "points_needed": 0}
-        # Registered users can still earn toward premium unlock.
-        if role in ('student', 'teacher', 'parent'):
-            return {"unlocked": False, "reason": "Earn Honey Points or purchase", "points_needed": max(unlock_points - honey_points, 0)}
-        # If guest owns a matching avatar SKU (by product_id -> avatar_id), unlock it.
-        if anon_owned:
-            try:
-                for pid in anon_owned:
-                    m = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
-                    if isinstance(m, dict) and m.get('type') == 'avatar':
-                        if str(m.get('avatar_id') or '').strip().lower() == avatar_id:
-                            return {"unlocked": True, "reason": "Restored purchase", "points_needed": 0}
-            except Exception:
-                pass
-        return {"unlocked": False, "reason": "Premium - purchase to unlock", "points_needed": None}
+        
+        # Check if unlocked via points
+        if honey_points >= unlock_points:
+            return {"unlocked": True, "reason": "Sufficient points", "points_needed": 0}
+        
+        # Still locked - need more points or purchase
+        return {"unlocked": False, "reason": "Earn Honey Points or purchase", "points_needed": max(unlock_points - honey_points, 0)}
 
     # Fallback - treat unknown tiers as locked
     return {"unlocked": False, "reason": "Locked", "points_needed": None}

@@ -18,6 +18,95 @@ let previewLoadProgress = 0;
 let currentUserHoneyPoints = 0;
 // Bundle catalog for bundle shop modal
 let bundlesData = [];
+
+// Purchase state machine - CRITICAL for preventing purchase loops
+const PurchaseState = {
+    IDLE: 'IDLE',
+    STORE_LOADING: 'STORE_LOADING',
+    READY: 'READY',
+    PURCHASING: 'PURCHASING',
+    PURCHASED: 'PURCHASED',
+    FAILED: 'FAILED',
+    CANCELLED: 'CANCELLED'
+};
+
+let purchaseState = PurchaseState.IDLE;
+let storeReady = false;
+let productsLoaded = false; // Products fetched and cached
+let canMakePayments = true; // Apple allows IAP (default true, will be checked)
+let currentPurchaseSlug = null; // Track which avatar is being purchased
+let currentPurchaseProductId = null; // Track productId being purchased
+let purchaseUpdateSubscription = null;
+let purchaseErrorSubscription = null;
+let lastPurchaseAttempt = 0; // For debouncing
+let purchasingStartTime = 0; // Track when purchase started for timeout
+const PURCHASE_DEBOUNCE_MS = 3000; // 3 second debounce
+const PURCHASE_TIMEOUT_MS = 60000; // 60 second hard timeout
+const PURCHASE_STATE_KEY = 'beesmart_purchase_state_v1'; // localStorage key for persistence
+
+// Restore purchase state from localStorage (survives page refresh)
+function restorePurchaseState() {
+    try {
+        if (!window.localStorage) return;
+        const stored = window.localStorage.getItem(PURCHASE_STATE_KEY);
+        if (!stored) return;
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.state === PurchaseState.PURCHASING && parsed.slug) {
+            const age = Date.now() - (parsed.timestamp || 0);
+            // Only restore if less than 30 seconds old (prevents stuck state)
+            if (age < 30000) {
+                purchaseState = PurchaseState.PURCHASING;
+                currentPurchaseSlug = parsed.slug;
+                currentPurchaseProductId = parsed.productId;
+                purchasingStartTime = parsed.timestamp;
+                console.log('[IAP] Restored purchase state:', parsed.slug);
+                // Set timeout to recover if purchase never completes
+                setTimeout(() => {
+                    if (purchaseState === PurchaseState.PURCHASING) {
+                        console.warn('[IAP] Purchase timeout - resetting state');
+                        purchaseState = PurchaseState.IDLE;
+                        currentPurchaseSlug = null;
+                        currentPurchaseProductId = null;
+                        clearPurchaseState();
+                    }
+                }, PURCHASE_TIMEOUT_MS - age);
+            } else {
+                // Stale state - clear it
+                clearPurchaseState();
+            }
+        }
+    } catch (e) {
+        console.warn('[IAP] Failed to restore purchase state:', e);
+    }
+}
+
+// Persist purchase state to localStorage
+function persistPurchaseState() {
+    try {
+        if (!window.localStorage) return;
+        if (purchaseState === PurchaseState.PURCHASING && currentPurchaseSlug) {
+            window.localStorage.setItem(PURCHASE_STATE_KEY, JSON.stringify({
+                state: purchaseState,
+                slug: currentPurchaseSlug,
+                productId: currentPurchaseProductId,
+                timestamp: purchasingStartTime || Date.now()
+            }));
+        } else {
+            clearPurchaseState();
+        }
+    } catch (e) {
+        console.warn('[IAP] Failed to persist purchase state:', e);
+    }
+}
+
+// Clear persisted purchase state
+function clearPurchaseState() {
+    try {
+        if (window.localStorage) {
+            window.localStorage.removeItem(PURCHASE_STATE_KEY);
+        }
+    } catch (e) { /* ignore */ }
+}
 // 3D viewer state to support zoom/rotate/reset controls
 const avatarViewerState = {
     scene: null,
@@ -70,6 +159,59 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             window.addEventListener('beesmart:iap-reconciled', function(ev) {
                 const ok = ev && ev.detail ? ev.detail.ok : null;
+                const detail = ev && ev.detail ? ev.detail : {};
+                const owned = detail.owned || [];
+                const data = detail.data || {};
+                
+                // CRITICAL: Log reconciliation event for debugging
+                console.log('[IAP] beesmart:iap-reconciled event:', {
+                    ok,
+                    owned: owned.length,
+                    productIds: owned.slice(0, 5), // First 5 for logging
+                    purchaseState,
+                    currentPurchaseSlug,
+                    currentPurchaseProductId
+                });
+                
+                // CRITICAL: If we're purchasing and the productId is in owned list, mark as purchased
+                if (purchaseState === PurchaseState.PURCHASING && currentPurchaseProductId && Array.isArray(owned)) {
+                    const ownedNormalized = owned.map(p => String(p || '').toLowerCase().trim());
+                    const productIdNormalized = String(currentPurchaseProductId || '').toLowerCase().trim();
+                    
+                    if (ownedNormalized.includes(productIdNormalized)) {
+                        console.log('[IAP] Purchase confirmed via reconciliation:', currentPurchaseProductId);
+                        purchaseState = PurchaseState.PURCHASED;
+                        clearPurchaseState();
+                        
+                        // Close modal and refresh avatars
+                        const existingModal = document.querySelector(`.locked-avatar-modal[data-avatar-slug="${currentPurchaseSlug}"]`);
+                        if (existingModal) {
+                            existingModal.remove();
+                        }
+                        
+                        // Refresh avatars immediately
+                        loadAvatars().then(() => {
+                            const updated = findAvatarBySlug(currentPurchaseSlug);
+                            if (updated && !updated.is_locked) {
+                                alert(`✅ ${updated.name || 'Avatar'} unlocked!`);
+                                const escSlug = (window.CSS && typeof CSS.escape === 'function')
+                                    ? CSS.escape(updated.slug)
+                                    : String(updated.slug).replace(/"/g, '\\"');
+                                const el = document.querySelector(`.avatar-hex-position[data-slug="${escSlug}"]`);
+                                if (el) selectAvatar(updated, el);
+                            }
+                            
+                            // Reset state after delay
+                            setTimeout(() => {
+                                purchaseState = PurchaseState.IDLE;
+                                currentPurchaseSlug = null;
+                                currentPurchaseProductId = null;
+                            }, 2000);
+                        });
+                        return; // Don't schedule another refresh
+                    }
+                }
+                
                 scheduleRefresh('iap-reconciled' + (ok === false ? ':fail' : ''));
             });
             window.addEventListener('beesmart:iap-ready', function(ev) {
@@ -78,6 +220,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
         } catch (e) { /* ignore */ }
     })();
+    
+    // Restore purchase state from localStorage (survives page refresh)
+    restorePurchaseState();
+    
+    // Initialize IAP store on app start (not on button click)
+    await initializeIAPStore();
     
     loadAvatars();
     setupSearchFilter();
@@ -1627,6 +1775,11 @@ function chooseAvatar() {
     
     // Check if avatar is locked before attempting selection (skip for admins)
     if (!isAdmin && selectedAvatar.is_locked) {
+        // CRITICAL FIX: Don't show modal if we're purchasing this avatar
+        if (purchaseState === PurchaseState.PURCHASING && currentPurchaseSlug === selectedAvatar.slug) {
+            console.log('[IAP] Blocking chooseAvatar modal during purchase:', selectedAvatar.slug);
+            return;
+        }
         console.log('🔒 Avatar is locked for non-admin user');
         showLockedMessage(selectedAvatar);
         return;
@@ -1781,6 +1934,18 @@ function filterAvatars(query) {
 
 // Show locked avatar message
 function showLockedMessage(avatar) {
+    // CRITICAL FIX: Don't show modal if we're already purchasing this avatar
+    if (purchaseState === PurchaseState.PURCHASING && currentPurchaseSlug === avatar.slug) {
+        console.log('[IAP] Blocking modal re-open during purchase:', avatar.slug);
+        return;
+    }
+    
+    // CRITICAL FIX: Don't show modal if we're in any non-idle purchase state for this avatar
+    if (purchaseState !== PurchaseState.IDLE && currentPurchaseSlug === avatar.slug) {
+        console.log('[IAP] Blocking modal re-open - purchase state:', purchaseState);
+        return;
+    }
+    
     // Use the unified computation for consistency across UI
     const message = computeLockedMessage(avatar);
     
@@ -1806,16 +1971,19 @@ function showLockedMessage(avatar) {
         // All Apple-approved avatars are purchasable in native app: show Purchase for any locked avatar (backend sends product_id/price).
         const showPurchaseBtn = inNativeApp ? true : canPurchase;
         const purchaseLabel = avatar.price ? `Purchase for $${Number(avatar.price).toFixed(2)}` : 'Purchase to Unlock';
-        const notReadyMsg = inNativeApp
-            ? 'If the Purchase button doesn\'t work yet, wait a few seconds and try again.'
-            : 'Purchases are available in the BeeSmart iOS/Android app.';
+        const isDisabled = purchaseState === PurchaseState.PURCHASING || purchaseState === PurchaseState.STORE_LOADING || !storeReady;
+        const disabledClass = isDisabled ? 'disabled' : '';
+        const disabledAttr = isDisabled ? 'disabled' : '';
+        const buttonText = purchaseState === PurchaseState.PURCHASING ? 'Processing...' : 
+                          purchaseState === PurchaseState.STORE_LOADING ? 'Loading Store...' : 
+                          purchaseLabel;
         actionHtml = `
             <p style="margin-top: 1rem; color: #FFB300;">💎 This bee is available for purchase.</p>
             <div style="display:flex; gap:1rem; justify-content:center; margin-top: 1.25rem; flex-wrap: wrap;">
-                ${showPurchaseBtn ? `<button class="locked-modal-btn" onclick="purchaseLockedAvatar('${escapeAttr(avatar.slug)}')">${purchaseLabel}</button>` : ''}
+                ${showPurchaseBtn ? `<button class="locked-modal-btn ${disabledClass}" ${disabledAttr} onclick="purchaseLockedAvatar('${escapeAttr(avatar.slug)}')" id="purchase-btn-${escapeAttr(avatar.slug)}">${buttonText}</button>` : ''}
                 <button class="locked-modal-btn-secondary" onclick="this.closest('.locked-avatar-modal').remove()">Not now</button>
             </div>
-            ${!showPurchaseBtn ? `<p style="margin-top: 0.75rem; color: rgba(255,215,0,0.85); font-weight: 600;">${notReadyMsg}</p>` : ''}
+            ${!showPurchaseBtn ? `<p style="margin-top: 0.75rem; color: rgba(255,215,0,0.85); font-weight: 600;">Purchases are available in the BeeSmart iOS/Android app.</p>` : ''}
         `;
     } else {
         actionHtml = `
@@ -1826,6 +1994,7 @@ function showLockedMessage(avatar) {
     
     const modal = document.createElement('div');
     modal.className = 'locked-avatar-modal';
+    modal.setAttribute('data-avatar-slug', avatar.slug);
     modal.innerHTML = `
         <div class="locked-modal-content">
             <button class="locked-modal-close" onclick="this.parentElement.parentElement.remove()">×</button>
@@ -1924,45 +2093,259 @@ async function _waitForNativeIapBridge(timeoutMs){
     return !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function');
 }
 
+// Initialize IAP store on app start
+async function initializeIAPStore() {
+    console.log('[IAP] Initializing store...');
+    purchaseState = PurchaseState.STORE_LOADING;
+    storeReady = false;
+    productsLoaded = false;
+    canMakePayments = true;
+    
+    try {
+        const inNative = isProbablyNativeAppContext();
+        const bridgeReady = await _waitForNativeIapBridge(inNative ? 15000 : 2000);
+        
+        if (bridgeReady && window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') {
+            // CRITICAL: Check if we can make payments (iOS/Android)
+            try {
+                // Native bridge should expose canMakePayments if available
+                if (typeof window.BeeSmartIAP.canMakePayments === 'function') {
+                    canMakePayments = await Promise.resolve(window.BeeSmartIAP.canMakePayments());
+                } else {
+                    // Default to true if not exposed (bridge handles it)
+                    canMakePayments = true;
+                }
+            } catch (e) {
+                console.warn('[IAP] Could not check canMakePayments:', e);
+                canMakePayments = true; // Default to true
+            }
+            
+            // CRITICAL: Products are considered "loaded" when bridge is ready
+            // The native layer handles product fetching internally
+            // For web, we'll mark as loaded when bridge exists
+            productsLoaded = true;
+            
+            // Set up transaction listeners
+            setupPurchaseListeners();
+            
+            // CRITICAL: Store is ready only if ALL conditions met
+            if (bridgeReady && canMakePayments && productsLoaded) {
+                purchaseState = PurchaseState.READY;
+                storeReady = true;
+                console.log('[IAP] Store ready:', { bridgeReady, canMakePayments, productsLoaded });
+            } else {
+                purchaseState = PurchaseState.READY;
+                storeReady = false;
+                console.log('[IAP] Store not fully ready:', { bridgeReady, canMakePayments, productsLoaded });
+            }
+        } else {
+            // Store not available (web context)
+            purchaseState = PurchaseState.READY;
+            storeReady = false;
+            productsLoaded = false;
+            console.log('[IAP] Store not available (web context)');
+        }
+    } catch (err) {
+        console.error('[IAP] Store initialization failed:', err);
+        purchaseState = PurchaseState.FAILED;
+        storeReady = false;
+        productsLoaded = false;
+        // Reset after delay
+        setTimeout(() => {
+            purchaseState = PurchaseState.IDLE;
+        }, 5000);
+    }
+}
+
+// Set up purchase transaction listeners
+function setupPurchaseListeners() {
+    // Remove existing listeners if any
+    if (purchaseUpdateSubscription) {
+        try {
+            purchaseUpdateSubscription.remove();
+        } catch (e) { /* ignore */ }
+    }
+    if (purchaseErrorSubscription) {
+        try {
+            purchaseErrorSubscription.remove();
+        } catch (e) { /* ignore */ }
+    }
+    
+    // Note: The native bridge handles reconciliation automatically
+    // We just need to listen for the reconciliation events
+    console.log('[IAP] Purchase listeners set up (using event-based reconciliation)');
+}
+
 async function purchaseLockedAvatar(slug) {
+    console.log('[IAP] purchaseLockedAvatar called:', slug, 'State:', purchaseState);
+    
+    // CRITICAL FIX #1: Debounce multiple rapid taps
+    const now = Date.now();
+    if (now - lastPurchaseAttempt < PURCHASE_DEBOUNCE_MS) {
+        console.log('[IAP] Purchase debounced - too soon after last attempt');
+        return;
+    }
+    lastPurchaseAttempt = now;
+    
+    // CRITICAL FIX #2: Block if already purchasing
+    if (purchaseState === PurchaseState.PURCHASING) {
+        console.log('[IAP] Purchase already in progress - blocking');
+        return;
+    }
+    
     const avatar = findAvatarBySlug(slug);
     if (!avatar) {
         alert('Could not find that avatar. Please refresh and try again.');
         return;
     }
 
-    // Apple Guideline 5.1.1: Allow IAP purchases without requiring registration
-    // Registration is optional - users can purchase without an account
-    // If user is not authenticated, they can still purchase (purchase will be tied to device/Apple ID)
-    // We'll suggest registration after purchase for cross-device access
-
-    // All avatars are Apple-approved and purchasable. In native app, wait longer for bridge then always try purchase.
-    const inNative = isProbablyNativeAppContext();
-    await _waitForNativeIapBridge(inNative ? 15000 : 2000);
+    // CRITICAL FIX #3: Check store readiness BEFORE proceeding
+    // Store is ready only if: bridge exists + products loaded + can make payments
+    if (!storeReady) {
+        if (purchaseState === PurchaseState.STORE_LOADING) {
+            alert('One moment — the store is loading. Please wait a few seconds and try again.');
+        } else if (!canMakePayments) {
+            alert('In-app purchases are not available on this device. Please check your device settings.');
+        } else if (!productsLoaded) {
+            alert('Products are still loading. Please wait a moment and try again.');
+        } else {
+            alert('Store is not ready. Please refresh the page and try again.');
+        }
+        return;
+    }
 
     // Product ID: from API only (backend uses data/avatars.catalog.json). Do not hardcode — .v2 vs non-.v2 varies by avatar.
     const productId = avatar.product_id || null;
     if (!productId) {
-        // Catalog-backed API should always send product_id for purchasable avatars; no fallback to avoid wrong IDs.
+        console.error('[IAP] No product_id for avatar:', slug);
+        alert('This avatar is not available for purchase. Please try another one.');
         return;
     }
 
     // In native app, do not block on "bridge not ready" — try purchase so Apple sheet can appear.
+    const inNative = isProbablyNativeAppContext();
     if (!inNative && (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function')) {
         alert('In-app purchase is only available in the BeeSmart app. Install from the App Store to purchase avatars.');
         return;
     }
 
+    // Get references to UI elements before state changes
+    const purchaseBtn = document.getElementById(`purchase-btn-${slug}`);
+    const existingModal = document.querySelector(`.locked-avatar-modal[data-avatar-slug="${slug}"]`);
+    
+    // CRITICAL FIX #4: Set purchasing state BEFORE confirmation dialog
+    purchaseState = PurchaseState.PURCHASING;
+    currentPurchaseSlug = slug;
+    currentPurchaseProductId = productId;
+    purchasingStartTime = Date.now();
+    persistPurchaseState(); // Persist to survive page refresh
+    
+    // Set timeout to recover if purchase never completes
+    let timeoutId = setTimeout(() => {
+        if (purchaseState === PurchaseState.PURCHASING && currentPurchaseSlug === slug) {
+            console.warn('[IAP] Purchase timeout after', PURCHASE_TIMEOUT_MS, 'ms');
+            purchaseState = PurchaseState.FAILED;
+            clearPurchaseState();
+            
+            // Close modal and show message
+            const timeoutModal = document.querySelector(`.locked-avatar-modal[data-avatar-slug="${slug}"]`);
+            if (timeoutModal) {
+                timeoutModal.remove();
+            }
+            
+            alert('Purchase is taking longer than expected. Please try Restore Purchases if the purchase completed, or try again.');
+            
+            // Reset state
+            setTimeout(() => {
+                purchaseState = PurchaseState.IDLE;
+                currentPurchaseSlug = null;
+                currentPurchaseProductId = null;
+            }, 3000);
+        }
+    }, PURCHASE_TIMEOUT_MS);
+    
+    // Update button state
+    if (purchaseBtn) {
+        purchaseBtn.disabled = true;
+        purchaseBtn.textContent = 'Processing...';
+    }
+    
+    // Close any existing modals for this avatar (but keep reference)
+    if (existingModal) {
+        // Don't remove - just disable buttons
+        const buttons = existingModal.querySelectorAll('button');
+        buttons.forEach(btn => {
+            if (btn.id !== `purchase-btn-${slug}`) {
+                btn.disabled = true;
+            }
+        });
+    }
+
     const proceed = confirm(`Purchase ${avatar.name}? You can manage purchases in your App Store / Play settings.`);
-    if (!proceed) return;
+    if (!proceed) {
+        // CRITICAL FIX: User cancelled - set CANCELLED state (not FAILED)
+        clearTimeout(timeoutId);
+        purchaseState = PurchaseState.CANCELLED;
+        clearPurchaseState();
+        
+        // Reset state after brief delay
+        setTimeout(() => {
+            purchaseState = PurchaseState.IDLE;
+            currentPurchaseSlug = null;
+            currentPurchaseProductId = null;
+        }, 500);
+        
+        if (purchaseBtn) {
+            purchaseBtn.disabled = false;
+            purchaseBtn.textContent = avatar.price ? `Purchase for $${Number(avatar.price).toFixed(2)}` : 'Purchase to Unlock';
+        }
+        return;
+    }
 
     try {
         const platform = getIapPlatform();
+        
+        // Double-check bridge is ready
         if (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function') {
-            alert('One moment — the store is loading. Tap Purchase again in a few seconds.');
-            return;
+            throw new Error('Store bridge not ready');
         }
+        
+        console.log('[IAP] Initiating purchase:', {
+            productId,
+            slug,
+            purchaseState,
+            storeReady,
+            canMakePayments,
+            productsLoaded
+        });
+        
         const result = await Promise.resolve(window.BeeSmartIAP.purchase(productId));
+        
+        console.log('[IAP] Purchase result:', {
+            result,
+            transaction_id: result?.transaction_id || result?.transactionId,
+            cancelled: result?.cancelled
+        });
+        
+        // CRITICAL: Check for explicit cancellation
+        if (result && (result.cancelled === true || result.cancelled === 'true')) {
+            clearTimeout(timeoutId);
+            purchaseState = PurchaseState.CANCELLED;
+            clearPurchaseState();
+            
+            // Close modal
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Reset state
+            setTimeout(() => {
+                purchaseState = PurchaseState.IDLE;
+                currentPurchaseSlug = null;
+                currentPurchaseProductId = null;
+            }, 500);
+            return; // Silent return - user cancelled intentionally
+        }
 
         // Important: On iOS (StoreKit2), the native layer already returns VERIFIED transactions
         // and `native-iap-bridge.js` immediately reconciles owned products via `/api/iap/restore`.
@@ -1984,6 +2367,7 @@ async function purchaseLockedAvatar(slug) {
             const json = await resp.json().catch(() => ({}));
             verifyOk = !!(resp.ok && json && json.success);
         } catch (e) {
+            console.warn('[IAP] Verification failed (non-fatal):', e);
             verifyOk = false;
         }
 
@@ -1999,7 +2383,19 @@ async function purchaseLockedAvatar(slug) {
                     body: JSON.stringify({ platform: 'web', product_ids: [] })
                 });
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) { 
+            console.warn('[IAP] Reconciliation failed (non-fatal):', e);
+        }
+
+        // CRITICAL FIX #5: Clear timeout and set purchased state
+        clearTimeout(timeoutId);
+        purchaseState = PurchaseState.PURCHASED;
+        clearPurchaseState();
+        
+        // Close modal
+        if (existingModal) {
+            existingModal.remove();
+        }
 
         // Refresh the avatar list to reflect new entitlements
         await loadAvatars();
@@ -2011,16 +2407,60 @@ async function purchaseLockedAvatar(slug) {
                 : String(updated.slug).replace(/"/g, '\\"');
             const el = document.querySelector(`.avatar-hex-position[data-slug="${escSlug}"]`);
             if (el) selectAvatar(updated, el);
-            return;
+        } else {
+            // Purchase completed; unlock may take a moment. Positive framing, no negative message.
+            alert('Purchase complete! If this avatar doesn\'t unlock right away, tap Restore Purchases and it will sync.');
         }
-
-        // Purchase completed; unlock may take a moment. Positive framing, no negative message.
-        alert('Purchase complete! If this avatar doesn\'t unlock right away, tap Restore Purchases and it will sync.');
+        
+        // Reset state after delay
+        setTimeout(() => {
+            purchaseState = PurchaseState.IDLE;
+            currentPurchaseSlug = null;
+        }, 2000);
+        
     } catch (err) {
-        console.error('❌ Avatar purchase failed:', err);
+        console.error('[IAP] Avatar purchase failed:', err);
+        purchaseState = PurchaseState.FAILED;
+        
+        // Close modal on error
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        clearTimeout(timeoutId);
+        
         const msg = (err && err.message) ? err.message : 'Unknown error';
-        if (/cancel|user cancelled|skipped/i.test(msg)) return;
-        alert('The purchase didn\'t go through. Tap Purchase again or try Restore Purchases if you already bought this bee.');
+        if (/cancel|user cancelled|skipped/i.test(msg)) {
+            // CRITICAL FIX: User cancelled - set CANCELLED state (not IDLE)
+            purchaseState = PurchaseState.CANCELLED;
+            clearPurchaseState();
+            
+            // Close modal silently
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Reset state after brief delay
+            setTimeout(() => {
+                purchaseState = PurchaseState.IDLE;
+                currentPurchaseSlug = null;
+                currentPurchaseProductId = null;
+            }, 500);
+            return; // Silent return - user cancelled intentionally
+        }
+        
+        // Actual error - show message
+        purchaseState = PurchaseState.FAILED;
+        clearPurchaseState();
+        
+        alert('The purchase didn\'t go through. Please try again or use Restore Purchases if you already bought this bee.');
+        
+        // Reset state after delay
+        setTimeout(() => {
+            purchaseState = PurchaseState.IDLE;
+            currentPurchaseSlug = null;
+            currentPurchaseProductId = null;
+        }, 3000);
     }
 }
 

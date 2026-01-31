@@ -681,9 +681,17 @@ p, h1, h2, h3, h4, h5, h6, span {
     box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
 }
 
-.locked-modal-btn:hover {
+.locked-modal-btn:hover:not(:disabled):not(.disabled) {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(255, 215, 0, 0.6);
+}
+
+.locked-modal-btn:disabled,
+.locked-modal-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    background: linear-gradient(135deg, #999 0%, #666 100%);
 }
 
 .locked-modal-btn-secondary {
