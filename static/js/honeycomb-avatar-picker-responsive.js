@@ -224,11 +224,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Restore purchase state from localStorage (survives page refresh)
     restorePurchaseState();
     
-    // Initialize IAP store on app start (non-blocking - don't delay avatar loading)
-    // Run in background - purchase function will wait for bridge when needed
-    initializeIAPStore().catch(err => {
-        console.warn('[IAP] Store initialization failed (non-blocking):', err);
-    });
+    // IAP store initialization moved to system checks (unified_menu.html)
+    // It will be initialized before picker loads, so it's ready when needed
     
     loadAvatars();
     setupSearchFilter();
@@ -2102,8 +2099,9 @@ async function _waitForNativeIapBridge(timeoutMs){
     return !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function');
 }
 
-// Initialize IAP store on app start (non-blocking)
-async function initializeIAPStore() {
+// Initialize IAP store on app start (called during system checks)
+// Make globally accessible so system checks can call it
+window.initializeIAPStore = async function initializeIAPStore() {
     console.log('[IAP] Initializing store (background)...');
     purchaseState = PurchaseState.STORE_LOADING;
     storeReady = false;

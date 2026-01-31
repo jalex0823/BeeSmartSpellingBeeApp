@@ -17163,16 +17163,55 @@ function showRestoreDialog(title, message, isSuccess) {
                 
                 console.log(' Cumulative stats check complete (never skipped)');
                 
+                // Check 12: IAP Store Initialization (CRITICAL: Initialize before avatar picker loads)
+                const check12 = this.addCheck('IAP Store', 'Initializing...', '');
+                await this.delay(200);
+                try {
+                    this.updateProgress(82, ' Initializing in-app purchase store...');
+                    
+                    // Initialize IAP store (function is in honeycomb-avatar-picker-responsive.js)
+                    if (typeof window.initializeIAPStore === 'function') {
+                        // Run with timeout to prevent hanging
+                        const initPromise = window.initializeIAPStore();
+                        const timeoutPromise = new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('IAP initialization timeout')), 5000)
+                        );
+                        
+                        try {
+                            await Promise.race([initPromise, timeoutPromise]);
+                            this.updateCheck(check12, 'Ready', '', 85);
+                            this.updateProgress(85, ' IAP store ready');
+                            console.log('✅ IAP store initialized during system checks');
+                        } catch (initError) {
+                            // Timeout or error - non-fatal, store will initialize when needed
+                            console.warn('⚠️ IAP store initialization timed out or failed (non-fatal):', initError.message || initError);
+                            this.updateCheck(check12, 'Will initialize on demand', 'ℹ', 85);
+                            this.updateProgress(85, ' IAP store will initialize when needed');
+                        }
+                    } else {
+                        // Function not loaded yet - will initialize when picker loads
+                        this.updateCheck(check12, 'Will initialize on demand', 'ℹ', 85);
+                        this.updateProgress(85, ' IAP store will initialize when needed');
+                        console.log('ℹ IAP store initialization function not loaded yet (will initialize on demand)');
+                    }
+                } catch (iapError) {
+                    console.warn('IAP store check error (non-fatal):', iapError);
+                    this.updateCheck(check12, 'Will initialize on demand', 'ℹ', 85);
+                    this.updateProgress(85, ' IAP store will initialize when needed');
+                }
+                
+                console.log(' IAP store check complete');
+                
                 } catch (systemCheckError) {
                     // CRITICAL FAILSAFE: If ANY system check crashes, log it and continue
                     console.error(' CRITICAL: System check crashed:', systemCheckError);
-                    this.updateProgress(80, ' Some checks failed - continuing anyway');
+                    this.updateProgress(85, ' Some checks failed - continuing anyway');
                 }
                 
                 // Guarantee we visibly advance even if later steps change.
                 try {
-                    if (Number(this.progress) < 75) {
-                        this.updateProgress(75, ' Systems checks complete');
+                    if (Number(this.progress) < 85) {
+                        this.updateProgress(85, ' Systems checks complete');
                     }
                 } catch (_e) {}
 
