@@ -2515,10 +2515,10 @@ window.initializeIAPStore = async function initializeIAPStore() {
     canMakePayments = true;
     
     try {
-        const inNative = isProbablyNativeAppContext();
+        const isNativeApp = isProbablyNativeAppContext();
         // CRITICAL FIX: Use very short timeout - bridge will be waited for in purchase function if needed
         // This prevents blocking picker loading
-        const bridgeReady = await _waitForNativeIapBridge(inNative ? 1000 : 500);
+        const bridgeReady = await _waitForNativeIapBridge(isNativeApp ? 1000 : 500);
         
         if (bridgeReady && window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') {
             // CRITICAL: Check if we can make payments (iOS/Android) - non-blocking, default to true
