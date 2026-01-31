@@ -2848,40 +2848,72 @@ async function purchaseLockedAvatar(slug) {
 
         // CRITICAL: Refresh the avatar unlock status IMMEDIATELY after purchase
         // Wait a brief moment for backend to process the purchase
+        console.log(`[IAP] Refreshing unlock status for purchased avatar: ${slug}`);
         await new Promise(resolve => setTimeout(resolve, 500));
         await refreshAvatarUnlockStatus();
         
-        // Check if avatar is now unlocked
-        const updated = findAvatarBySlug(slug);
-        if (updated && !updated.is_locked) {
-            // Success! Avatar unlocked
-            alert(`✅ ${avatar.name} unlocked!`);
-            const escSlug = (window.CSS && typeof CSS.escape === 'function')
-                ? CSS.escape(updated.slug)
-                : String(updated.slug).replace(/"/g, '\\"');
-            const el = document.querySelector(`.avatar-hex-position[data-slug="${escSlug}"]`);
-            if (el) {
-                selectAvatar(updated, el);
-            }
-        } else {
-            // Purchase completed but unlock status not updated yet
-            // This can happen if backend needs more time - show helpful message
-            console.warn('[IAP] Purchase completed but avatar still locked - may need backend sync');
-            alert('Purchase complete! The avatar should unlock shortly. If it doesn\'t, tap Restore Purchases.');
+        // Check if avatar is now unlocked (with multiple attempts for backend sync delays)
+        let unlocked = false;
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts && !unlocked) {
+            attempts++;
+            const updated = findAvatarBySlug(slug);
             
-            // Try one more refresh after a delay
-            setTimeout(async () => {
-                await refreshAvatarUnlockStatus();
-                const retryUpdated = findAvatarBySlug(slug);
-                if (retryUpdated && !retryUpdated.is_locked) {
-                    alert(`✅ ${avatar.name} is now unlocked!`);
+            if (updated) {
+                console.log(`[IAP] Attempt ${attempts}/${maxAttempts}: Avatar ${slug} - is_locked=${updated.is_locked}`);
+                
+                if (!updated.is_locked) {
+                    // Success! Avatar unlocked
+                    unlocked = true;
+                    console.log(`✅ [IAP] Avatar ${slug} successfully unlocked!`);
+                    
+                    // Ensure UI is updated (renderAvatarGrid should have been called by refreshAvatarUnlockStatus)
+                    // Wait a moment for DOM to update
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
                     const escSlug = (window.CSS && typeof CSS.escape === 'function')
-                        ? CSS.escape(retryUpdated.slug)
-                        : String(retryUpdated.slug).replace(/"/g, '\\"');
+                        ? CSS.escape(updated.slug)
+                        : String(updated.slug).replace(/"/g, '\\"');
                     const el = document.querySelector(`.avatar-hex-position[data-slug="${escSlug}"]`);
-                    if (el) selectAvatar(retryUpdated, el);
+                    
+                    if (el) {
+                        // Verify element shows unlocked state
+                        const isLockedAttr = el.getAttribute('data-locked');
+                        const hasLockedClass = el.classList.contains('avatar-locked');
+                        console.log(`[IAP] DOM element state - data-locked="${isLockedAttr}", has avatar-locked class: ${hasLockedClass}`);
+                        
+                        // Remove locked class if still present (safety check)
+                        if (hasLockedClass) {
+                            el.classList.remove('avatar-locked');
+                            el.setAttribute('data-locked', 'false');
+                        }
+                        
+                        selectAvatar(updated, el);
+                        alert(`✅ ${avatar.name} unlocked!`);
+                    } else {
+                        console.warn(`[IAP] Avatar element not found in DOM for ${slug}, but avatar is unlocked`);
+                        alert(`✅ ${avatar.name} unlocked! Refresh the page to see it.`);
+                    }
+                    break;
                 }
-            }, 2000);
+            } else {
+                console.warn(`[IAP] Attempt ${attempts}/${maxAttempts}: Avatar ${slug} not found in avatarsData`);
+            }
+            
+            // If not unlocked yet, wait and retry
+            if (!unlocked && attempts < maxAttempts) {
+                console.log(`[IAP] Avatar still locked, waiting before retry ${attempts + 1}/${maxAttempts}...`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                await refreshAvatarUnlockStatus();
+            }
+        }
+        
+        if (!unlocked) {
+            // Purchase completed but unlock status not updated after all attempts
+            console.warn('[IAP] Purchase completed but avatar still locked after', maxAttempts, 'attempts - may need backend sync');
+            alert('Purchase complete! The avatar should unlock shortly. If it doesn\'t appear unlocked, tap Restore Purchases.');
         }
         
         // Reset state after delay
