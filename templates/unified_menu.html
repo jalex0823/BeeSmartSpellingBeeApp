@@ -16727,7 +16727,7 @@ function showRestoreDialog(title, message, isSuccess) {
             }
             
             async runSystemChecks() {
-                console.log('=== STARTING SYSTEM CHECKS (12 checks total) ===');
+                console.log('=== STARTING SYSTEM CHECKS (13 checks total) ===');
                 
                 // CRITICAL: Wrap entire runSystemChecks in try-catch to prevent hangs
                 try {
@@ -17202,16 +17202,112 @@ function showRestoreDialog(title, message, isSuccess) {
                 
                 console.log(' IAP store check complete');
                 
+                // Check 13: Pre-load Avatar Catalog (CRITICAL: Load before picker opens)
+                const check13 = this.addCheck('Avatar Catalog', 'Pre-loading...', '');
+                await this.delay(200);
+                try {
+                    this.updateProgress(87, ' Pre-loading avatar catalog...');
+                    
+                    // Pre-load avatars so picker loads instantly
+                    if (typeof window.loadAvatars === 'function' || typeof fetch === 'function') {
+                        try {
+                            const timestamp = new Date().getTime();
+                            const avatarResponse = await fetch(`/api/avatars?force=1&t=${timestamp}`, {
+                                method: 'GET',
+                                credentials: 'same-origin',
+                                cache: 'no-cache',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Cache-Control': 'no-cache',
+                                    'Pragma': 'no-cache'
+                                }
+                            });
+                            
+                            if (avatarResponse.ok) {
+                                const avatarData = await avatarResponse.json();
+                                let apiAvatars = null;
+                                if (Array.isArray(avatarData)) {
+                                    apiAvatars = avatarData;
+                                } else if (avatarData && Array.isArray(avatarData.avatars)) {
+                                    apiAvatars = avatarData.avatars;
+                                } else if (avatarData && avatarData.status === 'success' && avatarData.data && Array.isArray(avatarData.data)) {
+                                    apiAvatars = avatarData.data;
+                                }
+                                
+                                if (apiAvatars && apiAvatars.length > 0) {
+                                    // Store pre-loaded avatars globally for picker to use
+                                    window.preloadedAvatars = apiAvatars.map(avatar => ({
+                                        slug: avatar.id,
+                                        name: avatar.name,
+                                        description: avatar.description,
+                                        category: avatar.category,
+                                        glb_url: (avatar.urls && avatar.urls.glb) || null,
+                                        thumbnail: (avatar.urls && avatar.urls.thumbnail) || avatar.thumbnail || null,
+                                        is_locked: avatar.is_locked || false,
+                                        unlock_message: avatar.unlock_message || '',
+                                        unlock_points: (typeof avatar.unlock_points === 'number') ? avatar.unlock_points : null,
+                                        tier: avatar.tier || null,
+                                        price: (typeof avatar.price === 'number') ? avatar.price : ((typeof avatar.price_usd === 'number') ? avatar.price_usd : null),
+                                        product_id: avatar.product_id || null,
+                                    }));
+                                    
+                                    // Also store user session data if available
+                                    if (avatarData.user) {
+                                        window.userSessionData = {
+                                            authenticated: avatarData.user.is_authenticated || false,
+                                            username: avatarData.user.username || null,
+                                            role: avatarData.user.role || null,
+                                            is_admin: avatarData.user.is_admin || false,
+                                            is_guest: avatarData.user.is_guest || false,
+                                            honey_points: avatarData.user.honey_points || 0
+                                        };
+                                        window.avatarUserInfo = {
+                                            is_guest: avatarData.user.is_guest || false,
+                                            is_admin: avatarData.user.is_admin || false,
+                                            user_role: avatarData.user.role || null,
+                                            user_authenticated: avatarData.user.is_authenticated || false,
+                                            purchased_avatars: avatarData.purchased_avatars || []
+                                        };
+                                    }
+                                    
+                                    this.updateCheck(check13, `Ready (${apiAvatars.length} avatars)`, '', 90);
+                                    this.updateProgress(90, ` Avatar catalog pre-loaded: ${apiAvatars.length} bees`);
+                                    console.log(`✅ Avatar catalog pre-loaded: ${apiAvatars.length} avatars`);
+                                } else {
+                                    this.updateCheck(check13, 'Will load on demand', 'ℹ', 90);
+                                    this.updateProgress(90, ' Avatar catalog will load when picker opens');
+                                }
+                            } else {
+                                this.updateCheck(check13, 'Will load on demand', 'ℹ', 90);
+                                this.updateProgress(90, ' Avatar catalog will load when picker opens');
+                            }
+                        } catch (avatarError) {
+                            console.warn('Avatar catalog pre-load error (non-fatal):', avatarError);
+                            this.updateCheck(check13, 'Will load on demand', 'ℹ', 90);
+                            this.updateProgress(90, ' Avatar catalog will load when picker opens');
+                        }
+                    } else {
+                        this.updateCheck(check13, 'Will load on demand', 'ℹ', 90);
+                        this.updateProgress(90, ' Avatar catalog will load when picker opens');
+                    }
+                } catch (avatarCheckError) {
+                    console.warn('Avatar catalog check error (non-fatal):', avatarCheckError);
+                    this.updateCheck(check13, 'Will load on demand', 'ℹ', 90);
+                    this.updateProgress(90, ' Avatar catalog will load when picker opens');
+                }
+                
+                console.log(' Avatar catalog pre-load complete');
+                
                 } catch (systemCheckError) {
                     // CRITICAL FAILSAFE: If ANY system check crashes, log it and continue
                     console.error(' CRITICAL: System check crashed:', systemCheckError);
-                    this.updateProgress(85, ' Some checks failed - continuing anyway');
+                    this.updateProgress(90, ' Some checks failed - continuing anyway');
                 }
                 
                 // Guarantee we visibly advance even if later steps change.
                 try {
-                    if (Number(this.progress) < 85) {
-                        this.updateProgress(85, ' Systems checks complete');
+                    if (Number(this.progress) < 90) {
+                        this.updateProgress(90, ' Systems checks complete');
                     }
                 } catch (_e) {}
 

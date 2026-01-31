@@ -128,10 +128,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     console.log('GLTFLoader available:', typeof THREE !== 'undefined' && typeof THREE.GLTFLoader !== 'undefined');
     console.log('DRACOLoader available:', typeof THREE !== 'undefined' && typeof THREE.DRACOLoader !== 'undefined');
     
-    // CRITICAL: Verify user authentication FIRST during loading screen
-    await verifyUserAuthentication();
-    // Apply initial role-based UI before heavy loading
-    applyRoleBasedUI();
+    // CRITICAL: Authentication and avatar loading moved to system checks
+    // Picker just uses pre-loaded data - no blocking operations here
+    // If data not pre-loaded, use template data or load in background
+    if (!window.userSessionData) {
+        // Try to get from template data or load in background (non-blocking)
+        verifyUserAuthentication().catch(err => {
+            console.warn('[Picker] Auth check failed (non-blocking):', err);
+        });
+    } else {
+        // Use pre-loaded session data
+        applyRoleBasedUI();
+    }
 
     // If the native IAP bridge is missing/late (common in TestFlight),
     // native-iap-bridge.js will do a server reconcile and emit events.
@@ -227,7 +235,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     // IAP store initialization moved to system checks (unified_menu.html)
     // It will be initialized before picker loads, so it's ready when needed
     
-    loadAvatars();
+    // CRITICAL: Check if avatars were pre-loaded during system checks
+    if (window.preloadedAvatars && Array.isArray(window.preloadedAvatars) && window.preloadedAvatars.length > 0) {
+        console.log('✅ Using pre-loaded avatars from system checks:', window.preloadedAvatars.length);
+        // Use pre-loaded avatars immediately
+        avatarsData = window.preloadedAvatars;
+        updateDynamicMarquee(avatarsData);
+        renderAvatarGrid();
+        // Hide loading overlay immediately
+        const overlay = document.getElementById('avatar-loading-overlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+            overlay.style.display = 'none';
+        }
+    } else {
+        // Fallback: load avatars (non-blocking, but should be pre-loaded)
+        console.log('⚠️ Avatars not pre-loaded, loading now (should have been loaded in system checks)');
+        loadAvatars();
+    }
+    
     setupSearchFilter();
     setupBundleShop();
 
