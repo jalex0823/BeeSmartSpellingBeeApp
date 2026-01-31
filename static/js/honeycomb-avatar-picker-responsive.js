@@ -245,22 +245,41 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.error('❌ CRITICAL: Avatars not pre-loaded during system checks!');
         console.error('❌ Picker cannot load avatars - this should never happen.');
         
-        // CRITICAL: Hide overlay immediately with error message
+        // CRITICAL: Show error message - override base.html's display:none !important rule
         if (overlay) {
+            // Force show overlay with !important inline styles to override base.html CSS
+            overlay.style.setProperty('display', 'flex', 'important');
+            overlay.style.setProperty('opacity', '1', 'important');
+            overlay.style.setProperty('pointer-events', 'auto', 'important');
+            overlay.style.setProperty('visibility', 'visible', 'important');
+            overlay.classList.remove('hidden');
+            
             overlay.innerHTML = `
-                <div style="text-align: center; padding: 2rem; color: #FFD700;">
-                    <div style="font-size: 3rem;">⚠️</div>
-                    <div style="font-size: 1.2rem; margin-top: 1rem;">Avatars not loaded</div>
-                    <div style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.8;">Please refresh the page</div>
+                <div class="loading-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
+                    <h2 style="color: #FFD700; font-size: 1.5rem; margin-bottom: 0.5rem;">Avatars Not Loaded</h2>
+                    <p style="color: rgba(255, 215, 0, 0.9); font-size: 1rem; margin-bottom: 1rem;">The avatar catalog failed to load during system checks.</p>
+                    <p style="color: rgba(255, 215, 0, 0.7); font-size: 0.9rem; margin-top: 0.5rem;">Please refresh the page to try again.</p>
+                    <button onclick="window.location.reload()" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: #FFD700; color: #1a1a1a; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;">Refresh Page</button>
                 </div>
             `;
-            // Hide after showing error
-            setTimeout(() => {
-                if (overlay) {
-                    overlay.classList.add('hidden');
-                    overlay.style.display = 'none';
-                }
-            }, 3000);
+            
+            // Keep error visible - don't auto-hide (user needs to see it)
+            // Error will remain visible until user refreshes or closes manually
+        } else {
+            // Fallback: Show error in page content if overlay doesn't exist
+            const gridContainer = document.querySelector('.honeycomb-grid');
+            if (gridContainer) {
+                gridContainer.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: #FFD700;">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
+                        <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Avatars Not Loaded</h2>
+                        <p style="font-size: 1rem; margin-bottom: 1rem;">The avatar catalog failed to load during system checks.</p>
+                        <p style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 1.5rem;">Please refresh the page to try again.</p>
+                        <button onclick="window.location.reload()" style="padding: 0.75rem 1.5rem; background: #FFD700; color: #1a1a1a; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;">Refresh Page</button>
+                    </div>
+                `;
+            }
         }
         return; // STOP - don't try to load anything
     }
