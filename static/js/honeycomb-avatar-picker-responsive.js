@@ -224,8 +224,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Restore purchase state from localStorage (survives page refresh)
     restorePurchaseState();
     
-    // Initialize IAP store on app start (not on button click)
-    await initializeIAPStore();
+    // Initialize IAP store on app start (non-blocking - don't delay avatar loading)
+    // Run in background - purchase function will wait for bridge when needed
+    initializeIAPStore().catch(err => {
+        console.warn('[IAP] Store initialization failed (non-blocking):', err);
+    });
     
     loadAvatars();
     setupSearchFilter();
@@ -2099,9 +2102,9 @@ async function _waitForNativeIapBridge(timeoutMs){
     return !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function');
 }
 
-// Initialize IAP store on app start
+// Initialize IAP store on app start (non-blocking)
 async function initializeIAPStore() {
-    console.log('[IAP] Initializing store...');
+    console.log('[IAP] Initializing store (background)...');
     purchaseState = PurchaseState.STORE_LOADING;
     storeReady = false;
     productsLoaded = false;
@@ -2109,21 +2112,21 @@ async function initializeIAPStore() {
     
     try {
         const inNative = isProbablyNativeAppContext();
-        const bridgeReady = await _waitForNativeIapBridge(inNative ? 15000 : 2000);
+        // CRITICAL FIX: Reduce timeout for faster initialization
+        // Bridge will be waited for in purchase function if needed
+        const bridgeReady = await _waitForNativeIapBridge(inNative ? 3000 : 1000);
         
         if (bridgeReady && window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') {
-            // CRITICAL: Check if we can make payments (iOS/Android)
-            try {
-                // Native bridge should expose canMakePayments if available
-                if (typeof window.BeeSmartIAP.canMakePayments === 'function') {
-                    canMakePayments = await Promise.resolve(window.BeeSmartIAP.canMakePayments());
-                } else {
-                    // Default to true if not exposed (bridge handles it)
-                    canMakePayments = true;
-                }
-            } catch (e) {
-                console.warn('[IAP] Could not check canMakePayments:', e);
-                canMakePayments = true; // Default to true
+            // CRITICAL: Check if we can make payments (iOS/Android) - non-blocking, default to true
+            canMakePayments = true; // Default to true, check async if available
+            if (typeof window.BeeSmartIAP.canMakePayments === 'function') {
+                // Check async but don't block
+                Promise.resolve(window.BeeSmartIAP.canMakePayments()).then(result => {
+                    canMakePayments = result !== false;
+                }).catch(e => {
+                    console.warn('[IAP] Could not check canMakePayments:', e);
+                    canMakePayments = true; // Default to true
+                });
             }
             
             // CRITICAL: Products are considered "loaded" when bridge is ready
@@ -2134,18 +2137,19 @@ async function initializeIAPStore() {
             // Set up transaction listeners
             setupPurchaseListeners();
             
-            // CRITICAL: Store is ready only if ALL conditions met
-            if (bridgeReady && canMakePayments && productsLoaded) {
+            // CRITICAL: In native app, mark as ready immediately (canMakePayments check is async)
+            // Purchase function will handle any edge cases
+            if (bridgeReady && productsLoaded) {
                 purchaseState = PurchaseState.READY;
                 storeReady = true;
-                console.log('[IAP] Store ready:', { bridgeReady, canMakePayments, productsLoaded });
+                console.log('[IAP] Store ready:', { bridgeReady, productsLoaded });
             } else {
                 purchaseState = PurchaseState.READY;
                 storeReady = false;
-                console.log('[IAP] Store not fully ready:', { bridgeReady, canMakePayments, productsLoaded });
+                console.log('[IAP] Store not fully ready:', { bridgeReady, productsLoaded });
             }
         } else {
-            // Store not available (web context)
+            // Store not available (web context) - mark as ready so UI doesn't block
             purchaseState = PurchaseState.READY;
             storeReady = false;
             productsLoaded = false;
