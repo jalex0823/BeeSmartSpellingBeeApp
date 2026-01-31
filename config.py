@@ -103,16 +103,16 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False  # Set to True for query debugging
     
-    # Enhanced database connection pool configuration for DigitalOcean PostgreSQL
-    # Prevents connection timeouts, pool exhaustion, and improves reliability
+    # Enhanced database connection pool configuration for PostgreSQL (Heroku, DigitalOcean, etc.)
+    # Prevents connection timeouts, pool exhaustion, and SSL SYSCALL EOF (stale connections).
     # IMPORTANT: Only apply Postgres-specific connect_args to Postgres.
     # SQLite will crash if it receives connect_timeout/application_name/options.
     if str(SQLALCHEMY_DATABASE_URI).startswith('sqlite'):
         SQLALCHEMY_ENGINE_OPTIONS = {}
     else:
         SQLALCHEMY_ENGINE_OPTIONS = {
-            'pool_pre_ping': True,           # Verify connections before using (prevents stale connections)
-            'pool_recycle': 300,             # Recycle connections after 5 minutes (prevents timeout)
+            'pool_pre_ping': True,           # Test connection before use (avoids SSL EOF on stale conns)
+            'pool_recycle': 30,              # Recycle connections every 30s (below typical server idle timeout)
             'pool_timeout': 20,              # Wait up to 20 seconds for connection from pool
             'pool_size': 5,                  # Maintain 5 persistent connections
             'max_overflow': 10,              # Allow up to 10 overflow connections (total: 15)

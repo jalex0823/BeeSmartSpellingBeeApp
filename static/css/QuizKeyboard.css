@@ -1,0 +1,111 @@
+/**
+ * BeeSmart Custom Quiz Keyboard
+ * Mobile-first: 44px min key height, safe-area, honey/gold theme.
+ * Only loaded on quiz pages.
+ */
+
+.quiz-keyboard {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0));
+    background: linear-gradient(180deg, rgba(255, 248, 225, 0.98) 0%, rgba(255, 236, 179, 0.98) 100%);
+    border-top: 3px solid rgba(255, 193, 7, 0.6);
+    box-shadow: 0 -4px 20px rgba(255, 193, 7, 0.25);
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+}
+
+.quiz-keyboard-disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.quiz-keyboard-row {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    max-width: 600px;
+}
+
+.quiz-keyboard-row-bottom {
+    gap: 10px;
+    margin-top: 2px;
+}
+
+.quiz-keyboard-key {
+    min-height: 44px;
+    min-width: 28px;
+    padding: 8px 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #5A2C15;
+    background: linear-gradient(180deg, #fffef5 0%, #fff8e1 50%, #ffecb3 100%);
+    border: 2px solid rgba(255, 193, 7, 0.7);
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.quiz-keyboard-key:hover:not(:disabled) {
+    background: linear-gradient(180deg, #fff8e1 0%, #ffecb3 100%);
+    box-shadow: 0 3px 10px rgba(255, 193, 7, 0.35);
+}
+
+.quiz-keyboard-key:active:not(:disabled) {
+    transform: scale(0.96);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.quiz-keyboard-key:focus {
+    outline: 2px solid rgba(255, 152, 0, 0.8);
+    outline-offset: 2px;
+}
+
+.quiz-keyboard-key:disabled {
+    cursor: default;
+    opacity: 0.7;
+}
+
+.quiz-keyboard-key-letter {
+    flex: 0 0 auto;
+    width: calc((100% - 9 * 6px) / 10);
+    max-width: 36px;
+}
+
+.quiz-keyboard-key-space {
+    flex: 1;
+    min-width: 80px;
+    max-width: 200px;
+    font-size: 0.9rem;
+}
+
+.quiz-keyboard-key-backspace {
+    flex: 0 0 auto;
+    min-width: 52px;
+    font-size: 1.25rem;
+}
+
+@media (min-width: 600px) {
+    .quiz-keyboard-key-letter {
+        max-width: 44px;
+    }
+    .quiz-keyboard {
+        padding-left: 12px;
+        padding-right: 12px;
+        gap: 10px;
+    }
+    .quiz-keyboard-row {
+        gap: 8px;
+    }
+}
