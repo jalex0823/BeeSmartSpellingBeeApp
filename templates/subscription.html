@@ -1278,6 +1278,9 @@
                 }
 
                 if (ok && (premium || ownedCount > 0 || appliedCount > 0)) {
+                    // Reconcile entitlements and refresh UI before showing success dialog.
+                    try { await reconcileAndRefreshSubscriptionUI('restore_success'); } catch (e) {}
+                    await new Promise(r => setTimeout(r, 400));
                     const message = appliedCount > 0
                         ? `Successfully restored ${appliedCount} purchase${appliedCount === 1 ? '' : 's'}!`
                         : 'Restore complete. Your purchases are already active.';
@@ -1285,11 +1288,6 @@
 
                     // Celebration AFTER validation modal.
                     try { runRestoreCelebrationBurst({ durationMs: 1200 }); } catch (e) {}
-                    // IMPORTANT: Avoid a forced reload here.
-                    // In some iOS WebView / Capacitor configurations, a full reload can
-                    // momentarily drop cookies and make it *look* like the user got logged out.
-                    // Instead, reconcile entitlements + update the UI in-place.
-                    try { await reconcileAndRefreshSubscriptionUI('restore_success'); } catch (e) {}
                     try {
                         const ent2 = (reconcilePayload && (reconcilePayload.entitlements || reconcilePayload)) || {};
                         window.__beesmartPremiumState.active = _isPremiumActiveFromEntitlements(ent2) || premium;

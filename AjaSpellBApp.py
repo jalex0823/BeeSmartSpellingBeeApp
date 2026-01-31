@@ -60,7 +60,13 @@ from models import SpeedRoundConfig, SpeedRoundScore
 from models import Avatar, BattleSession, PurchaseRecord, BundleKey, DynamicBundle, BundleKeyRedemption
 from models import WordBankStorage  # Single source of truth for all word operations
 from datetime import date
-from avatar_skus import AVATAR_SKUS, build_product_entitlements, sku_for_slug  # Avatar monetization mapping
+from avatar_skus import (
+    AVATAR_SKUS,
+    APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG,
+    app_store_product_id_for_avatar,
+    build_product_entitlements,
+    sku_for_slug,
+)  # Avatar monetization mapping
 try:
     from bundle_skus import build_bundle_product_entitlements, bundle_sku_for_id  # Bundle monetization mapping
 except Exception:
@@ -1183,9 +1189,11 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
         except Exception:
             anon_premium = False
 
-    # Earn-or-buy tier: unlock by points or purchase
+    # Earn-or-buy tier: unlock by points or purchase (normalize slugs for comparison)
     if tier == 'earn_or_buy':
-        if avatar_id in purchased:
+        purchased_norm_eb = {str(x or '').strip().lower().replace('_', '-') for x in purchased}
+        avatar_id_norm_eb = str(avatar_id or '').strip().lower().replace('_', '-')
+        if avatar_id_norm_eb in purchased_norm_eb:
             return {"unlocked": True, "reason": "Purchased", "points_needed": 0}
         # Guest restore/purchase unlock
         if role == 'guest' and user is None and anon_owned:
@@ -1206,21 +1214,24 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
     # - Guests: locked unless purchased/restored
     # - Registered users (student/teacher/parent): unlock via Honey Points (higher thresholds) OR purchase
     #
-    # IMPORTANT: `premium_member` is a subscription/feature flag and MUST NOT act as an
-    # "unlock all avatars" bypass. Avatar picker lock state must match the selection
-    # enforcement endpoint (/api/avatar/select), which validates via points/purchases.
+    # Subscription unlocks premium features and optionally the premium avatar set.
+    # Non-consumable avatar purchases still unlock individually without subscription.
     if tier == 'premium':
+        if premium_member:
+            return {"unlocked": True, "reason": "Included with Premium", "points_needed": 0}
         # Points unlock path (gameplay). This is what makes "unlock_points" meaningful.
         if role in ('student', 'teacher', 'parent') and honey_points >= unlock_points:
             return {"unlocked": True, "reason": "Sufficient points", "points_needed": 0}
 
         # Non-admin, non-registered fall back to entitlement-based unlock.
-        if avatar_id in purchased:
+        purchased_norm = {str(x or '').strip().lower().replace('_', '-') for x in purchased}
+        avatar_id_norm = str(avatar_id or '').strip().lower().replace('_', '-')
+        if avatar_id_norm in purchased_norm:
             return {"unlocked": True, "reason": "Purchased", "points_needed": 0}
         # Registered users can still earn toward premium unlock.
         if role in ('student', 'teacher', 'parent'):
             return {"unlocked": False, "reason": "Earn Honey Points or purchase", "points_needed": max(unlock_points - honey_points, 0)}
-        # If guest owns a matching avatar SKU, unlock it.
+        # If guest owns a matching avatar SKU (by product_id -> avatar_id), unlock it.
         if anon_owned:
             try:
                 for pid in anon_owned:
@@ -1470,21 +1481,21 @@ def api_avatars():
         obj_file = entry.get('obj_file') or ''
         # GLB avatars are in glb_files folder, not individual avatar folders
         glb_url = f"/static/assets/avatars/glb_files/{obj_file}" if obj_file else None
-        # Optional: stable product id for store purchase flows (required for IAP in app)
+        # 1:1 with App Store Connect: use exact approved product_id for this avatar (picker sends this to Apple).
         product_id = None
+        avatar_id = str(entry.get('id') or '').strip().lower()
         try:
-            tier_norm = (entry.get('tier') or '').lower()
-            avatar_id = str(entry.get('id') or '').strip().lower()
-            if tier_norm in ('earn_or_buy', 'premium') and avatar_id:
-                product_id = avatar_sku_lookup.get(avatar_id)
-                # Fallback: derive SKU so locked avatars are always purchasable in app
+            if avatar_id and not is_unlocked:
+                product_id = app_store_product_id_for_avatar(avatar_id)
                 if not product_id:
-                    product_id = sku_for_slug(avatar_id)
+                    product_id = avatar_sku_lookup.get(avatar_id) or sku_for_slug(avatar_id)
         except Exception:
             product_id = None
 
-        # Provide consistent unlock metadata for frontends
+        # Provide consistent unlock metadata for frontends; default price for purchasable locked avatars.
         price_val = float(entry.get('price') or 0.0) if entry.get('price') is not None else None
+        if not is_unlocked and product_id and (price_val is None or price_val <= 0):
+            price_val = 0.99  # Default so picker always shows "Purchase for $0.99" for Apple-approved avatars
         unlock_points_val = int(entry.get('unlock_points') or 0) or None
         unlock_msg = ''
         try:
@@ -1514,7 +1525,7 @@ def api_avatars():
             'tier': entry.get('tier'),
             'category': entry.get('category'),
             'description': entry.get('description'),
-            'price_usd': float(entry.get('price') or 0.0) if entry.get('price') is not None else None,
+            'price_usd': float(price_val) if price_val is not None else None,
             'unlock_requirement': int(entry.get('unlock_points') or 0) or None,
             # Back-compat + front-end friendly fields
             'price': price_val,
@@ -1752,7 +1763,10 @@ PRODUCT_MAP = {
     },
 }
 
-# Extend product map with all avatar SKUs → avatar entitlements
+# 1:1 App Store Connect approved avatar product IDs → entitlements (verify/restore use these)
+for _pid, _slug in (APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG or {}).items():
+    PRODUCT_MAP[_pid] = {'type': 'avatar', 'avatar_id': _slug}
+# Extend product map with all avatar SKUs → avatar entitlements (back-compat / aliases)
 try:
     PRODUCT_MAP.update(build_product_entitlements())
 except Exception as _e:
@@ -13801,8 +13815,12 @@ def api_update_user_avatar_legacy():
                 user_honey_points = getattr(current_user, 'honey_points', 0) or 0
                 purchased_avatars = getattr(current_user, 'purchased_avatars', []) or []
                 
-                # Check if avatar is unlocked
-                unlock_result = check_avatar_unlocked(avatar_id, user_honey_points, purchased_avatars)
+                # Check if avatar is unlocked (subscription can unlock premium set)
+                has_premium = bool(getattr(current_user, 'premium_member', False))
+                unlock_result = check_avatar_unlocked(
+                    avatar_id, user_honey_points, purchased_avatars,
+                    has_premium_subscription=has_premium
+                )
                 
                 if not unlock_result.get('unlocked', False):
                     # Forbidden: User has not earned/purchased this avatar
@@ -17047,9 +17065,11 @@ def api_admin_or_user_update_avatar(user_id):
                 # Get user's unlock eligibility
                 user_honey_points = getattr(user, 'honey_points', 0) or 0
                 purchased_avatars = getattr(user, 'purchased_avatars', []) or []
-                
-                # Check if avatar is unlocked
-                unlock_result = check_avatar_unlocked(avatar_id, user_honey_points, purchased_avatars)
+                has_premium = bool(getattr(user, 'premium_member', False))
+                unlock_result = check_avatar_unlocked(
+                    avatar_id, user_honey_points, purchased_avatars,
+                    has_premium_subscription=has_premium
+                )
                 
                 if not unlock_result.get('unlocked', False):
                     # Forbidden: User has not earned/purchased this avatar
@@ -17262,15 +17282,15 @@ def api_select_avatar():
             try:
                 from avatar_catalog import check_avatar_unlocked, AVATAR_CATALOG
                 
-                # Get user's unlock eligibility
+                # Get user's unlock eligibility (subscription can unlock premium set)
                 user_honey_points = getattr(current_user, 'honey_points', 0) or 0
                 purchased_avatars = getattr(current_user, 'purchased_avatars', []) or []
-                
-                # Check if avatar is unlocked
+                has_premium = bool(getattr(current_user, 'premium_member', False))
                 unlock_result = check_avatar_unlocked(
                     selected_avatar_id,
                     user_honey_points,
-                    purchased_avatars
+                    purchased_avatars,
+                    has_premium_subscription=has_premium
                 )
                 
                 if not unlock_result.get('unlocked', False):

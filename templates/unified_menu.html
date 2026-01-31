@@ -693,24 +693,21 @@ function showRestoreDialog(title, message, isSuccess) {
                         return;
                     }
 
-                    // Green validation modal first, then celebration animation.
+                    // Dispatch reconcile first so UI can refresh, then show modal after a short delay.
                     try {
                         setBtn('Restore Purchases', false);
                         if (premium || ownedCount > 0) {
-                            await showRestoreGreenModal(
-                                'Restore Purchases',
-                                'Restore complete. If iOS asked you to sign in, that’s the normal Apple ID restore step. Tap OK for a little celebration while we finish syncing.'
-                            );
-                            runRestoreGlitterOnly();
-                            // IMPORTANT: Avoid a forced reload here.
-                            // In some iOS WebView / Capacitor configurations, a full reload can
-                            // momentarily drop cookies and make it *look* like the user got logged out.
-                            // Instead, notify listeners so premium UI can update in-place.
                             try {
                                 window.dispatchEvent(new CustomEvent('beesmart:iap-reconciled', {
                                     detail: { ok: true, reason: 'menu_restore_success', data: result }
                                 }));
                             } catch (e) { /* ignore */ }
+                            await new Promise(r => setTimeout(r, 600));
+                            await showRestoreGreenModal(
+                                'Restore Purchases',
+                                'Restore complete. If iOS asked you to sign in, that’s the normal Apple ID restore step. Your avatars and premium status are updated.'
+                            );
+                            runRestoreGlitterOnly();
                         } else {
                             // No purchases found — keep messaging honest.
                             await showRestoreGreenModal(
@@ -1303,6 +1300,16 @@ function showRestoreDialog(title, message, isSuccess) {
             /* Perfect centering alignment to match main menu column */
             max-width: 100%;
             margin: 0 auto;
+        }
+        
+        /* About button: equal space above/below so it sits centered between logo and avatar */
+        .about-btn-spacer {
+            margin: 1.5rem 0 1.5rem 0 !important;
+        }
+        @media (min-width: 769px) {
+            .about-btn-spacer {
+                margin: 2.25rem 0 1.5rem 0 !important; /* extra top so button is visually centered to avatar */
+            }
         }
         
         /*  UNIVERSAL AVATAR CONTAINER STANDARDS - Compact size matching student dashboard */
@@ -4562,8 +4569,8 @@ function showRestoreDialog(title, message, isSuccess) {
                     " />
                 </div>
 
-                <!-- About button between logo and avatar (per user request) -->
-                <div style="display: flex; justify-content: center; margin: 0.5rem 0 0.75rem;">
+                <!-- About button centered between logo and avatar (equal spacing) -->
+                <div class="about-btn-spacer" style="display: flex; justify-content: center; align-items: center; margin: 1.5rem 0 1.5rem 0;">
                     <button type="button" id="aboutBtn" class="action-btn info" style="min-height: 44px; padding: 0.5rem 1rem; font-size: 0.95rem; border-radius: 999px;" title="About BeeSmart" aria-label="About BeeSmart">About</button>
                 </div>
 
@@ -5850,18 +5857,29 @@ function showRestoreDialog(title, message, isSuccess) {
         display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.45); align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;
     ">
         <div id="aboutModal" style="
-            background: linear-gradient(135deg, #FFFBF0 0%, #FFF9E6 100%); border-radius: 20px; padding: 1.25rem; max-width: min(92vw, 380px); width: 100%;
+            background: linear-gradient(135deg, #FFFBF0 0%, #FFF9E6 100%); border-radius: 20px; padding: 1.25rem; max-width: min(92vw, 420px); width: 100%;
             box-shadow: 0 12px 40px rgba(0,0,0,0.2); border: 2px solid rgba(255, 215, 0, 0.4);
-            max-height: 85vh; overflow: hidden; display: flex; flex-direction: column;
+            max-height: 85vh; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column;
         ">
             <h2 id="aboutModalTitle" style="margin: 0 0 0.75rem; font-size: 1.35rem; color: #5A2C15;">About BeeSmart</h2>
-            <p style="margin: 0 0 0.75rem; font-size: 0.9rem; color: #5A2C15; line-height: 1.5;">Spelling practice with avatars, voice input, and progress tracking for learners of all ages.</p>
+            <p style="margin: 0 0 1rem; font-size: 0.9rem; color: #5A2C15; line-height: 1.5;">BeeSmart helps you practice spelling using avatars, voice input, and interactive quizzes — at your own pace.</p>
+            <h3 style="margin: 0 0 0.4rem; font-size: 1rem; color: #5A2C15;">How it works</h3>
             <ul style="margin: 0 0 1rem; padding-left: 1.1rem; font-size: 0.9rem; color: #5A2C15; line-height: 1.5;">
-                <li>Upload words or use Random Words</li>
-                <li>Take quizzes with hints and sentences</li>
-                <li>Track points, grades, and history (when signed in)</li>
+                <li>Choose words or let BeeSmart generate them for you</li>
+                <li>Spell by typing or speaking, with optional hints and sentences</li>
             </ul>
-            <div style="flex-shrink: 0;">
+            <h3 style="margin: 0 0 0.4rem; font-size: 1rem; color: #5A2C15;">What you can do</h3>
+            <ul style="margin: 0 0 1rem; padding-left: 1.1rem; font-size: 0.9rem; color: #5A2C15; line-height: 1.5;">
+                <li>Upload your own word lists or use Random Words</li>
+                <li>Take quizzes with Honey Hints and sentence support</li>
+                <li>Earn points and see results after each quiz</li>
+            </ul>
+            <h3 style="margin: 0 0 0.4rem; font-size: 1rem; color: #5A2C15;">Progress tracking</h3>
+            <ul style="margin: 0 0 1rem; padding-left: 1.1rem; font-size: 0.9rem; color: #5A2C15; line-height: 1.5;">
+                <li>Play as a guest for instant practice</li>
+                <li>Sign in to save scores, grades, and quiz history</li>
+            </ul>
+            <div style="flex-shrink: 0; margin-top: 0.25rem;">
                 <button type="button" id="aboutModalCloseBtn" style="
                     width: 100%; min-height: 48px; border-radius: 12px; font-weight: 700; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #5A2C15; border: 2px solid rgba(255, 215, 0, 0.6); cursor: pointer; font-size: 1rem;
                 ">Close</button>

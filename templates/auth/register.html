@@ -81,6 +81,9 @@
   .consent-row{ display:flex; align-items:center; justify-content:center; margin: 0.5rem 0 1rem; font-size:0.9rem; color:#5A6C7D }
   .consent-row label{ display:flex; align-items:center; gap: 0.5rem; }
   .consent-row input[type="checkbox"]{ width: 18px; height: 18px; accent-color: #FFB300; }
+  /* Back to Main Menu - centered at top of page */
+  .btn-back-to-menu{ position: fixed; top: 1.25rem; left: 50%; transform: translateX(-50%); padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #9E9E9E, #757575); color: white; text-decoration: none; border-radius: 12px; font-weight: 700; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: all 0.3s ease; z-index: 1000; display: inline-flex; align-items: center; gap: 0.5rem; }
+  .btn-back-to-menu:hover{ color: white; opacity: 0.95; transform: translateX(-50%) translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.25); }
   
   /* Avatar Selection Styles - Enhanced for Better Visibility */
   .avatar-selection-container{ margin-top: 0.75rem; }
@@ -209,8 +212,8 @@
   window.REG_BILLING_MODE = "{{ (registration_billing_mode or 'subscription') | e }}";
 </script>
 <div class="page-center">
-  <!-- Back to Main Menu Button -->
-  <a href="/" class="btn-back-to-menu" id="backToMenuBtn" style="position: fixed; top: 20px; left: 20px; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #9E9E9E, #757575); color: white; text-decoration: none; border-radius: 12px; font-weight: 700; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: all 0.3s ease; z-index: 1000; display: flex; align-items: center; gap: 0.5rem;">
+  <!-- Back to Main Menu Button (centered at top) -->
+  <a href="/" class="btn-back-to-menu" id="backToMenuBtn" aria-label="Back to main menu">
     <span>←</span>
     <span>Back to Main Menu</span>
   </a>

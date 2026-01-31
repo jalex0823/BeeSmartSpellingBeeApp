@@ -1800,12 +1800,11 @@ function showLockedMessage(avatar) {
                 <button class="locked-modal-btn-secondary" onclick="this.closest('.locked-avatar-modal').remove()">Maybe Later</button>
             </div>
         `;
-    } else if (tier === 'premium' || tier === 'earn_or_buy') {
+    } else if (tier === 'premium' || tier === 'earn_or_buy' || (isProbablyNativeAppContext() && avatar.is_locked)) {
         const inNativeApp = isProbablyNativeAppContext();
         const canPurchase = canPurchaseAvatar(avatar);
-        // In native app, show Purchase button whenever avatar has price or product_id (all commissioned avatars).
-        // Avoids "still loading" when bridge is late or product_id was missing from API.
-        const showPurchaseBtn = inNativeApp ? !!(avatar.price || avatar.product_id) : canPurchase;
+        // All Apple-approved avatars are purchasable in native app: show Purchase for any locked avatar (backend sends product_id/price).
+        const showPurchaseBtn = inNativeApp ? true : canPurchase;
         const purchaseLabel = avatar.price ? `Purchase for $${Number(avatar.price).toFixed(2)}` : 'Purchase to Unlock';
         const notReadyMsg = inNativeApp
             ? 'If the Purchase button doesn\'t work yet, wait a few seconds and try again.'
@@ -1937,36 +1936,20 @@ async function purchaseLockedAvatar(slug) {
     // If user is not authenticated, they can still purchase (purchase will be tied to device/Apple ID)
     // We'll suggest registration after purchase for cross-device access
 
-    // Capacitor plugins can register after page JS runs; wait a bit longer in TestFlight
-    // and prefer the explicit iap-ready event.
-    await _waitForNativeIapBridge(isProbablyNativeAppContext() ? 5000 : 2000);
-    if (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function') {
-        // Don't hard-block TestFlight if bridge detection is flaky.
-        // Try a quick server-side restore/reconcile for users who already own premium/avatars.
-        try {
-            const res = await fetch('/api/iap/restore', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'same-origin',
-                body: JSON.stringify({ platform: 'web', product_ids: [] })
-            });
-            const data = await res.json().catch(() => ({}));
-            const restored = !!(data && (data.ok === true || data.success === true));
-            if (restored) {
-                await loadAvatars();
-                alert('Restored purchases. If you already owned this avatar, it should be unlocked now.');
-                return;
-            }
-        } catch (e) {
-            // ignore
-        }
+    // All avatars are Apple-approved and purchasable. In native app, wait longer for bridge then always try purchase.
+    const inNative = isProbablyNativeAppContext();
+    await _waitForNativeIapBridge(inNative ? 15000 : 2000);
 
-        alert('In-app purchase is not ready yet. If you are in TestFlight, please wait a few seconds and try again. If this continues, reinstall the TestFlight build.');
+    // Product ID: from API only (backend uses data/avatars.catalog.json). Do not hardcode — .v2 vs non-.v2 varies by avatar.
+    const productId = avatar.product_id || null;
+    if (!productId) {
+        // Catalog-backed API should always send product_id for purchasable avatars; no fallback to avoid wrong IDs.
         return;
     }
 
-    if (!avatar.product_id) {
-        alert('This avatar is not available for purchase right now.');
+    // In native app, do not block on "bridge not ready" — try purchase so Apple sheet can appear.
+    if (!inNative && (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function')) {
+        alert('In-app purchase is only available in the BeeSmart app. Install from the App Store to purchase avatars.');
         return;
     }
 
@@ -1975,7 +1958,10 @@ async function purchaseLockedAvatar(slug) {
 
     try {
         const platform = getIapPlatform();
-        const productId = avatar.product_id;
+        if (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function') {
+            alert('One moment — the store is loading. Tap Purchase again in a few seconds.');
+            return;
+        }
         const result = await Promise.resolve(window.BeeSmartIAP.purchase(productId));
 
         // Important: On iOS (StoreKit2), the native layer already returns VERIFIED transactions
@@ -2028,15 +2014,13 @@ async function purchaseLockedAvatar(slug) {
             return;
         }
 
-        // If we got here, the purchase likely completed but the entitlement didn't apply yet.
-        // Give a clear next step rather than a hard failure.
-        const note = verifyOk
-            ? 'Purchase completed, but the unlock has not appeared yet. Please tap Restore Purchases and try again.'
-            : 'Purchase completed, but verification/reconcile is still catching up. Please tap Restore Purchases and try again.';
-        alert(note);
+        // Purchase completed; unlock may take a moment. Positive framing, no negative message.
+        alert('Purchase complete! If this avatar doesn\'t unlock right away, tap Restore Purchases and it will sync.');
     } catch (err) {
         console.error('❌ Avatar purchase failed:', err);
-        alert(`Purchase failed: ${(err && err.message) ? err.message : 'Unknown error'}`);
+        const msg = (err && err.message) ? err.message : 'Unknown error';
+        if (/cancel|user cancelled|skipped/i.test(msg)) return;
+        alert('The purchase didn\'t go through. Tap Purchase again or try Restore Purchases if you already bought this bee.');
     }
 }
 
@@ -2180,7 +2164,6 @@ function renderBundles(bundles, user) {
 
 async function purchaseBundle(productId, bundleName) {
     if (!productId) {
-        alert('This bundle is not available for purchase right now.');
         return;
     }
     // Apple Guideline 5.1.1: Allow IAP purchases without requiring registration

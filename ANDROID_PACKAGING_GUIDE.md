@@ -2,6 +2,8 @@
 
 **Android package files** for Google Play (Play Console) live in the **`mobile/android/`** folder. Use this guide to build and submit the app bundle (.aab).
 
+**Important:** Google Play **does not accept IPA (iOS) or raw APK** for production. You must upload an **Android App Bundle (.aab)**. See **`ANDROID_STEP2_AAB.md`** for Step 2 — Generate the AAB.
+
 ## Where the Android files are
 
 | Purpose | Path |
@@ -197,19 +199,21 @@ storeFile=upload-keystore.jks
 
 ## Step 7: Build Release AAB (Android App Bundle)
 
+**Google requires AAB for production** — not IPA, not raw APK. See **`ANDROID_STEP2_AAB.md`** for a focused Step 2 checklist.
+
 ### In Android Studio:
 1. **Build → Generate Signed Bundle / APK**
 2. Select **Android App Bundle**
 3. Follow signing prompts
-4. Output: `mobile/android/app/release/app-release.aab`
+4. Output: `app/build/outputs/bundle/release/app-release.aab`
 
-### Via Command Line:
+### Via Command Line (from repo root):
 ```powershell
-cd "c:\Users\jeff\Dropbox\BeeSmartSpellingBeeApp\mobile\android"
+cd "c:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile\android"
 .\gradlew bundleRelease
 ```
 
-Output location: `app\build\outputs\bundle\release\app-release.aab`
+**Output:** `app\build\outputs\bundle\release\app-release.aab` — upload this file to Play Console.
 
 ---
 
