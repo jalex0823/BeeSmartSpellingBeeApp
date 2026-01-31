@@ -239,15 +239,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (window.preloadedAvatars && Array.isArray(window.preloadedAvatars) && window.preloadedAvatars.length > 0) {
         console.log('✅ Using pre-loaded avatars from system checks:', window.preloadedAvatars.length);
         // Use pre-loaded avatars immediately
-        avatarsData = window.preloadedAvatars;
+        avatarsData = window.preloadedAvatars.map(avatar => ({
+            ...avatar,
+            // Use cached thumbnail if available (pre-loaded during system checks)
+            _preloadedThumbnail: avatar._thumbnailCache || null
+        }));
+        
+        // Set thumbnail tracking for immediate render
+        totalThumbnails = avatarsData.length;
+        loadedThumbnails = avatarsData.filter(a => a._preloadedThumbnail).length;
+        failedThumbnails = avatarsData.length - loadedThumbnails;
+        pendingThumbnails.clear();
+        
         updateDynamicMarquee(avatarsData);
         renderAvatarGrid();
-        // Hide loading overlay immediately
+        
+        // Hide loading overlay immediately (thumbnails already loaded)
         const overlay = document.getElementById('avatar-loading-overlay');
         if (overlay) {
             overlay.classList.add('hidden');
             overlay.style.display = 'none';
         }
+        
+        console.log(`✅ Picker loaded instantly: ${loadedThumbnails}/${totalThumbnails} thumbnails pre-loaded`);
     } else {
         // Fallback: load avatars (non-blocking, but should be pre-loaded)
         console.log('⚠️ Avatars not pre-loaded, loading now (should have been loaded in system checks)');
@@ -976,7 +990,18 @@ function createAvatarElement(avatar, index) {
     // Use 2D thumbnail for fast loading (like original picker)
     // 3D model will load in preview panel when selected
     
-    if (avatar.thumbnail) {
+    // CRITICAL: Use pre-loaded thumbnail if available (from system checks)
+    if (avatar._preloadedThumbnail && avatar._preloadedThumbnail instanceof Image) {
+        // Thumbnail already loaded during system checks - use it instantly
+        thumbDiv.classList.remove('loading');
+        const img = avatar._preloadedThumbnail.cloneNode(false); // Clone the pre-loaded image
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        thumbDiv.appendChild(img);
+        // Already counted as loaded, no need to track
+    } else if (avatar.thumbnail) {
+        // Fallback: Load thumbnail normally (shouldn't happen if pre-loaded correctly)
         const img = document.createElement('img');
         // Intelligent thumbnail loading with fallbacks for filename/casing/punctuation mismatches
         const fallbackCandidates = buildThumbnailFallbacks(avatar, avatar.thumbnail);
@@ -1088,6 +1113,223 @@ function isAvatarPurchased(avatar) {
     if (!slug) return false;
     return Array.isArray(purchasedAvatarIds) && purchasedAvatarIds.includes(slug);
 }
+
+// Pre-load avatars with thumbnails - REAL progress tracking for system checks
+// This function loads avatars AND pre-loads all thumbnails with actual progress
+window.preloadAvatarsWithThumbnails = async function(progressCallback) {
+    try {
+        // Step 1: Fetch avatar data from API
+        if (progressCallback) progressCallback(5, 'Fetching avatar catalog...');
+        
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/avatars?force=1&t=${timestamp}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-cache',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to load avatars (HTTP ${response.status})`);
+        }
+        
+        const data = await response.json();
+        
+        // Store user session data
+        const userData = data.user || {};
+        window.userSessionData = {
+            authenticated: userData.is_authenticated || false,
+            username: userData.username || null,
+            role: userData.role || null,
+            is_admin: userData.is_admin || false,
+            is_guest: userData.is_guest || false,
+            honey_points: userData.honey_points || 0
+        };
+        window.avatarUserInfo = {
+            is_guest: userData.is_guest || false,
+            is_admin: userData.is_admin || false,
+            user_role: userData.role || null,
+            user_authenticated: userData.is_authenticated || false,
+            purchased_avatars: data.purchased_avatars || []
+        };
+        
+        // Parse avatar data
+        let apiAvatars = null;
+        if (Array.isArray(data)) {
+            apiAvatars = data;
+        } else if (data && Array.isArray(data.avatars)) {
+            apiAvatars = data.avatars;
+        } else if (data && data.status === 'success' && data.data && Array.isArray(data.data)) {
+            apiAvatars = data.data;
+        }
+        
+        if (!apiAvatars || apiAvatars.length === 0) {
+            throw new Error('No avatars found in API response');
+        }
+        
+        // Step 2: Process avatar data (same logic as loadAvatars)
+        if (progressCallback) progressCallback(15, 'Processing avatar data...');
+        
+        const rawAvatars = apiAvatars.map(avatar => ({
+            slug: avatar.id,
+            name: avatar.name,
+            description: avatar.description,
+            category: avatar.category,
+            folder_path: avatar.folder,
+            is_glb: true,
+            glb_url: (avatar.urls && avatar.urls.glb) || null,
+            thumbnail: (avatar.urls && avatar.urls.thumbnail) || avatar.thumbnail || null,
+            is_locked: avatar.is_locked || false,
+            unlock_message: avatar.unlock_message || '',
+            unlock_points: (typeof avatar.unlock_points === 'number') ? avatar.unlock_points : null,
+            tier: avatar.tier || null,
+            price: (typeof avatar.price === 'number') ? avatar.price : ((typeof avatar.price_usd === 'number') ? avatar.price_usd : null),
+            product_id: avatar.product_id || null,
+        }));
+        
+        // Dedupe logic (same as loadAvatars)
+        const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        const baseKeyFor = (av) => {
+            const slugKey = norm(av.slug);
+            if (slugKey) return slugKey;
+            const thumbName = (av.thumbnail || '').split('/').pop().replace(/\.[^.]+$/,'').replace(/!+$/,'');
+            if (thumbName) return norm(thumbName);
+            return norm(av.name);
+        };
+        const normThumb = (url) => {
+            const file = (url || '').split('/').pop();
+            return (file || '').toLowerCase().replace(/!+/g,'');
+        };
+        const pickPreferGLB = (a, b) => {
+            if (a.thumbnail && !b.thumbnail) return a;
+            if (!a.thumbnail && b.thumbnail) return b;
+            return a;
+        };
+        
+        const byBase = new Map();
+        for (const avatar of rawAvatars) {
+            const key = baseKeyFor(avatar);
+            if (!byBase.has(key)) {
+                byBase.set(key, avatar);
+            } else {
+                const chosen = pickPreferGLB(avatar, byBase.get(key));
+                if (chosen !== byBase.get(key)) {
+                    byBase.set(key, chosen);
+                }
+            }
+        }
+        
+        const seenThumb = new Set();
+        const processedAvatars = [];
+        for (const av of byBase.values()) {
+            const t = normThumb(av.thumbnail);
+            const isGenericThumb = t === 'honeycomb!.png' || t === 'honeycomb.png';
+            if (t && !isGenericThumb && seenThumb.has(t)) continue;
+            if (t && !isGenericThumb) seenThumb.add(t);
+            processedAvatars.push(av);
+        }
+        
+        // Filter banned avatars
+        const banned = new Set(['anxious-bee','monster-bee']);
+        const finalAvatars = processedAvatars.filter(av => !banned.has((av.slug||'').toLowerCase()));
+        
+        // Sort alphabetically
+        finalAvatars.sort((a, b) => {
+            const an = (a.name || '').toLowerCase();
+            const bn = (b.name || '').toLowerCase();
+            return an.localeCompare(bn);
+        });
+        
+        // Step 3: Pre-load ALL thumbnails with REAL progress tracking
+        if (progressCallback) progressCallback(25, `Pre-loading ${finalAvatars.length} thumbnails...`);
+        
+        const totalThumbs = finalAvatars.length;
+        let loadedThumbs = 0;
+        let failedThumbs = 0;
+        const thumbnailCache = new Map(); // Cache loaded thumbnails
+        
+        // Pre-load all thumbnails in parallel (with concurrency limit)
+        const CONCURRENT_LOADS = 10; // Load 10 at a time to avoid overwhelming browser
+        const loadThumbnail = (avatar) => {
+            return new Promise((resolve) => {
+                if (!avatar.thumbnail) {
+                    failedThumbs++;
+                    resolve(null);
+                    return;
+                }
+                
+                const fallbackCandidates = buildThumbnailFallbacks(avatar, avatar.thumbnail);
+                let candidateIdx = 0;
+                const img = new Image();
+                
+                const tryNext = () => {
+                    if (candidateIdx >= fallbackCandidates.length) {
+                        // All fallbacks exhausted
+                        failedThumbs++;
+                        resolve(null);
+                        return;
+                    }
+                    
+                    img.src = fallbackCandidates[candidateIdx];
+                };
+                
+                img.onload = () => {
+                    loadedThumbs++;
+                    thumbnailCache.set(avatar.slug, img); // Cache the loaded image
+                    const progress = 25 + Math.round((loadedThumbs + failedThumbs) / totalThumbs * 70);
+                    if (progressCallback) {
+                        progressCallback(progress, `Loaded ${loadedThumbs}/${totalThumbs} thumbnails`);
+                    }
+                    resolve(img);
+                };
+                
+                img.onerror = () => {
+                    candidateIdx++;
+                    tryNext();
+                };
+                
+                tryNext();
+            });
+        };
+        
+        // Load thumbnails in batches
+        for (let i = 0; i < finalAvatars.length; i += CONCURRENT_LOADS) {
+            const batch = finalAvatars.slice(i, i + CONCURRENT_LOADS);
+            await Promise.all(batch.map(loadThumbnail));
+        }
+        
+        // Step 4: Store pre-loaded avatars with cached thumbnails
+        window.preloadedAvatars = finalAvatars.map(avatar => ({
+            ...avatar,
+            _thumbnailCache: thumbnailCache.get(avatar.slug) || null // Pre-loaded image
+        }));
+        
+        // Store purchased avatar IDs
+        purchasedAvatarIds = Array.isArray(data && data.purchased_avatars)
+            ? data.purchased_avatars.map(x => String(x || '').toLowerCase())
+            : [];
+        
+        if (progressCallback) progressCallback(100, `Ready: ${loadedThumbs} loaded, ${failedThumbs} failed`);
+        
+        console.log(`✅ Pre-loaded ${finalAvatars.length} avatars (${loadedThumbs} thumbnails loaded, ${failedThumbs} failed)`);
+        
+        return {
+            avatars: window.preloadedAvatars,
+            loaded: loadedThumbs,
+            failed: failedThumbs,
+            total: totalThumbs
+        };
+        
+    } catch (error) {
+        console.error('❌ Avatar pre-load error:', error);
+        if (progressCallback) progressCallback(0, `Error: ${error.message}`);
+        throw error;
+    }
+};
 
 // Build a minimal, stable set of thumbnail candidates (server now provides robust URLs)
 function buildThumbnailFallbacks(avatar, initialUrl) {

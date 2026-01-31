@@ -17202,14 +17202,39 @@ function showRestoreDialog(title, message, isSuccess) {
                 
                 console.log(' IAP store check complete');
                 
-                // Check 13: Pre-load Avatar Catalog (CRITICAL: Load before picker opens)
-                const check13 = this.addCheck('Avatar Catalog', 'Pre-loading...', '');
+                // Check 13: Pre-load Avatar Catalog WITH Thumbnails (CRITICAL: Real progress tracking)
+                const check13 = this.addCheck('Avatar Catalog', 'Loading...', '');
                 await this.delay(200);
                 try {
-                    this.updateProgress(87, ' Pre-loading avatar catalog...');
-                    
-                    // Pre-load avatars so picker loads instantly
-                    if (typeof window.loadAvatars === 'function' || typeof fetch === 'function') {
+                    // Use REAL avatar pre-loading function with actual thumbnail progress
+                    if (typeof window.preloadAvatarsWithThumbnails === 'function') {
+                        try {
+                            // Progress callback updates system check progress in real-time
+                            const progressCallback = (percentage, message) => {
+                                // Map 0-100% avatar loading to 87-95% of overall system checks
+                                const systemProgress = 87 + Math.round(percentage * 0.08); // 87% to 95%
+                                this.updateProgress(systemProgress, ` ${message || 'Loading avatars...'}`);
+                                this.updateCheck(check13, message || 'Loading...', '', systemProgress);
+                            };
+                            
+                            const result = await window.preloadAvatarsWithThumbnails(progressCallback);
+                            
+                            if (result && result.avatars && result.avatars.length > 0) {
+                                this.updateCheck(check13, `Ready (${result.loaded}/${result.total} thumbnails)`, '', 95);
+                                this.updateProgress(95, ` Avatar catalog ready: ${result.avatars.length} bees, ${result.loaded} thumbnails loaded`);
+                                console.log(`✅ Avatar catalog pre-loaded: ${result.avatars.length} avatars, ${result.loaded}/${result.total} thumbnails`);
+                            } else {
+                                this.updateCheck(check13, 'Will load on demand', 'ℹ', 95);
+                                this.updateProgress(95, ' Avatar catalog will load when picker opens');
+                            }
+                        } catch (avatarError) {
+                            console.warn('Avatar catalog pre-load error (non-fatal):', avatarError);
+                            this.updateCheck(check13, 'Will load on demand', 'ℹ', 95);
+                            this.updateProgress(95, ' Avatar catalog will load when picker opens');
+                        }
+                    } else {
+                        // Fallback: try basic fetch if function not available
+                        this.updateProgress(87, ' Pre-loading avatar catalog...');
                         try {
                             const timestamp = new Date().getTime();
                             const avatarResponse = await fetch(`/api/avatars?force=1&t=${timestamp}`, {
@@ -17235,7 +17260,6 @@ function showRestoreDialog(title, message, isSuccess) {
                                 }
                                 
                                 if (apiAvatars && apiAvatars.length > 0) {
-                                    // Store pre-loaded avatars globally for picker to use
                                     window.preloadedAvatars = apiAvatars.map(avatar => ({
                                         slug: avatar.id,
                                         name: avatar.name,
@@ -17251,7 +17275,6 @@ function showRestoreDialog(title, message, isSuccess) {
                                         product_id: avatar.product_id || null,
                                     }));
                                     
-                                    // Also store user session data if available
                                     if (avatarData.user) {
                                         window.userSessionData = {
                                             authenticated: avatarData.user.is_authenticated || false,
@@ -17270,30 +17293,26 @@ function showRestoreDialog(title, message, isSuccess) {
                                         };
                                     }
                                     
-                                    this.updateCheck(check13, `Ready (${apiAvatars.length} avatars)`, '', 90);
-                                    this.updateProgress(90, ` Avatar catalog pre-loaded: ${apiAvatars.length} bees`);
-                                    console.log(`✅ Avatar catalog pre-loaded: ${apiAvatars.length} avatars`);
+                                    this.updateCheck(check13, `Ready (${apiAvatars.length} avatars)`, '', 95);
+                                    this.updateProgress(95, ` Avatar catalog pre-loaded: ${apiAvatars.length} bees`);
                                 } else {
-                                    this.updateCheck(check13, 'Will load on demand', 'ℹ', 90);
-                                    this.updateProgress(90, ' Avatar catalog will load when picker opens');
+                                    this.updateCheck(check13, 'Will load on demand', 'ℹ', 95);
+                                    this.updateProgress(95, ' Avatar catalog will load when picker opens');
                                 }
                             } else {
-                                this.updateCheck(check13, 'Will load on demand', 'ℹ', 90);
-                                this.updateProgress(90, ' Avatar catalog will load when picker opens');
+                                this.updateCheck(check13, 'Will load on demand', 'ℹ', 95);
+                                this.updateProgress(95, ' Avatar catalog will load when picker opens');
                             }
-                        } catch (avatarError) {
-                            console.warn('Avatar catalog pre-load error (non-fatal):', avatarError);
-                            this.updateCheck(check13, 'Will load on demand', 'ℹ', 90);
-                            this.updateProgress(90, ' Avatar catalog will load when picker opens');
+                        } catch (fetchError) {
+                            console.warn('Avatar fetch fallback error:', fetchError);
+                            this.updateCheck(check13, 'Will load on demand', 'ℹ', 95);
+                            this.updateProgress(95, ' Avatar catalog will load when picker opens');
                         }
-                    } else {
-                        this.updateCheck(check13, 'Will load on demand', 'ℹ', 90);
-                        this.updateProgress(90, ' Avatar catalog will load when picker opens');
                     }
                 } catch (avatarCheckError) {
                     console.warn('Avatar catalog check error (non-fatal):', avatarCheckError);
-                    this.updateCheck(check13, 'Will load on demand', 'ℹ', 90);
-                    this.updateProgress(90, ' Avatar catalog will load when picker opens');
+                    this.updateCheck(check13, 'Will load on demand', 'ℹ', 95);
+                    this.updateProgress(95, ' Avatar catalog will load when picker opens');
                 }
                 
                 console.log(' Avatar catalog pre-load complete');
@@ -17301,13 +17320,13 @@ function showRestoreDialog(title, message, isSuccess) {
                 } catch (systemCheckError) {
                     // CRITICAL FAILSAFE: If ANY system check crashes, log it and continue
                     console.error(' CRITICAL: System check crashed:', systemCheckError);
-                    this.updateProgress(90, ' Some checks failed - continuing anyway');
+                    this.updateProgress(95, ' Some checks failed - continuing anyway');
                 }
                 
                 // Guarantee we visibly advance even if later steps change.
                 try {
-                    if (Number(this.progress) < 90) {
-                        this.updateProgress(90, ' Systems checks complete');
+                    if (Number(this.progress) < 95) {
+                        this.updateProgress(95, ' Systems checks complete');
                     }
                 } catch (_e) {}
 
