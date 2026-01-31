@@ -157,7 +157,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 refreshTimer = setTimeout(async function() {
                     try {
                         console.log('🔄 IAP event refresh avatars:', reason);
-                        await loadAvatars();
+                        // CRITICAL: Use lightweight refresh function (updates unlock status only)
+                        // DO NOT call loadAvatars() - all loading happens in system checks
+                        await refreshAvatarUnlockStatus();
                     } catch (e) {
                         // Non-fatal: avoid breaking the avatar page if refresh fails.
                         console.warn('🐞 IAP-triggered avatar refresh failed:', e);
@@ -197,8 +199,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                             existingModal.remove();
                         }
                         
-                        // Refresh avatars immediately
-                        loadAvatars().then(() => {
+                        // Refresh avatar unlock status (lightweight - no full reload)
+                        refreshAvatarUnlockStatus().then(() => {
                             const updated = findAvatarBySlug(currentPurchaseSlug);
                             if (updated && !updated.is_locked) {
                                 alert(`✅ ${updated.name || 'Avatar'} unlocked!`);
@@ -235,38 +237,49 @@ document.addEventListener('DOMContentLoaded', async function() {
     // IAP store initialization moved to system checks (unified_menu.html)
     // It will be initialized before picker loads, so it's ready when needed
     
-    // CRITICAL: Check if avatars were pre-loaded during system checks
-    if (window.preloadedAvatars && Array.isArray(window.preloadedAvatars) && window.preloadedAvatars.length > 0) {
-        console.log('✅ Using pre-loaded avatars from system checks:', window.preloadedAvatars.length);
-        // Use pre-loaded avatars immediately
-        avatarsData = window.preloadedAvatars.map(avatar => ({
-            ...avatar,
-            // Use cached thumbnail if available (pre-loaded during system checks)
-            _preloadedThumbnail: avatar._thumbnailCache || null
-        }));
-        
-        // Set thumbnail tracking for immediate render
-        totalThumbnails = avatarsData.length;
-        loadedThumbnails = avatarsData.filter(a => a._preloadedThumbnail).length;
-        failedThumbnails = avatarsData.length - loadedThumbnails;
-        pendingThumbnails.clear();
-        
-        updateDynamicMarquee(avatarsData);
-        renderAvatarGrid();
-        
-        // Hide loading overlay immediately (thumbnails already loaded)
+    // CRITICAL: ALL avatar loading MUST happen during system checks
+    // Picker NEVER loads avatars - only uses pre-loaded data
+    if (!window.preloadedAvatars || !Array.isArray(window.preloadedAvatars) || window.preloadedAvatars.length === 0) {
+        console.error('❌ CRITICAL: Avatars not pre-loaded during system checks!');
+        console.error('❌ Picker cannot load avatars - this should never happen.');
         const overlay = document.getElementById('avatar-loading-overlay');
         if (overlay) {
-            overlay.classList.add('hidden');
-            overlay.style.display = 'none';
+            overlay.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: #FFD700;">
+                    <div style="font-size: 3rem;">⚠️</div>
+                    <div style="font-size: 1.2rem; margin-top: 1rem;">Avatars not loaded</div>
+                    <div style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.8;">Please refresh the page</div>
+                </div>
+            `;
         }
-        
-        console.log(`✅ Picker loaded instantly: ${loadedThumbnails}/${totalThumbnails} thumbnails pre-loaded`);
-    } else {
-        // Fallback: load avatars (non-blocking, but should be pre-loaded)
-        console.log('⚠️ Avatars not pre-loaded, loading now (should have been loaded in system checks)');
-        loadAvatars();
+        return; // STOP - don't try to load anything
     }
+    
+    console.log('✅ Using pre-loaded avatars from system checks:', window.preloadedAvatars.length);
+    // Use pre-loaded avatars immediately - NO loading, NO API calls
+    avatarsData = window.preloadedAvatars.map(avatar => ({
+        ...avatar,
+        // Use cached thumbnail if available (pre-loaded during system checks)
+        _preloadedThumbnail: avatar._thumbnailCache || null
+    }));
+    
+    // Set thumbnail tracking for immediate render
+    totalThumbnails = avatarsData.length;
+    loadedThumbnails = avatarsData.filter(a => a._preloadedThumbnail).length;
+    failedThumbnails = avatarsData.length - loadedThumbnails;
+    pendingThumbnails.clear();
+    
+    updateDynamicMarquee(avatarsData);
+    renderAvatarGrid();
+    
+    // Hide loading overlay immediately (thumbnails already loaded)
+    const overlay = document.getElementById('avatar-loading-overlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+        overlay.style.display = 'none';
+    }
+    
+    console.log(`✅ Picker loaded instantly: ${loadedThumbnails}/${totalThumbnails} thumbnails pre-loaded`);
     
     setupSearchFilter();
     setupBundleShop();
@@ -623,7 +636,111 @@ function computeLockedMessage(avatar) {
     return avatar.unlock_message || 'Complete more quizzes to unlock this bee!';
 }
 
+// Lightweight refresh function - ONLY updates unlock status, NO loading
+// Used after purchases/IAP events - all heavy loading happens in system checks
+async function refreshAvatarUnlockStatus() {
+    try {
+        // Fetch ONLY unlock status (lightweight API call)
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/avatars?force=1&t=${timestamp}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-cache',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+        
+        if (!response.ok) {
+            console.warn('⚠️ Failed to refresh unlock status');
+            return;
+        }
+        
+        const data = await response.json();
+        let apiAvatars = null;
+        if (Array.isArray(data)) {
+            apiAvatars = data;
+        } else if (data && Array.isArray(data.avatars)) {
+            apiAvatars = data.avatars;
+        } else if (data && data.status === 'success' && data.data && Array.isArray(data.data)) {
+            apiAvatars = data.data;
+        }
+        
+        if (!apiAvatars || apiAvatars.length === 0) return;
+        
+        // Update user session data
+        const userData = data.user || {};
+        if (userData) {
+            window.userSessionData = {
+                authenticated: userData.is_authenticated || false,
+                username: userData.username || null,
+                role: userData.role || null,
+                is_admin: userData.is_admin || false,
+                is_guest: userData.is_guest || false,
+                honey_points: userData.honey_points || 0
+            };
+            window.avatarUserInfo = {
+                is_guest: userData.is_guest || false,
+                is_admin: userData.is_admin || false,
+                user_role: userData.role || null,
+                user_authenticated: userData.is_authenticated || false,
+                purchased_avatars: data.purchased_avatars || []
+            };
+            if (typeof userData.honey_points === 'number') {
+                currentUserHoneyPoints = userData.honey_points;
+            }
+        }
+        
+        // Update purchased avatar IDs
+        purchasedAvatarIds = Array.isArray(data && data.purchased_avatars)
+            ? data.purchased_avatars.map(x => String(x || '').toLowerCase())
+            : [];
+        
+        // Create lookup map for unlock status
+        const unlockMap = new Map();
+        apiAvatars.forEach(avatar => {
+            unlockMap.set(String(avatar.id || '').toLowerCase(), {
+                is_locked: avatar.is_locked || false,
+                unlock_message: avatar.unlock_message || '',
+                unlock_points: (typeof avatar.unlock_points === 'number') ? avatar.unlock_points : null,
+                tier: avatar.tier || null,
+                price: (typeof avatar.price === 'number') ? avatar.price : ((typeof avatar.price_usd === 'number') ? avatar.price_usd : null),
+                product_id: avatar.product_id || null
+            });
+        });
+        
+        // Update existing avatarsData with new unlock status (preserve pre-loaded thumbnails)
+        avatarsData.forEach(avatar => {
+            const slug = String(avatar.slug || '').toLowerCase();
+            const update = unlockMap.get(slug);
+            if (update) {
+                avatar.is_locked = update.is_locked;
+                avatar.unlock_message = update.unlock_message;
+                avatar.unlock_points = update.unlock_points;
+                avatar.tier = update.tier;
+                avatar.price = update.price;
+                avatar.product_id = update.product_id;
+            }
+        });
+        
+        // Re-apply role UI
+        applyRoleBasedUI();
+        
+        // Re-render grid to show updated lock status
+        updateDynamicMarquee(avatarsData);
+        renderAvatarGrid();
+        
+        console.log('✅ Avatar unlock status refreshed');
+    } catch (error) {
+        console.warn('⚠️ Failed to refresh avatar unlock status:', error);
+    }
+}
+
 // Load avatars from API
+// NOTE: This function should ONLY be called during system checks
+// Picker should NEVER call this - use refreshAvatarUnlockStatus() for updates
 async function loadAvatars() {
     try {
         // Add timestamp to bypass stale cache + force=1 for server-side cache bypass
@@ -2681,8 +2798,8 @@ async function purchaseLockedAvatar(slug) {
             existingModal.remove();
         }
 
-        // Refresh the avatar list to reflect new entitlements
-        await loadAvatars();
+        // Refresh the avatar unlock status (lightweight - no full reload)
+        await refreshAvatarUnlockStatus();
         const updated = findAvatarBySlug(slug);
         if (updated && !updated.is_locked) {
             alert(`✅ ${avatar.name} unlocked!`);
@@ -2941,7 +3058,7 @@ async function purchaseBundle(productId, bundleName) {
 
         // Refresh both bundles and avatars so locks update immediately
         await loadBundles();
-        await loadAvatars();
+        await refreshAvatarUnlockStatus(); // Lightweight refresh - no full reload
 
         alert(`✅ Bundle unlocked: ${bundleName}${verifyOk ? '' : ' (syncing...)'}`);
     } catch (err) {
