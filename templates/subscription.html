@@ -1710,7 +1710,27 @@ function showRestoreDialog(title, message, isSuccess) {
                     return;
                 }
 
-                // Purchase complete — reconcile and refresh UI.
+                // Purchase complete — verify with server (same pipeline as avatar purchase) so premium_member is applied immediately.
+                let verifyOk = false;
+                try {
+                    const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform) ? window.BeeSmartIAP.platform : 'apple';
+                    const body = {
+                        product_id: productId,
+                        transaction_id: (result && (result.transaction_id || result.transactionId)) || null,
+                        purchase_token: (result && (result.purchase_token || result.purchaseToken)) || null,
+                        payload: (result && result.payload) ? result.payload : (result || {})
+                    };
+                    const verifyResp = await fetch('/api/iap/verify/' + platform, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin',
+                        body: JSON.stringify(body)
+                    });
+                    const verifyJson = await verifyResp.json().catch(() => ({}));
+                    verifyOk = !!(verifyResp.ok && verifyJson && verifyJson.success);
+                } catch (e) { /* non-fatal */ }
+
+                // Reconcile and refresh UI (backup path; verify above applies premium_member like avatar flow).
                 try {
                     if (window.BeeSmartIAP && typeof window.BeeSmartIAP.reconcile === 'function') {
                         await Promise.resolve(window.BeeSmartIAP.reconcile('purchase_post'));

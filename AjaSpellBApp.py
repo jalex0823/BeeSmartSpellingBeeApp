@@ -6217,10 +6217,32 @@ def avatar_diagnostic():
 
 @app.route("/minimal")
 def minimal_main():
-    """Minimal version of main page for testing"""
+    """Minimal version of main page for testing. Pass same auth/subscription context as home so tiles unlock correctly for all account types."""
     import time
     timestamp = str(int(time.time()))
-    return render_template("unified_menu.html", timestamp=timestamp)
+    billing_mode = os.environ.get('REGISTRATION_BILLING_MODE', 'subscription').strip().lower()
+    try:
+        subscription_product_id = os.environ.get('PRODUCT_SUBSCRIPTION_FULL_ID')
+        subscription_product_id = (subscription_product_id or '').strip() or SUBSCRIPTION_PRODUCT_IDS.get('monthly', 'com.beesmart.premium.monthly')
+    except Exception:
+        subscription_product_id = SUBSCRIPTION_PRODUCT_IDS.get('monthly', 'com.beesmart.premium.monthly')
+    try:
+        from flask_login import current_user as _cu
+        is_premium = bool(getattr(_cu, 'is_authenticated', False) and getattr(_cu, 'premium_member', False))
+    except Exception:
+        is_premium = False
+    try:
+        avatar_product_ids = AVATAR_SKUS
+    except Exception:
+        avatar_product_ids = {}
+    return render_template(
+        "unified_menu.html",
+        timestamp=timestamp,
+        registration_billing_mode=billing_mode,
+        subscription_product_id=subscription_product_id,
+        is_premium=is_premium,
+        avatar_product_ids=avatar_product_ids,
+    )
 
 @app.route("/quiz", strict_slashes=False)
 def quiz_page():

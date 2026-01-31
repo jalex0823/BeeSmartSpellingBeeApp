@@ -51,11 +51,15 @@
         <div class="stats">
           <div class="stat"><div id="detail-quizzes" class="val">{{ total_quizzes|format_number }}</div><div>Quizzes</div></div>
           <div class="stat"><div id="detail-accuracy" class="val">{{ '%.0f'|format(avg_accuracy) }}%</div><div>Avg Accuracy</div></div>
+          {% if (student.total_quizzes_completed or 0) > 0 %}
           <div class="stat"><div id="detail-gpa" class="val">{{ student.cumulative_gpa or 0 }}</div><div>GPA</div></div>
+          {% endif %}
         </div>
         <div style="margin-top:1rem">
           <div><strong>Avatar:</strong> {{ avatar.name if avatar else student.avatar_id }}</div>
+          {% if (student.total_quizzes_completed or 0) > 0 %}
           <div style="margin-top:.35rem"><strong>Best Grade:</strong> {{ student.best_grade or '—' }}</div>
+          {% endif %}
         </div>
       </div>
 
@@ -140,9 +144,25 @@
           const body = await resp.json();
           if(!resp.ok || body.status!=='success') return;
           const s = body.stats||{};
-          const q = document.getElementById('detail-quizzes'); if(q) q.textContent = numberWithCommas(s.total_quizzes_completed||0);
+          const quizzesCompleted = Number(s.total_quizzes_completed||0);
+          const q = document.getElementById('detail-quizzes'); if(q) q.textContent = numberWithCommas(quizzesCompleted);
           const a = document.getElementById('detail-accuracy'); if(a) a.textContent = `${Math.round(s.average_accuracy||0)}%`;
-          const g = document.getElementById('detail-gpa'); if(g) g.textContent = (s.cumulative_gpa||0).toFixed ? (s.cumulative_gpa).toFixed(2) : s.cumulative_gpa;
+          
+          // Only update GPA if student has completed at least one quiz
+          const g = document.getElementById('detail-gpa');
+          if(g) {
+            if(quizzesCompleted > 0) {
+              g.textContent = (s.cumulative_gpa||0).toFixed ? (s.cumulative_gpa).toFixed(2) : s.cumulative_gpa;
+              // Show the GPA stat if it was hidden
+              const gpaStat = g.closest('.stat');
+              if(gpaStat) gpaStat.style.display = '';
+            } else {
+              // Hide the GPA stat if no quizzes completed
+              const gpaStat = g.closest('.stat');
+              if(gpaStat) gpaStat.style.display = 'none';
+            }
+          }
+          
           const p = document.getElementById('detail-points'); if(p) p.textContent = numberWithCommas(s.total_lifetime_points||0);
           const bs = document.getElementById('detail-best-streak'); if(bs) bs.textContent = numberWithCommas(s.best_streak||0);
         }catch(e){ /* silent */ }

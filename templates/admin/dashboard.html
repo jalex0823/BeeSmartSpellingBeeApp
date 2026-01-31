@@ -710,8 +710,13 @@
                             </span>
                         </td>
                         <td style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">
+                            {% if ((student.total_quizzes_completed or 0) > 0) or ((student.quiz_count or 0) > 0) %}
                             <span id="student-{{ student.id }}-grade">{{ student.cumulative_gpa|gpa_to_grade }}</span>
                             <span id="student-{{ student.id }}-gpa" style="opacity: 0.8;">({{ "%.2f"|format(student.cumulative_gpa|float) if student.cumulative_gpa is not none else "0.00" }})</span>
+                            {% else %}
+                            <span id="student-{{ student.id }}-grade" style="color: #999;">—</span>
+                            <span id="student-{{ student.id }}-gpa" style="opacity: 0.6; color: #999;">—</span>
+                            {% endif %}
                         </td>
                         <td style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;"><span id="student-{{ student.id }}-streak">{{ student.best_streak or 0 }}</span></td>
                         <td style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;"><span id="student-{{ student.id }}-points">{{ student.total_lifetime_points|format_number if student.total_lifetime_points is not none else '0' }}</span></td>
@@ -800,16 +805,41 @@
                 return 'F';
             }
             function updateRow(id, s){
-                const q = document.getElementById(`student-${id}-quizzes`); if(q) q.textContent = numberWithCommas(s.total_quizzes_completed||0);
+                const quizzesCompleted = Number(s.total_quizzes_completed||0);
+                const q = document.getElementById(`student-${id}-quizzes`); if(q) q.textContent = numberWithCommas(quizzesCompleted);
                 const p = document.getElementById(`student-${id}-points`); if(p) p.textContent = numberWithCommas(s.total_lifetime_points||0);
                 const acc = Math.round(s.average_accuracy||0);
                 const accEl = document.getElementById(`student-${id}-accuracy`); if(accEl){
                     accEl.textContent = `${acc}%`;
                     accEl.style.color = acc>=80?'#48bb78':(acc>=60?'#ed8936':'#f56565');
                 }
-                const gpa = (s.cumulative_gpa||0).toFixed(2);
-                const gEl = document.getElementById(`student-${id}-grade`); if(gEl) gEl.textContent = gradeFromGpa(gpa);
-                const gpaEl = document.getElementById(`student-${id}-gpa`); if(gpaEl) gpaEl.textContent = `(${gpa})`;
+                
+                // Only update grade if student has completed at least one quiz
+                const gEl = document.getElementById(`student-${id}-grade`);
+                const gpaEl = document.getElementById(`student-${id}-gpa`);
+                if(quizzesCompleted > 0) {
+                    const gpa = (s.cumulative_gpa||0).toFixed(2);
+                    if(gEl) {
+                        gEl.textContent = gradeFromGpa(gpa);
+                        gEl.style.color = '#4a5568';
+                    }
+                    if(gpaEl) {
+                        gpaEl.textContent = `(${gpa})`;
+                        gpaEl.style.opacity = '0.8';
+                        gpaEl.style.color = '#4a5568';
+                    }
+                } else {
+                    if(gEl) {
+                        gEl.textContent = '—';
+                        gEl.style.color = '#999';
+                    }
+                    if(gpaEl) {
+                        gpaEl.textContent = '—';
+                        gpaEl.style.opacity = '0.6';
+                        gpaEl.style.color = '#999';
+                    }
+                }
+                
                 const st = document.getElementById(`student-${id}-streak`); if(st) st.textContent = numberWithCommas(s.best_streak||0);
             }
             async function poll(){

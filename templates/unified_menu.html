@@ -4952,7 +4952,7 @@ function showRestoreDialog(title, message, isSuccess) {
                             }
 
                             if (requiresPremium && !window.IS_PREMIUM) {
-                                try { if (typeof showLockedFeature === 'function') showLockedFeature('BeeSmart Premium'); } catch(e){}
+                                try { if (typeof showLockedFeature === 'function') showLockedFeature('BeeSmart Premium', { requirePremium: true }); } catch(e){}
                                 return;
                             }
 
@@ -5032,6 +5032,7 @@ function showRestoreDialog(title, message, isSuccess) {
                                 flex-wrap: wrap;
                                 margin-bottom: 1.5rem;
                             ">
+                                {% if (current_user.total_quizzes_completed or 0) > 0 %}
                                 <div style="
                                     background: rgba(255, 255, 255, 0.6);
                                     padding: 0.8rem 1rem;
@@ -5053,6 +5054,7 @@ function showRestoreDialog(title, message, isSuccess) {
                                         GPA: <span id="stats-gpa-value">{{ "%.2f"|format(current_user.cumulative_gpa|float) if current_user.cumulative_gpa and current_user.cumulative_gpa != None else "0.00" }}</span>
                                     </div>
                                 </div>
+                                {% endif %}
                                 
                                 <div style="
                                     background: rgba(255, 255, 255, 0.6);
@@ -11176,14 +11178,23 @@ function showRestoreDialog(title, message, isSuccess) {
             });
         }
         
-        // Show locked feature message for guest users
-        function showLockedFeature(featureName) {
-            console.log('🔒 Locked feature clicked:', featureName);
+        // Show locked feature message for guests (Sign In) or for premium-gated (Subscribe).
+        // options.requirePremium === true: user is signed in but not premium → show Subscribe CTA to /subscription (avoids sign-in loop).
+        function showLockedFeature(featureName, options) {
+            options = options || {};
+            const requirePremium = !!options.requirePremium;
+            console.log('🔒 Locked feature clicked:', featureName, requirePremium ? '(Premium Required)' : '(Sign In Required)');
             
             // Play a soft "denied" sound if available
             if (window.kidSounds && window.kidSounds.playBuzz) {
                 window.kidSounds.playBuzz();
             }
+            
+            const message = requirePremium
+                ? 'Subscribe to BeeSmart Premium to unlock this feature and more!'
+                : 'Sign in to unlock this feature and save your progress!';
+            const ctaHref = requirePremium ? '/subscription' : ('/auth/login?next=' + encodeURIComponent('/subscription'));
+            const ctaLabel = requirePremium ? 'Subscribe to Premium' : '🔓 Sign In';
             
             // Create a friendly modal/alert
             const modal = document.createElement('div');
@@ -11218,10 +11229,10 @@ function showRestoreDialog(title, message, isSuccess) {
                         ${featureName} is Locked!
                     </div>
                     <div style="font-size: 1rem; color: #8B4513; margin-bottom: 1.5rem; line-height: 1.5;">
-                        Sign in to unlock this feature and save your progress!
+                        ${message}
                     </div>
                     <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
-                        <a href="/auth/login" style="
+                        <a href="${ctaHref}" style="
                             padding: 0.75rem 1.5rem;
                             background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
                             color: #5A2C15;
@@ -11234,7 +11245,7 @@ function showRestoreDialog(title, message, isSuccess) {
                             transition: all 0.3s ease;
                         " onmouseover="this.style.transform='translateY(-2px)'"
                            onmouseout="this.style.transform='translateY(0)'">
-                            🔓 Sign In
+                            ${ctaLabel}
                         </a>
                         <button onclick="this.closest('div').parentElement.remove()" style="
                             padding: 0.75rem 1.5rem;
@@ -21773,18 +21784,27 @@ function showRestoreDialog(title, message, isSuccess) {
 
             const gpa = Number(stats.cumulative_gpa) || 0;
             const acc = Number(stats.average_accuracy) || 0;
+            const quizzesCompleted = Number(stats.total_quizzes_completed) || 0;
 
-            const elGrade = document.getElementById('stats-grade-letter');
-            if (elGrade) { elGrade.textContent = gpaToLetter(gpa); flashStatEl(elGrade); }
+            // Only update grade elements if user has completed at least one quiz
+            // Note: The grade card is conditionally rendered server-side, so it may not exist
+            if (quizzesCompleted > 0) {
+                const elGrade = document.getElementById('stats-grade-letter');
+                if (elGrade) { 
+                    elGrade.textContent = gpaToLetter(gpa); 
+                    flashStatEl(elGrade);
+                }
 
-            const elGpa = document.getElementById('stats-gpa-value');
-            if (elGpa) { elGpa.textContent = gpa.toFixed(2); flashStatEl(elGpa); }
+                const elGpa = document.getElementById('stats-gpa-value');
+                if (elGpa) { elGpa.textContent = gpa.toFixed(2); flashStatEl(elGpa); }
+            }
+            // If no quizzes completed, the grade card won't be rendered (server-side conditional)
 
             const elPoints = document.getElementById('stats-points');
             if (elPoints) { elPoints.textContent = numberWithCommas(stats.total_lifetime_points || 0); flashStatEl(elPoints); }
 
             const elQuizzes = document.getElementById('stats-quizzes');
-            if (elQuizzes) { elQuizzes.textContent = numberWithCommas(stats.total_quizzes_completed || 0); flashStatEl(elQuizzes); }
+            if (elQuizzes) { elQuizzes.textContent = numberWithCommas(quizzesCompleted); flashStatEl(elQuizzes); }
 
             const elAccuracy = document.getElementById('stats-accuracy');
             if (elAccuracy) { elAccuracy.textContent = (Number.isFinite(acc) ? acc : 0).toFixed(1); flashStatEl(elAccuracy); }
