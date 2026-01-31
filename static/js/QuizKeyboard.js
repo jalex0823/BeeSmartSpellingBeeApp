@@ -2,6 +2,8 @@
  * BeeSmart Custom Quiz Keyboard
  * On-screen A–Z + Space + Backspace for quiz flows only.
  * Prevents system keyboard; consistent UI across iOS/Android/Web.
+ * Lifecycle: mount when countdown starts, disable on submit/timer end, unmount on game over.
+ * Optional: hex key styling (USE_HEX_KEYS), practice-mode key flash.
  */
 (function (global) {
     'use strict';
@@ -10,27 +12,66 @@
     const ROW2 = 'ASDFGHJKL'.split('');
     const ROW3 = 'ZXCVBNM'.split('');
 
+    /** Set true only after QA confirms tap targets remain accurate. */
+    const USE_HEX_KEYS_DEFAULT = false;
+
     let instance = null;
+
+    function playKeyClick(volume) {
+        try {
+            if (typeof window.BeeSmartButtonSfx !== 'undefined' && window.BeeSmartButtonSfx.playRandom) {
+                window.BeeSmartButtonSfx.playRandom({ volume: typeof volume === 'number' ? volume : 0.32 });
+            }
+        } catch (_) {}
+    }
+
+    function playSubmitSound() {
+        try {
+            if (window.quizManager && window.quizManager.soundboard && typeof window.quizManager.soundboard.play === 'function') {
+                window.quizManager.soundboard.play('correct');
+            } else if (typeof window.BeeSmartButtonSfx !== 'undefined' && window.BeeSmartButtonSfx.playRandom) {
+                window.BeeSmartButtonSfx.playRandom({ volume: 0.5 });
+            }
+        } catch (_) {}
+    }
 
     function createKey(letter, opts) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'quiz-keyboard-key quiz-keyboard-key-letter';
+        if (opts.useHexKeys) button.classList.add('quiz-keyboard-key-hex');
         button.setAttribute('aria-label', 'Letter ' + letter);
+        button.setAttribute('data-no-button-sfx', '1');
         button.textContent = opts.autoCaps !== false ? letter : letter.toLowerCase();
         button.dataset.letter = letter;
-        button.addEventListener('click', () => opts.onLetter(letter));
+        const onLetter = () => {
+            playKeyClick(0.3);
+            opts.onLetter(letter);
+        };
+        button.addEventListener('click', onLetter);
         button.addEventListener('touchstart', (e) => { e.preventDefault(); button.click(); }, { passive: false });
         return button;
     }
 
-    function createSpecialKey(label, className, ariaLabel, onClick) {
+    function createSpecialKey(label, className, ariaLabel, onClick, isSubmit, useHexKeys) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'quiz-keyboard-key ' + className;
+        if (useHexKeys) button.classList.add('quiz-keyboard-key-hex');
         button.setAttribute('aria-label', ariaLabel);
+        button.setAttribute('data-no-button-sfx', '1');
         button.innerHTML = label;
-        button.addEventListener('click', onClick);
+        const wrapped = () => {
+            if (isSubmit) {
+                playSubmitSound();
+                button.classList.add('quiz-keyboard-submit-pressed');
+                setTimeout(() => button.classList.remove('quiz-keyboard-submit-pressed'), 420);
+            } else {
+                playKeyClick(0.32);
+            }
+            onClick();
+        };
+        button.addEventListener('click', wrapped);
         button.addEventListener('touchstart', (e) => { e.preventDefault(); button.click(); }, { passive: false });
         return button;
     }
@@ -47,7 +88,9 @@
             autoCaps = true,
             maxLength = null,
             disableInputWhenRoundEnds = true,
-            practiceMode = false
+            practiceMode = false,
+            showSubmitKey = false,
+            useHexKeys = USE_HEX_KEYS_DEFAULT
         } = options || {};
 
         if (!targetEl || !inputEl) {
@@ -89,8 +132,8 @@
 
         function handleSpace() {
             if (!enabled || !allowSpaces) return;
-            if (maxLength != null && currentAnswer.length >= maxLength) return;
-            if (currentAnswer.length === 0) return;
+            if (state.maxLength != null && currentAnswer.length >= state.maxLength) return;
+            if (currentAnswer.length === 0) return; // no space at start
             currentAnswer += ' ';
             syncToInput();
             if (typeof onSpace === 'function') onSpace();
@@ -102,33 +145,43 @@
         }
 
         const container = document.createElement('div');
-        container.className = 'quiz-keyboard';
+        container.className = 'quiz-keyboard' + (useHexKeys ? ' quiz-keyboard--hex-keys' : '');
         container.setAttribute('role', 'group');
         container.setAttribute('aria-label', 'Quiz spelling keyboard');
 
+        const keyOpts = { autoCaps, onLetter: handleLetter, useHexKeys };
+
         const row1 = document.createElement('div');
         row1.className = 'quiz-keyboard-row';
-        ROW1.forEach(l => row1.appendChild(createKey(l, { autoCaps, onLetter: handleLetter })));
+        ROW1.forEach(l => row1.appendChild(createKey(l, keyOpts)));
         container.appendChild(row1);
 
         const row2 = document.createElement('div');
         row2.className = 'quiz-keyboard-row';
-        ROW2.forEach(l => row2.appendChild(createKey(l, { autoCaps, onLetter: handleLetter })));
+        ROW2.forEach(l => row2.appendChild(createKey(l, keyOpts)));
         container.appendChild(row2);
 
         const row3 = document.createElement('div');
         row3.className = 'quiz-keyboard-row';
-        ROW3.forEach(l => row3.appendChild(createKey(l, { autoCaps, onLetter: handleLetter })));
+        ROW3.forEach(l => row3.appendChild(createKey(l, keyOpts)));
         container.appendChild(row3);
 
         const row4 = document.createElement('div');
         row4.className = 'quiz-keyboard-row quiz-keyboard-row-bottom';
+        const spacer = document.createElement('div');
+        spacer.className = 'quiz-keyboard-key-spacer';
+        spacer.setAttribute('aria-hidden', 'true');
+        row4.appendChild(spacer);
         if (allowSpaces) {
-            const spaceBtn = createSpecialKey('Space', 'quiz-keyboard-key-space', 'Space', handleSpace);
+            const spaceBtn = createSpecialKey('Space', 'quiz-keyboard-key-space', 'Space', handleSpace, false, useHexKeys);
             row4.appendChild(spaceBtn);
         }
-        const backspaceBtn = createSpecialKey('⌫', 'quiz-keyboard-key-backspace', 'Backspace', handleBackspace);
+        const backspaceBtn = createSpecialKey('⌫', 'quiz-keyboard-key-backspace', 'Backspace', handleBackspace, false, useHexKeys);
         row4.appendChild(backspaceBtn);
+        if (showSubmitKey) {
+            const submitBtn = createSpecialKey('Submit', 'quiz-keyboard-key-submit', 'Submit answer', handleSubmit, true, useHexKeys);
+            row4.appendChild(submitBtn);
+        }
         container.appendChild(row4);
 
         targetEl.innerHTML = '';
@@ -147,6 +200,15 @@
             inputEl.blur();
         });
 
+        let mode = practiceMode ? 'practice' : 'test';
+
+        function flashKey(letter, className) {
+            const keyEl = container.querySelector('.quiz-keyboard-key-letter[data-letter="' + letter + '"]');
+            if (!keyEl) return;
+            keyEl.classList.add(className);
+            setTimeout(() => keyEl.classList.remove(className), 400);
+        }
+
         instance = {
             setEnabled(bool) {
                 enabled = !!bool;
@@ -164,6 +226,21 @@
             },
             getValue() {
                 return currentAnswer;
+            },
+            clear() {
+                currentAnswer = '';
+                syncToInput();
+            },
+            setMode(m) {
+                mode = m === 'practice' || m === 'test' ? m : mode;
+            },
+            flashCorrectKey(letter) {
+                if (mode !== 'practice') return;
+                flashKey(String(letter).toUpperCase(), 'quiz-keyboard-key-flash-correct');
+            },
+            flashIncorrectKey(letter) {
+                if (mode !== 'practice') return;
+                flashKey(String(letter).toUpperCase(), 'quiz-keyboard-key-flash-incorrect');
             },
             setOptions(opts) {
                 if (opts.maxLength !== undefined) state.maxLength = opts.maxLength;
@@ -186,6 +263,18 @@
         }
     }
 
+    function clear() {
+        if (instance && typeof instance.clear === 'function') {
+            instance.clear();
+        }
+    }
+
+    function setMode(mode) {
+        if (instance && typeof instance.setMode === 'function') {
+            instance.setMode(mode);
+        }
+    }
+
     function destroy() {
         if (instance && typeof instance.destroy === 'function') {
             instance.destroy();
@@ -193,7 +282,30 @@
         instance = null;
     }
 
+    /**
+     * Spec-compliant mount: (containerEl, handlers, options).
+     * handlers: { onKey, onSpace, onBackspace, onSubmit (optional) }
+     * options: { inputEl, maxLength, allowSpaces, autoCaps, showSubmitKey, useHexKeys, practiceMode, ... }
+     */
+    function mount(containerEl, handlers, options) {
+        const opts = Object.assign({}, options, {
+            targetEl: containerEl,
+            onKey: handlers && handlers.onKey,
+            onBackspace: handlers && handlers.onBackspace,
+            onSpace: handlers && handlers.onSpace,
+            onSubmit: handlers && handlers.onSubmit
+        });
+        return initQuizKeyboard(opts);
+    }
+
     global.initQuizKeyboard = initQuizKeyboard;
     global.setQuizKeyboardEnabled = setEnabled;
     global.destroyQuizKeyboard = destroy;
+    global.QuizKeyboard = {
+        mount,
+        unmount: destroy,
+        setEnabled,
+        clear,
+        setMode
+    };
 })(typeof window !== 'undefined' ? window : this);

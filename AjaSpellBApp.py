@@ -42,6 +42,9 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from werkzeug.utils import secure_filename
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 
+# Create app immediately so Gunicorn always finds AjaSpellBApp:app even if later imports fail
+app = Flask(__name__)
+
 # App Review helpers
 # When enabled, we provide a reviewer-friendly path for Apple App Review to access
 # core premium flows without creating an account or relying on fragile demo creds.
@@ -50,15 +53,22 @@ from PIL import Image
 from sqlalchemy import inspect, exc as sa_exc, or_, and_, not_, text
 from sqlalchemy.exc import DisconnectionError, OperationalError, SQLAlchemyError
 
-# Database imports
-from config import get_config
-from models import db, User, QuizSession, QuizResult, WordMastery, TeacherStudent, Achievement
-from models import WordList, WordListItem
-from models import PasswordResetToken
-from models import SessionLog
-from models import SpeedRoundConfig, SpeedRoundScore
-from models import Avatar, BattleSession, PurchaseRecord, BundleKey, DynamicBundle, BundleKeyRedemption
-from models import WordBankStorage  # Single source of truth for all word operations
+# Database imports - log full traceback to stderr on failure so deploy logs show the real error
+try:
+    from config import get_config
+    from models import db, User, QuizSession, QuizResult, WordMastery, TeacherStudent, Achievement
+    from models import WordList, WordListItem
+    from models import PasswordResetToken
+    from models import SessionLog
+    from models import SpeedRoundConfig, SpeedRoundScore
+    from models import Avatar, BattleSession, PurchaseRecord, BundleKey, DynamicBundle, BundleKeyRedemption
+    from models import WordBankStorage  # Single source of truth for all word operations
+except Exception:
+    import traceback
+    sys.stderr.write("STARTUP FAILED (config/models import):\n")
+    sys.stderr.write(traceback.format_exc())
+    sys.stderr.flush()
+    raise
 from datetime import date
 from avatar_skus import (
     AVATAR_SKUS,
@@ -122,14 +132,8 @@ else:
 print(" Using built-in Simple English Wiktionary (50K+ words, kid-friendly)")
 
 # ------------------------------
-# Ensure Flask app exists BEFORE any route decorators
+# App already created at top of file for Gunicorn; ensure it exists for route decorators below
 # ------------------------------
-# Some routes (e.g., wordbank APIs) are defined early in this module. To avoid
-# NameError during module import, make sure `app` is created up front.
-try:
-    app  # type: ignore[name-defined]
-except NameError:
-    app = Flask(__name__)
 
 # ------------------------------
 # Simple in-memory cache for avatar API
@@ -2662,8 +2666,15 @@ else:
 
 # Load configuration from config.py (includes database settings)
 print(" Loading configuration...")
-app.config.from_object(get_config())
-print(f" Config loaded - Database: {app.config['SQLALCHEMY_DATABASE_URI'][:50]}...")
+try:
+    app.config.from_object(get_config())
+    print(f" Config loaded - Database: {app.config['SQLALCHEMY_DATABASE_URI'][:50]}...")
+except Exception as _config_err:
+    import traceback
+    sys.stderr.write("STARTUP FAILED (config):\n")
+    sys.stderr.write(traceback.format_exc())
+    sys.stderr.flush()
+    raise
 
 # Backwards compatibility: keep old secret key if not in config
 if not app.config.get('SECRET_KEY'):
@@ -2735,8 +2746,15 @@ app.config.update(
 
 # Initialize database
 print(" Initializing database...")
-db.init_app(app)
-print(" Database initialized")
+try:
+    db.init_app(app)
+    print(" Database initialized")
+except Exception as _db_err:
+    import traceback
+    sys.stderr.write("STARTUP FAILED (db.init_app):\n")
+    sys.stderr.write(traceback.format_exc())
+    sys.stderr.flush()
+    raise
 
 # Initialize Socket.IO for Battle of the Bees
 try:

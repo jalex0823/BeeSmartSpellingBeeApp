@@ -1,901 +1,309 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Dashboard - BeeSmart Spelling</title>
-    <script defer src="{{ url_for('static', filename='js/button-press-sfx.js') }}"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+{% extends "base.html" %}
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 2rem;
-        }
+{% block title %}Teacher Dashboard - BeeSmart Spelling{% endblock %}
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+{% block content %}
+<style>
+    /* Hide floating bee and orb on teacher dashboard for cleaner look */
+    .floating-bee, #mascotBee3D, #mascotBee3D canvas, .bee-mascot,
+    .decorative-orb, .honey-orb, .floating-orb, .particle-container,
+    .morph-container { display: none !important; visibility: hidden !important; }
+</style>
 
-        .header {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        }
-
-        .header h1 {
-            color: #333;
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .header .subtitle {
-            color: #666;
-            font-size: 1.2rem;
-        }
-
-        .teacher-key-section {
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-top: 1.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .teacher-key-label {
-            color: #5A2C15;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .teacher-key-value {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .key-display {
-            background: white;
-            padding: 0.8rem 1.5rem;
-            border-radius: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: #5A2C15;
-            letter-spacing: 1px;
-        }
-
-        .copy-btn {
-            padding: 0.8rem 1.5rem;
-            background: #5A2C15;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .copy-btn:hover {
-            background: #3d1e0f;
-            transform: scale(1.05);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            text-align: center;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .stat-icon {
-            font-size: 3rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 0.3rem;
-        }
-
-        .stat-label {
-            font-size: 1rem;
-            color: #666;
-            font-weight: 600;
-        }
-
-        .content-section {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .section-title {
-            color: #333;
-            font-size: 1.8rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .search-bar {
-            padding: 0.8rem 1.2rem;
-            border: 2px solid #E0E0E0;
-            border-radius: 10px;
-            font-size: 1rem;
-            width: 300px;
-            max-width: 100%;
-        }
-
-        .search-bar:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .students-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            overflow: hidden;
-        }
-
-        .students-table thead th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1rem;
-            text-align: left;
-            font-weight: 600;
-            cursor: pointer;
-            user-select: none;
-            position: relative;
-        }
-
-        .students-table thead th:hover {
-            background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
-        }
-
-        .students-table thead th:first-child {
-            border-radius: 10px 0 0 0;
-        }
-
-        .students-table thead th:last-child {
-            border-radius: 0 10px 0 0;
-        }
-
-        .students-table tbody tr {
-            background: #f9f9f9;
-            transition: background 0.2s ease;
-        }
-
-        .students-table tbody tr:hover {
-            background: #f0f0f0;
-        }
-
-        .students-table tbody tr:nth-child(even) {
-            background: #ffffff;
-        }
-
-        .students-table tbody tr:nth-child(even):hover {
-            background: #f0f0f0;
-        }
-
-        .students-table tbody td {
-            padding: 1rem;
-            color: #333;
-            border-bottom: 1px solid #E0E0E0;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .status-active {
-            background: #4CAF50;
-            color: white;
-        }
-
-        .status-inactive {
-            background: #9E9E9E;
-            color: white;
-        }
-
-        .accuracy-bar {
-            width: 100px;
-            height: 8px;
-            background: #E0E0E0;
-            border-radius: 4px;
-            overflow: hidden;
-            display: inline-block;
-            vertical-align: middle;
-            margin-right: 0.5rem;
-        }
-
-        .accuracy-fill {
-            height: 100%;
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
-
-        .accuracy-excellent { background: #4CAF50; }
-        .accuracy-good { background: #8BC34A; }
-        .accuracy-fair { background: #FFC107; }
-        .accuracy-poor { background: #FF9800; }
-        .accuracy-fail { background: #F44336; }
-
-        .view-btn {
-            padding: 0.5rem 1.2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .view-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin-top: 2rem;
-        }
-
-        .btn {
-            padding: 1rem 2rem;
-            border: none;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-            color: #5A2C15;
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #F44336 0%, #d32f2f 100%);
-            color: white;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: #666;
-        }
-
-        .empty-state .icon {
-            font-size: 5rem;
-            margin-bottom: 1rem;
-            opacity: 0.3;
-        }
-
-        .empty-state h3 {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-            color: #333;
-        }
-
-        .empty-state p {
-            font-size: 1.1rem;
-        }
-
-        .sort-arrow {
-            font-size: 0.8em;
-            margin-left: 0.3rem;
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 1rem;
-            }
-
-            .header h1 {
-                font-size: 2rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .students-table {
-                font-size: 0.85rem;
-            }
-
-            .students-table thead th,
-            .students-table tbody td {
-                padding: 0.8rem 0.5rem;
-            }
-
-            .search-bar {
-                width: 100%;
-            }
-
-            .action-buttons {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-            }
-
-            .teacher-key-section {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .teacher-key-value {
-                flex-direction: column;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1>👨‍🏫 Teacher Dashboard</h1>
-            <p class="subtitle">Welcome, {{ current_user.display_name }}!</p>
-            
-            <!-- 3D Avatar Display (Unified spacing) -->
-            <div class="unified-avatar-stage large" aria-label="Teacher avatar" role="img">
-                <div id="teacherAvatar3D" class="avatar-fallback">🐝</div>
-            </div>
-            
+<div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem; display: flex; flex-direction: column; align-items: center;">
+    <!-- Centered Title Bar (admin-style) -->
+    <div style="text-align: center; margin-bottom: 1rem; width: 100%;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3); display: inline-block; min-width: 400px;">
+            <h1 style="margin: 0 0 0.5rem 0; font-size: 2rem;">👨‍🏫 Teacher Dashboard</h1>
+            <p style="margin: 0 0 1rem 0; opacity: 0.9;">Welcome back, {{ current_user.display_name }}!</p>
             <!-- Buzz Dust Rank Badge -->
-            <div id="teacher-buzz-dust-rank" style="margin-top: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 0.75rem 1.25rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);">
-                    <div id="teacher-rank-badge" class="rank-badge-3d" style="width: 48px; height: 48px; display: none;"></div>
-                    <div style="text-align: left;">
-                        <div id="teacher-rank-name" style="font-size: 0.875rem; font-weight: 700; color: #5A2C15;">Loading...</div>
-                        <div id="teacher-buzz-dust-amount" style="font-size: 1.25rem; font-weight: 900; color: #8B4513;">0 ✨</div>
-                    </div>
+            <div id="teacher-buzz-dust-rank" style="margin-top: 0.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+                <div id="teacher-rank-badge" style="width: 64px; height: 64px; display: none;"></div>
+                <div style="display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: 12px; backdrop-filter: blur(10px);">
+                    <div id="teacher-rank-name" style="font-size: 0.95rem; font-weight: 700; opacity: 0.9;">Loading...</div>
+                    <div id="teacher-buzz-dust-amount" style="font-size: 1.25rem; font-weight: 900;">0 ✨</div>
                 </div>
             </div>
-
-            <!-- Teacher Key Section -->
-            <div class="teacher-key-section">
-                <div class="teacher-key-label">
-                    🔑 Your Teacher Key (share with students):
-                </div>
-                <div class="teacher-key-value">
-                    <div class="key-display" id="teacherKey">{{ current_user.teacher_key }}</div>
-                    <button class="copy-btn" onclick="copyTeacherKey()">📋 Copy</button>
-                    <button class="copy-btn" style="background:#8B5CF6" onclick="generateTeacherKey()">🔁 Generate / Rotate</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Stats Grid -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon">👥</div>
-                <div class="stat-value">{{ students|length }}</div>
-                <div class="stat-label">Total Students</div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">📝</div>
-                <div class="stat-value" id="class-total-quizzes">{{ class_stats.total_quizzes|format_number }}</div>
-                <div class="stat-label">Total Quizzes</div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">📊</div>
-                <div class="stat-value" id="class-avg-accuracy">{{ "%.0f"|format(class_stats.avg_accuracy) }}%</div>
-                <div class="stat-label">Class Accuracy</div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">🏆</div>
-                <div class="stat-value" id="class-total-points">{{ class_stats.total_points|format_number }}</div>
-                <div class="stat-label">Total Points</div>
-            </div>
-
-            <div class="stat-card" style="background: linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 50%, #FFD700 100%);">
-                <div class="stat-icon">✨</div>
-                <div class="stat-value" id="class-total-buzz-dust" style="color: #8B4513;">0</div>
-                <div class="stat-label" style="color: #5A2C15; font-weight: 700;">🐝 Total Buzz Dust</div>
-            </div>
-        </div>
-        
-        <!-- Explanation for Apple Reviewers (shown when class stats are zero) -->
-        {% if (class_stats.total_quizzes or 0) == 0 %}
-        <div style="
-            background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
-            border: 3px solid rgba(255, 165, 0, 0.4);
-            border-radius: 20px;
-            padding: 1.25rem 1.5rem;
-            margin: 1.5rem auto 0 auto;
-            max-width: 900px;
-            box-shadow: 0 6px 20px rgba(255, 165, 0, 0.15);
-            text-align: center;
-        ">
-            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🐝📚</div>
-            <h3 style="
-                color: #8B4513;
-                font-size: 1.3rem;
-                font-weight: 700;
-                margin: 0 0 0.75rem 0;
-                text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
-            ">Class Stats Will Appear Here!</h3>
-            <p style="
-                color: #5A2C15;
-                font-size: 1rem;
-                line-height: 1.6;
-                margin: 0;
-                font-weight: 500;
-            ">
-                🎯 <strong>How it works:</strong> When your students complete their first spelling quizzes or challenges, all class statistics (total quizzes, class accuracy, total points, and buzz dust) will automatically calculate and appear here!
-                <br><br>
-                👨‍🏫 <strong>For teachers:</strong> Encourage your students to start taking quizzes from the main menu. Their progress will be tracked and displayed in real-time! 🚀
-            </p>
-        </div>
-        {% endif %}
-
-
-
-        <!-- Students Section -->
-        <div class="content-section">
-            <div class="section-header">
-                <h2 class="section-title">📋 My Students</h2>
-                <input 
-                    type="text" 
-                    class="search-bar" 
-                    placeholder="🔍 Search students..." 
-                    id="searchInput"
-                    onkeyup="filterStudents()"
-                />
-            </div>
-
-            {% if students %}
-                <table class="students-table" id="studentsTable">
-                    <thead>
-                        <tr>
-                            <th>Avatar</th>
-                            <th onclick="sortTable(1)">Name <span class="sort-arrow">⬍</span></th>
-                            <th onclick="sortTable(2)">Grade <span class="sort-arrow">⬍</span></th>
-                            <th onclick="sortTable(3)">Quizzes <span class="sort-arrow">⬍</span></th>
-                            <th onclick="sortTable(4)">Accuracy <span class="sort-arrow">⬍</span></th>
-                            <th onclick="sortTable(5)">Points <span class="sort-arrow">⬍</span></th>
-                            <th onclick="sortTable(6)">✨ Buzz Dust <span class="sort-arrow">⬍</span></th>
-                            <th onclick="sortTable(7)">Last Active <span class="sort-arrow">⬍</span></th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for student in students %}
-                        <tr data-student-id="{{ student.id }}">
-                            <td>
-                                {% if student.avatar_thumb_url %}
-                                    <img src="{{ student.avatar_thumb_url }}" alt="avatar" style="width:36px;height:36px;border-radius:8px;border:1px solid #eee;object-fit:cover;">
-                                {% else %}
-                                    <div style="width:36px;height:36px;border-radius:8px;background:#f2f2f2;border:1px solid #eee;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:.8rem;">🐝</div>
-                                {% endif %}
-                            </td>
-                            <td><strong>{{ student.display_name }}</strong></td>
-                            <td>{{ student.grade_level or 'N/A' }}</td>
-                            <td><span id="student-{{ student.id }}-quizzes">{{ student.total_quizzes_completed|format_number or 0 }}</span></td>
-                            <td>
-                                {% set accuracy = student.avg_accuracy or 0 %}
-                                <div class="accuracy-bar">
-                                    <div id="student-{{ student.id }}-acc-bar" class="accuracy-fill 
-                                        {% if accuracy >= 90 %}accuracy-excellent
-                                        {% elif accuracy >= 80 %}accuracy-good
-                                        {% elif accuracy >= 70 %}accuracy-fair
-                                        {% elif accuracy >= 60 %}accuracy-poor
-                                        {% else %}accuracy-fail{% endif %}"
-                                        style="width: {{ accuracy }}%;">
-                                    </div>
-                                </div>
-                                <span id="student-{{ student.id }}-acc-text">{{ "%.0f"|format(accuracy) }}%</span>
-                            </td>
-                            <td><strong id="student-{{ student.id }}-points">{{ student.total_lifetime_points|format_number or 0 }}</strong></td>
-                            <td style="color: #8B4513; font-weight: 600;">
-                                <span id="student-{{ student.id }}-buzz-dust">{{ student.total_buzz_dust or 0 }}</span>
-                                <div style="font-size: 0.75rem; color: #666; margin-top: 0.2rem;" id="student-{{ student.id }}-bee-class">🐝 {{ student.bee_class or 'Novice Bee' }}</div>
-                            </td>
-                            <td>
-                                {% if student.last_login %}
-                                    {{ student.last_login.strftime('%b %d') }}
-                                {% else %}
-                                    Never
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if student.last_login and (now - student.last_login).days < 7 %}
-                                    <span class="status-badge status-active">Active</span>
-                                {% else %}
-                                    <span class="status-badge status-inactive">Inactive</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <a href="/teacher/student/{{ student.id }}" class="view-btn">View Details</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <div class="empty-state">
-                    <div class="icon">👥</div>
-                    <h3>No Students Yet</h3>
-                    <p>Share your Teacher Key with students so they can link their accounts!</p>
-                    <p style="font-size: 0.9rem; color: #999; margin-top: 1rem;">
-                        Students enter your key during registration to automatically join your class.
-                    </p>
-                </div>
-            {% endif %}
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="action-buttons">
-            <a href="/" class="btn btn-primary">🏠 Back to Home</a>
-            <a class="btn btn-secondary" href="/teacher/export/class.csv">� Export Class CSV</a>
-            <a class="btn btn-secondary" href="/teacher/export/class.pdf" style="background:#ffb300;color:#4a2b00">🧾 Export Class PDF</a>
-            <a href="/auth/logout" class="btn btn-danger">🚪 Sign Out</a>
         </div>
     </div>
 
-    <script>
-        // Copy teacher key to clipboard
-        function copyTeacherKey() {
-            const keyText = document.getElementById('teacherKey').textContent;
-            navigator.clipboard.writeText(keyText).then(() => {
-                const btn = event.target;
-                const originalText = btn.textContent;
-                btn.textContent = '✅ Copied!';
-                btn.style.background = '#4CAF50';
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.style.background = '#5A2C15';
-                }, 2000);
-            }).catch(err => {
-                alert('Failed to copy: ' + err);
-            });
-        }
+    <!-- Refresh + Last updated -->
+    <div style="text-align: center; margin-bottom: 1.5rem; width: 100%;">
+        <button onclick="window.location.reload()" style="background: #4CAF50; color: white; border: none; padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);">
+            🔄 Refresh Data
+        </button>
+        <div id="last-updated" style="margin-top: 0.5rem; font-size: 0.875rem; color: #666;">
+            Last updated: <span id="update-time"></span>
+        </div>
+    </div>
 
-        // Generate/Rotate teacher key via API
-        async function generateTeacherKey(){
-            try{
-                const resp = await fetch('/api/teacher/key', { method:'POST', headers:{'Content-Type':'application/json'} });
-                const data = await resp.json();
-                if(data && data.success){
-                    const keyEl = document.getElementById('teacherKey');
-                    keyEl.textContent = data.teacher_key || '';
-                    // flash animation
-                    keyEl.style.outline = '3px solid #8B5CF6';
-                    setTimeout(()=> keyEl.style.outline = 'none', 800);
-                } else {
-                    alert(data.error || 'Could not generate key');
-                }
-            }catch(e){
-                alert('Network error while generating key');
-            }
-        }
+    <!-- Teacher Key strip (compact, prominent) -->
+    <div style="width: 100%; max-width: 800px; margin-bottom: 2rem; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); border-radius: 16px; padding: 1.25rem 1.5rem; box-shadow: 0 6px 20px rgba(255, 165, 0, 0.25); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem;">
+        <div style="font-weight: 700; color: #5A2C15; font-size: 1rem;">🔑 Your Teacher Key (share with students):</div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <div id="teacherKey" style="background: white; padding: 0.6rem 1.2rem; border-radius: 10px; font-family: monospace; font-size: 1.15rem; font-weight: 700; color: #5A2C15; letter-spacing: 1px;">{{ current_user.teacher_key }}</div>
+            <button type="button" onclick="copyTeacherKey()" style="padding: 0.6rem 1.2rem; background: #5A2C15; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">📋 Copy</button>
+            <button type="button" onclick="generateTeacherKey()" style="padding: 0.6rem 1.2rem; background: #8B5CF6; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">🔁 Generate / Rotate</button>
+        </div>
+    </div>
 
-        // Search/filter students
-        function filterStudents() {
-            const input = document.getElementById('searchInput');
-            const filter = input.value.toLowerCase();
-            const table = document.getElementById('studentsTable');
-            const rows = table.getElementsByTagName('tr');
+    <!-- Stats Grid (admin-style cards) -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; width: 100%;">
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">My Students</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #667eea;" class="formatted-number">{{ students|length }}</div>
+        </div>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Total Quizzes</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #9f7aea;" id="class-total-quizzes">{{ class_stats.total_quizzes|format_number }}</div>
+        </div>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Class Accuracy</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #48bb78;" id="class-avg-accuracy">{{ "%.0f"|format(class_stats.avg_accuracy) }}%</div>
+        </div>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Total Points</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #ed8936;" id="class-total-points">{{ class_stats.total_points|format_number }}</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 50%, #FFD700 100%); padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(255, 165, 0, 0.25); text-align: center;">
+            <div style="font-size: 0.875rem; color: #5A2C15; margin-bottom: 0.5rem; font-weight: 600;">🐝 Total Buzz Dust</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #8B4513;" id="class-total-buzz-dust">0</div>
+        </div>
+    </div>
 
-            for (let i = 1; i < rows.length; i++) {
-                // Column 0 is avatar; column 1 is Name
-                const nameCell = rows[i].getElementsByTagName('td')[1];
-                if (nameCell) {
-                    const name = nameCell.textContent || nameCell.innerText;
-                    if (name.toLowerCase().indexOf(filter) > -1) {
-                        rows[i].style.display = '';
-                    } else {
-                        rows[i].style.display = 'none';
-                    }
-                }
-            }
-        }
+    {% if (class_stats.total_quizzes or 0) == 0 %}
+    <div style="width: 100%; max-width: 700px; margin-bottom: 2rem; background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%); border: 2px solid rgba(255, 165, 0, 0.4); border-radius: 16px; padding: 1.25rem 1.5rem; box-shadow: 0 4px 16px rgba(255, 165, 0, 0.15); text-align: center;">
+        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🐝📚</div>
+        <h3 style="color: #8B4513; font-size: 1.2rem; font-weight: 700; margin: 0 0 0.5rem 0;">Class stats will appear here</h3>
+        <p style="color: #5A2C15; font-size: 0.95rem; margin: 0; line-height: 1.5;">When your students complete quizzes, total quizzes, class accuracy, points, and buzz dust will show here. Share your Teacher Key so students can link their accounts.</p>
+    </div>
+    {% endif %}
 
-        // Sort table columns
-        let sortDirection = {};
-        function sortTable(columnIndex) {
-            const table = document.getElementById('studentsTable');
-            const tbody = table.getElementsByTagName('tbody')[0];
-            const rows = Array.from(tbody.getElementsByTagName('tr'));
-            
-            // Initialize sort direction for this column
-            if (sortDirection[columnIndex] === undefined) {
-                sortDirection[columnIndex] = true; // ascending
-            } else {
-                sortDirection[columnIndex] = !sortDirection[columnIndex];
-            }
-            
-            const ascending = sortDirection[columnIndex];
-            
-            rows.sort((a, b) => {
-                let aValue = a.getElementsByTagName('td')[columnIndex].textContent.trim();
-                let bValue = b.getElementsByTagName('td')[columnIndex].textContent.trim();
-                
-                // Handle numeric values
-                const aNum = parseFloat(aValue.replace(/[^0-9.-]/g, ''));
-                const bNum = parseFloat(bValue.replace(/[^0-9.-]/g, ''));
-                
-                if (!isNaN(aNum) && !isNaN(bNum)) {
-                    return ascending ? aNum - bNum : bNum - aNum;
-                }
-                
-                // Handle text values
-                return ascending ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-            });
-            
-            // Re-append rows in sorted order
-            rows.forEach(row => tbody.appendChild(row));
-            
-            // Update sort arrows
-            const headers = table.getElementsByTagName('th');
-            for (let i = 0; i < headers.length; i++) {
-                const arrow = headers[i].querySelector('.sort-arrow');
-                if (arrow) {
-                    if (i === columnIndex) {
-                        arrow.textContent = ascending ? '▲' : '▼';
-                    } else {
-                        arrow.textContent = '⬍';
-                    }
-                }
-            }
-        }
+    <!-- My Students Section -->
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem; width: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+            <h2 style="margin: 0; font-size: 1.5rem;">📋 My Students</h2>
+            <input type="text" id="searchInput" placeholder="🔍 Search students..." onkeyup="filterStudents()"
+                   style="padding: 0.6rem 1rem; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 1rem; width: 260px; max-width: 100%;" />
+        </div>
 
-        // Export buttons use direct links now; keep function for backward compatibility
-        function exportClassReport() {
-            window.location.href = '/teacher/export/class.csv';
-        }
+        {% if students %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;" id="studentsTable">
+                <thead>
+                    <tr style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Avatar</th>
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568; cursor: pointer;" onclick="sortTable(1)">Name</th>
+                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568; cursor: pointer;" onclick="sortTable(2)">Grade</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568; cursor: pointer;" onclick="sortTable(3)">Quizzes</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568; cursor: pointer;" onclick="sortTable(4)">Accuracy</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568; cursor: pointer;" onclick="sortTable(5)">Points</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">✨ Buzz Dust</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Last Active</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Status</th>
+                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr data-student-id="{{ student.id }}" style="border-bottom: 1px solid #e2e8f0; {% if loop.index % 2 == 0 %}background: #f9fafb;{% endif %}">
+                        <td style="padding: 1rem;">
+                            {% if student.avatar_thumb_url %}
+                            <img src="{{ student.avatar_thumb_url }}" alt="" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0;">
+                            {% else %}
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: #f2f2f2; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">🐝</div>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem; font-weight: 600; color: #2d3748;">{{ student.display_name }}</td>
+                        <td style="padding: 1rem; color: #718096;">{{ student.grade_level or '—' }}</td>
+                        <td style="padding: 1rem; text-align: center; font-weight: 600; color: #9f7aea;"><span id="student-{{ student.id }}-quizzes">{{ student.total_quizzes_completed|format_number or 0 }}</span></td>
+                        <td style="padding: 1rem; text-align: center;">
+                            {% set accuracy = student.avg_accuracy or 0 %}
+                            <span id="student-{{ student.id }}-acc-text" style="font-weight: 600; color: {% if accuracy >= 80 %}#48bb78{% elif accuracy >= 60 %}#ed8936{% else %}#f56565{% endif %};">{{ "%.0f"|format(accuracy) }}%</span>
+                        </td>
+                        <td style="padding: 1rem; text-align: center; font-weight: 600;"><span id="student-{{ student.id }}-points">{{ student.total_lifetime_points|format_number or 0 }}</span></td>
+                        <td style="padding: 1rem; text-align: center; color: #8B4513; font-weight: 600;">
+                            <span id="student-{{ student.id }}-buzz-dust">{{ student.total_buzz_dust or 0 }}</span>
+                            <div style="font-size: 0.75rem; color: #666;" id="student-{{ student.id }}-bee-class">🐝 {{ student.bee_class or 'Novice Bee' }}</div>
+                        </td>
+                        <td style="padding: 1rem; font-size: 0.875rem; color: #718096;">{{ student.last_login.strftime('%b %d') if student.last_login else 'Never' }}</td>
+                        <td style="padding: 1rem; text-align: center;">
+                            {% if student.last_login and (now - student.last_login).days < 7 %}
+                            <span style="background: #C6F6D5; color: #276749; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">Active</span>
+                            {% else %}
+                            <span style="background: #E2E8F0; color: #4a5568; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <a href="/teacher/student/{{ student.id }}" style="display: inline-block; padding: 0.5rem 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem;">View Details</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 3rem; color: #718096;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
+            <p style="font-size: 1.125rem; margin: 0;">No students yet</p>
+            <p style="font-size: 0.875rem; margin: 0.5rem 0 0 0;">Share your Teacher Key with students so they can link their accounts during registration.</p>
+        </div>
+        {% endif %}
+    </div>
 
-        // Add smooth animations on page load
-        window.addEventListener('load', () => {
-            const cards = document.querySelectorAll('.stat-card, .content-section');
-            cards.forEach((card, index) => {
-                card.style.opacity = '0';
-                card.style.transform = 'translateY(20px)';
-                setTimeout(() => {
-                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                    card.style.opacity = '1';
-                    card.style.transform = 'translateY(0)';
-                }, index * 100);
-            });
-        });
+    <!-- Quick Actions (admin-style) -->
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 820px; width: 100%; margin-bottom: 2rem; text-align: center;">
+        <h2 style="margin: 0 0 1rem 0; font-size: 1.25rem;">Quick Actions</h2>
+        <div style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); justify-items: center;">
+            <a href="/" style="display: block; width: 100%; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 10px; text-align: center; font-weight: 600;">🏠 Home</a>
+            <a href="/teacher/export/class.csv" style="display: block; width: 100%; padding: 1rem; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #5A2C15; text-decoration: none; border-radius: 10px; text-align: center; font-weight: 600;">📄 Export CSV</a>
+            <a href="/teacher/export/class.pdf" style="display: block; width: 100%; padding: 1rem; background: linear-gradient(135deg, #ffb74d 0%, #fb8c00 100%); color: white; text-decoration: none; border-radius: 10px; text-align: center; font-weight: 600;">🧾 Export PDF</a>
+            <a href="/auth/logout" style="display: block; width: 100%; padding: 1rem; background: linear-gradient(135deg, #f56565 0%, #c53030 100%); color: white; text-decoration: none; border-radius: 10px; text-align: center; font-weight: 600;">🚪 Sign Out</a>
+        </div>
+    </div>
+</div>
 
-
-    </script>
-    <script>
-        // Dynamic polling to refresh student stats and class aggregates
-        (function(){
-            function numberWithCommas(x){
-                try {
-                    const n = Number(x||0);
-                    return n.toLocaleString();
-                } catch { return x; }
-            }
-            function updateRow(id, data){
-                // quizzes
-                const q = document.getElementById(`student-${id}-quizzes`);
-                if(q) q.textContent = numberWithCommas(data.total_quizzes_completed||0);
-                // points
-                const p = document.getElementById(`student-${id}-points`);
-                if(p) p.textContent = numberWithCommas(data.total_lifetime_points||0);
-                // accuracy
-                const acc = Math.round((data.average_accuracy||0));
-                const accText = document.getElementById(`student-${id}-acc-text`);
-                if(accText) accText.textContent = `${acc}%`;
-                const bar = document.getElementById(`student-${id}-acc-bar`);
-                if(bar){
-                    bar.style.width = `${acc}%`;
-                    bar.classList.remove('accuracy-excellent','accuracy-good','accuracy-fair','accuracy-poor','accuracy-fail');
-                    if(acc>=90) bar.classList.add('accuracy-excellent');
-                    else if(acc>=80) bar.classList.add('accuracy-good');
-                    else if(acc>=70) bar.classList.add('accuracy-fair');
-                    else if(acc>=60) bar.classList.add('accuracy-poor');
-                    else bar.classList.add('accuracy-fail');
-                }
-            }
-            async function pollClass(){
-                const rows = Array.from(document.querySelectorAll('tr[data-student-id]'));
-                if(rows.length===0) return;
-                const ids = rows.map(r=>r.getAttribute('data-student-id')).join(',');
-                try{
-                    const resp = await fetch(`/api/users/stats/batch?ids=${ids}`, { headers:{'Accept':'application/json'} });
-                    const body = await resp.json();
-                    if(!resp.ok || body.status!=='success') return;
-                    const results = body.results||{};
-                    // aggregates
-                    let totalQuizzes = 0, totalPoints = 0, totalBuzzDust = 0, accSum = 0, count = 0;
-                    for(const [id, stats] of Object.entries(results)){
-                        updateRow(id, stats);
-                        totalQuizzes += Number(stats.total_quizzes_completed||0);
-                        totalPoints += Number(stats.total_lifetime_points||0);
-                        totalBuzzDust += Number(stats.total_buzz_dust||0);
-                        accSum += Number(stats.average_accuracy||0);
-                        count += 1;
-                        
-                        // 🐝 Update individual Buzz Dust display
-                        const buzzEl = document.getElementById(`student-${id}-buzz-dust`);
-                        if(buzzEl) buzzEl.textContent = numberWithCommas(stats.total_buzz_dust||0);
-                        const beeClassEl = document.getElementById(`student-${id}-bee-class`);
-                        if(beeClassEl && stats.bee_class) beeClassEl.textContent = '🐝 ' + stats.bee_class;
-                    }
-                    const avgAcc = count? Math.round(accSum/count) : 0;
-                    const elQ = document.getElementById('class-total-quizzes');
-                    if(elQ) elQ.textContent = numberWithCommas(totalQuizzes);
-                    const elP = document.getElementById('class-total-points');
-                    if(elP) elP.textContent = numberWithCommas(totalPoints);
-                    const elBuzz = document.getElementById('class-total-buzz-dust');
-                    if(elBuzz) elBuzz.textContent = numberWithCommas(totalBuzzDust);
-                    const elA = document.getElementById('class-avg-accuracy');
-                    if(elA) elA.textContent = `${avgAcc}%`;
-                }catch(e){ /* silent */ }
-            }
-            
-            // 🐝 Fetch and display teacher's own Buzz Dust rank
-            async function loadTeacherBuzzDust() {
-                try {
-                    console.log('🐝 Loading teacher Buzz Dust info...');
-                    const res = await fetch('/api/buzz-dust/info', {
-                        credentials: 'same-origin',
-                        cache: 'no-store'
-                    });
-                    
-                    if (!res.ok) {
-                        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-                    }
-                    
-                    const data = await res.json();
-                    console.log('✅ Teacher Buzz Dust data received:', data);
-                    
-                    if (data.success && data.current_class) {
-                        const rankEl = document.getElementById('teacher-rank-name');
-                        const badgeEl = document.getElementById('teacher-rank-badge');
-                        const amountEl = document.getElementById('teacher-buzz-dust-amount');
-                        
-                        if (rankEl) {
-                            rankEl.textContent = data.current_class.label || 'Novice Bee';
-                            console.log('✅ Teacher rank name updated:', data.current_class.label);
-                        }
-                        if (amountEl) {
-                            amountEl.textContent = numberWithCommas(data.total_buzz_dust || 0) + ' ✨';
-                            console.log('✅ Teacher Buzz Dust amount updated:', data.total_buzz_dust);
-                        }
-                        
-                        if (badgeEl && data.current_class.badge_image && window.Badge3DRenderer) {
-                            // Clear existing badge
-                            badgeEl.innerHTML = '';
-                            
-                            // Create 3D badge
-                            new Badge3DRenderer(badgeEl, {
-                                badgeFile: data.current_class.badge_image,
-                                width: 48,
-                                height: 48,
-                                autoRotate: true,
-                                rotationSpeed: 0.3,
-                                enableLighting: true
-                            });
-                            badgeEl.style.display = 'block';
-                            console.log('✅ Teacher 3D badge rendered:', data.current_class.badge_image);
-                        }
-                    } else {
-                        console.error('❌ API returned success=false:', data);
-                        const rankEl = document.getElementById('teacher-rank-name');
-                        if (rankEl) rankEl.textContent = 'Novice Bee';
-                    }
-                } catch (error) {
-                    console.error('❌ Error loading teacher Buzz Dust:', error);
-                    const rankEl = document.getElementById('teacher-rank-name');
-                    const amountEl = document.getElementById('teacher-buzz-dust-amount');
-                    if (rankEl) rankEl.textContent = 'Novice Bee';
-                    if (amountEl) amountEl.textContent = '0 ✨';
-                }
-            }
-            
-            // Load Buzz Dust immediately when DOM is ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', loadTeacherBuzzDust);
-            } else {
-                loadTeacherBuzzDust();
-            }
-            
-            // Initial + interval
-            document.addEventListener('visibilitychange', ()=>{
-                if(!document.hidden) pollClass();
-            });
-            setInterval(pollClass, 12000);
-            window.addEventListener('load', () => {
-                pollClass();
-            });
-        })();
-    </script>
 <script>
-async function ensureSmartyBeeReady(){
-    if(typeof SmartyBee3D!=='undefined') return; await new Promise(r=>{const i=setInterval(()=>{if(typeof SmartyBee3D!=='undefined'){clearInterval(i);r();}},150);});
-}
-document.addEventListener('DOMContentLoaded', async () => {
-    const el = document.getElementById('teacherAvatar3D');
-    if(!el) return;
-    try {
-        await ensureSmartyBeeReady();
-        new SmartyBee3D('teacherAvatar3D', {
-            avatarId: window.currentUserAvatarId || 'cutie-bee-avatar',
-            enableAnimation:true,
-            enableRotation:true,
-            scale:1.0,
-            cameraDistance:3.4
-        });
-    } catch(e){
-        console.warn('Teacher avatar failed', e);
-        el.textContent='🐝';
+(function(){
+    function numberWithCommas(x){ try { const n = Number(x||0); return n.toLocaleString(); } catch { return x; } }
+    function updateRow(id, data){
+        var q = document.getElementById('student-' + id + '-quizzes'); if(q) q.textContent = numberWithCommas(data.total_quizzes_completed||0);
+        var p = document.getElementById('student-' + id + '-points'); if(p) p.textContent = numberWithCommas(data.total_lifetime_points||0);
+        var acc = Math.round(data.average_accuracy||0);
+        var accText = document.getElementById('student-' + id + '-acc-text'); if(accText) accText.textContent = acc + '%';
+        var buzz = document.getElementById('student-' + id + '-buzz-dust'); if(buzz) buzz.textContent = numberWithCommas(data.total_buzz_dust||0);
+        var beeClass = document.getElementById('student-' + id + '-bee-class'); if(beeClass && data.bee_class) beeClass.textContent = '🐝 ' + data.bee_class;
     }
+    async function pollClass(){
+        var rows = document.querySelectorAll('tr[data-student-id]');
+        if(!rows.length) return;
+        var ids = Array.from(rows).map(function(r){ return r.getAttribute('data-student-id'); }).join(',');
+        try {
+            var resp = await fetch('/api/users/stats/batch?ids=' + ids, { headers: { 'Accept': 'application/json' } });
+            var body = await resp.json();
+            if(!resp.ok || body.status !== 'success') return;
+            var results = body.results || {};
+            var totalQuizzes = 0, totalPoints = 0, totalBuzzDust = 0, accSum = 0, count = 0;
+            for(var id in results){ var s = results[id]; updateRow(id, s);
+                totalQuizzes += Number(s.total_quizzes_completed||0); totalPoints += Number(s.total_lifetime_points||0);
+                totalBuzzDust += Number(s.total_buzz_dust||0); accSum += Number(s.average_accuracy||0); count++;
+            }
+            var avgAcc = count ? Math.round(accSum/count) : 0;
+            var elQ = document.getElementById('class-total-quizzes'); if(elQ) elQ.textContent = numberWithCommas(totalQuizzes);
+            var elP = document.getElementById('class-total-points'); if(elP) elP.textContent = numberWithCommas(totalPoints);
+            var elBuzz = document.getElementById('class-total-buzz-dust'); if(elBuzz) elBuzz.textContent = numberWithCommas(totalBuzzDust);
+            var elA = document.getElementById('class-avg-accuracy'); if(elA) elA.textContent = avgAcc + '%';
+        } catch(e) {}
+    }
+    document.addEventListener('visibilitychange', function(){ if(!document.hidden) pollClass(); });
+    setInterval(pollClass, 12000);
+    window.addEventListener('load', pollClass);
+})();
+</script>
+<script>
+function copyTeacherKey() {
+    var key = document.getElementById('teacherKey').textContent;
+    navigator.clipboard.writeText(key).then(function(){
+        var btn = event.target; var orig = btn.textContent;
+        btn.textContent = '✅ Copied!'; btn.style.background = '#4CAF50';
+        setTimeout(function(){ btn.textContent = orig; btn.style.background = ''; }, 2000);
+    }).catch(function(err){ alert('Copy failed: ' + err); });
+}
+async function generateTeacherKey(){
+    try {
+        var resp = await fetch('/api/teacher/key', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        var data = await resp.json();
+        if(data && data.success){
+            document.getElementById('teacherKey').textContent = data.teacher_key || '';
+        } else { alert(data.error || 'Could not generate key'); }
+    } catch(e){ alert('Network error'); }
+}
+function filterStudents() {
+    var filter = document.getElementById('searchInput').value.toLowerCase();
+    var table = document.getElementById('studentsTable');
+    if(!table) return;
+    var rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    for(var i = 0; i < rows.length; i++){
+        var nameCell = rows[i].getElementsByTagName('td')[1];
+        if(nameCell){
+            var name = (nameCell.textContent || nameCell.innerText).toLowerCase();
+            rows[i].style.display = name.indexOf(filter) > -1 ? '' : 'none';
+        }
+    }
+}
+var sortDirection = {};
+function sortTable(col) {
+    var table = document.getElementById('studentsTable');
+    if(!table) return;
+    var tbody = table.getElementsByTagName('tbody')[0];
+    var rows = Array.from(tbody.getElementsByTagName('tr'));
+    sortDirection[col] = !sortDirection[col];
+    var asc = sortDirection[col];
+    rows.sort(function(a, b){
+        var aVal = (a.getElementsByTagName('td')[col].textContent || '').trim();
+        var bVal = (b.getElementsByTagName('td')[col].textContent || '').trim();
+        var aNum = parseFloat(aVal.replace(/[^0-9.-]/g, ''));
+        var bNum = parseFloat(bVal.replace(/[^0-9.-]/g, ''));
+        if(!isNaN(aNum) && !isNaN(bNum)) return asc ? aNum - bNum : bNum - aNum;
+        return asc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    });
+    rows.forEach(function(r){ tbody.appendChild(r); });
+}
+</script>
+<script>
+(function(){
+    function numberWithCommas(x){ try { return Number(x||0).toLocaleString(); } catch { return x; } }
+    async function loadTeacherBuzzDust(){
+        try {
+            var res = await fetch('/api/buzz-dust/info', { credentials: 'same-origin', cache: 'no-store' });
+            if(!res.ok) throw new Error(res.statusText);
+            var data = await res.json();
+            if(data.success && data.current_class){
+                var rankEl = document.getElementById('teacher-rank-name');
+                var badgeEl = document.getElementById('teacher-rank-badge');
+                var amountEl = document.getElementById('teacher-buzz-dust-amount');
+                if(rankEl) rankEl.textContent = data.current_class.label || 'Novice Bee';
+                if(amountEl) amountEl.textContent = numberWithCommas(data.total_buzz_dust||0) + ' ✨';
+                if(badgeEl && data.current_class.badge_image){
+                    badgeEl.innerHTML = ''; badgeEl.style.display = 'block';
+                    if(typeof Badge3DRenderer !== 'undefined'){
+                        try {
+                            new Badge3DRenderer(badgeEl, { badgeFile: data.current_class.badge_image, width: 64, height: 64, autoRotate: true, rotationSpeed: 0.3, enableLighting: true });
+                        } catch(e){
+                            var fn = (data.current_class.badge_image||'').replace('.glb','.png');
+                            badgeEl.innerHTML = '<img src="/static/assets/badges/' + fn + '" alt="" style="width:64px;height:64px;object-fit:contain;">';
+                        }
+                    } else {
+                        var fn = (data.current_class.badge_image||'').replace('.glb','.png');
+                        badgeEl.innerHTML = '<img src="/static/assets/badges/' + fn + '" alt="" style="width:64px;height:64px;object-fit:contain;">';
+                    }
+                }
+            } else {
+                var rankEl = document.getElementById('teacher-rank-name'); if(rankEl) rankEl.textContent = 'Novice Bee';
+            }
+        } catch(e){
+            var rankEl = document.getElementById('teacher-rank-name'); var amountEl = document.getElementById('teacher-buzz-dust-amount');
+            if(rankEl) rankEl.textContent = 'Novice Bee'; if(amountEl) amountEl.textContent = '0 ✨';
+        }
+    }
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadTeacherBuzzDust);
+    else loadTeacherBuzzDust();
+})();
+</script>
+<script>
+(function(){
+    var now = new Date();
+    var opts = { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true };
+    var el = document.getElementById('update-time');
+    if(el) el.textContent = now.toLocaleString('en-US', opts);
+})();
+</script>
+<!-- Hide mascot/orb on teacher dashboard (DOM backup) -->
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    ['#mascotBee3D', '.bee-mascot', '.decorative-orb', '.floating-orb', '.particle-container', '.morph-container'].forEach(function(sel){
+        try { document.querySelectorAll(sel).forEach(function(el){ el.style.display = 'none'; el.remove(); }); } catch(e){}
+    });
 });
 </script>
-</body>
-</html>
+{% endblock %}

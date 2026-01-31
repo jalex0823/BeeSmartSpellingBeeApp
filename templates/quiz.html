@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v=20251213-1745">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251213-1745">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20251213-1745">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/QuizKeyboard.css') }}?v={{ timestamp }}">
 
 <script>
 // 🛡️ DISABLE SERVICE WORKER AUTO-RELOAD on quiz page to prevent reload loops
@@ -3953,9 +3954,11 @@ document.addEventListener('DOMContentLoaded', () => {
                    autocorrect="off"
                    autocapitalize="off"
                    spellcheck="false"
-                   inputmode="text"
+                   inputmode="none"
                    style="font-size: 16px;">
         </div>
+        <!-- Custom on-screen keyboard (quiz only); prevents system keyboard on mobile -->
+        <div id="quizKeyboardContainer" role="region" aria-label="Quiz spelling keyboard"></div>
 
         <script>
         // Ensure desktop intro voice plays reliably by triggering on first user interaction
@@ -4187,6 +4190,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/QuizKeyboard.js') }}?v={{ timestamp }}"></script>
 <script>
 console.log('✅ Quiz script loading - Dec 13, 2025 @ 6:15pm - VISUALIZATION REMOVED');
 
@@ -5457,6 +5461,9 @@ class QuizManager {
         } catch (e) {
             console.error('❌ Error in initializeEventListeners:', e);
         }
+
+        // 🎹 Custom quiz keyboard: mount only when countdown starts (see startCountdownTimer), not on page load
+        // ROUND_COUNTDOWN_STARTED → mount + setEnabled(true); ROUND_ENDED / GAME_OVER_SHOWN → setEnabled(false) / unmount
         
         // 🍎 iOS-specific optimizations
         if (this.isIOS || this.isSafari) {
@@ -6355,6 +6362,8 @@ class QuizManager {
                     spellingInput.disabled = false;
                     spellingInput.value = '';
                     spellingInput.placeholder = 'Type your answer...';
+                    if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+                    if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
                 }
             }
 
@@ -6549,8 +6558,33 @@ class QuizManager {
         // Start the timer
         this.countdownTimer.start();
         
-        // ENABLE input now that timer has started
+        // ROUND_COUNTDOWN_STARTED: mount keyboard only when countdown becomes visible and starts
         const spellingInput = document.getElementById('spellingInput');
+        try {
+            const keyboardContainer = document.getElementById('quizKeyboardContainer');
+            if (keyboardContainer && spellingInput && typeof initQuizKeyboard === 'function') {
+                if (!window.quizKeyboardInstance) {
+                    window.quizKeyboardInstance = initQuizKeyboard({
+                        targetEl: keyboardContainer,
+                        inputEl: spellingInput,
+                        onSubmit: () => { if (this.submitAnswer) this.submitAnswer(); },
+                        allowSpaces: true,
+                        autoCaps: true,
+                        maxLength: null,
+                        disableInputWhenRoundEnds: true,
+                        practiceMode: false,
+                        showSubmitKey: false
+                    });
+                    console.log('✅ Quiz keyboard mounted (countdown started)');
+                }
+                if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
+                if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+            }
+        } catch (e) {
+            console.warn('Quiz keyboard mount failed:', e);
+        }
+        
+        // ENABLE input now that timer has started
         if (spellingInput) {
             spellingInput.disabled = false;
             spellingInput.placeholder = 'Type your answer...';
@@ -6588,6 +6622,9 @@ class QuizManager {
     handleTimerExpired() {
         console.log('⏰ Timer expired! Auto-advancing to next word...');
 
+        // ROUND_ENDED (timer hit 0): disable keyboard
+        if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(false);
+        
         // Clean up timer visuals
         this.stopCountdownTimer();
         
@@ -7647,6 +7684,8 @@ class QuizManager {
             spellingInput.disabled = false;
             spellingInput.value = '';
             spellingInput.placeholder = 'Type your answer...';
+            if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+            if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
             this.isAnswering = false; // Reset flag for new word
             console.log('✅ Input enabled and ready for answer');
             // Do not force focus here to avoid interrupting TTS; users can start typing anytime
@@ -8107,8 +8146,9 @@ class QuizManager {
         }
 
         this.isAnswering = true;
-        // Keep submit button enabled - only disable input field
+        // Keep submit button enabled - only disable input field and custom keyboard
         document.getElementById('spellingInput').disabled = true;
+        if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(false);
         
         // ⏱️ Stop countdown timer when answer submitted
         this.stopCountdownTimer();
@@ -8653,6 +8693,7 @@ class QuizManager {
     enableInput() {
         const spellingInput = document.getElementById('spellingInput');
         spellingInput.disabled = false;
+        if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
         
         // 🍎 iOS FIX: Delay focus to allow keyboard to properly show after interaction
         if (this.isIOS || this.isSafari) {
@@ -8703,6 +8744,8 @@ class QuizManager {
             spellingInput.value = '';
             spellingInput.disabled = false;
             spellingInput.placeholder = 'Retry your spelling...';
+            if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+            if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
             
             // 🍎 iOS FIX: Delay focus to ensure keyboard shows properly after retry
             if (this.isIOS || this.isSafari) {
@@ -8861,6 +8904,8 @@ class QuizManager {
             spellingInput.value = '';
             spellingInput.disabled = false;
             spellingInput.placeholder = 'Retry your spelling...';
+            if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+            if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
             spellingInput.focus();
             console.log('   - Input field enabled and focused');
         }
@@ -9028,6 +9073,8 @@ class QuizManager {
             spellingInput.value = '';
             spellingInput.disabled = false;
             spellingInput.placeholder = 'Retry spelling... (33% points)';
+            if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+            if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
             spellingInput.focus();
         }
         
@@ -9249,6 +9296,12 @@ class QuizManager {
     }
 
     async showQuizComplete(summary) {
+        // GAME_OVER_SHOWN: unmount keyboard when quiz complete screen is shown
+        try {
+            if (typeof destroyQuizKeyboard === 'function') destroyQuizKeyboard();
+            window.quizKeyboardInstance = null;
+        } catch (_) {}
+        
         document.getElementById('quizCard').style.display = 'none';
         const completeDiv = document.getElementById('quizComplete');
         completeDiv.style.display = 'block';
