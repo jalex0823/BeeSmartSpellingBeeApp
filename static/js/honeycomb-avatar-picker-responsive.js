@@ -1971,11 +1971,17 @@ function showLockedMessage(avatar) {
         // All Apple-approved avatars are purchasable in native app: show Purchase for any locked avatar (backend sends product_id/price).
         const showPurchaseBtn = inNativeApp ? true : canPurchase;
         const purchaseLabel = avatar.price ? `Purchase for $${Number(avatar.price).toFixed(2)}` : 'Purchase to Unlock';
-        const isDisabled = purchaseState === PurchaseState.PURCHASING || purchaseState === PurchaseState.STORE_LOADING || !storeReady;
+        
+        // CRITICAL FIX: In native app, don't disable based on storeReady (bridge may still be initializing)
+        // Only disable if actively purchasing or if in web context and store not ready
+        const isDisabled = purchaseState === PurchaseState.PURCHASING || 
+                          (purchaseState === PurchaseState.STORE_LOADING && !inNativeApp) ||
+                          (!inNativeApp && !storeReady && !canPurchase);
+        
         const disabledClass = isDisabled ? 'disabled' : '';
         const disabledAttr = isDisabled ? 'disabled' : '';
         const buttonText = purchaseState === PurchaseState.PURCHASING ? 'Processing...' : 
-                          purchaseState === PurchaseState.STORE_LOADING ? 'Loading Store...' : 
+                          (purchaseState === PurchaseState.STORE_LOADING && !inNativeApp) ? 'Loading Store...' : 
                           purchaseLabel;
         actionHtml = `
             <p style="margin-top: 1rem; color: #FFB300;">💎 This bee is available for purchase.</p>
@@ -2200,8 +2206,10 @@ async function purchaseLockedAvatar(slug) {
     }
 
     // CRITICAL FIX #3: Check store readiness BEFORE proceeding
-    // Store is ready only if: bridge exists + products loaded + can make payments
-    if (!storeReady) {
+    // In native app: allow purchase even if storeReady is false (bridge may still be initializing)
+    // In web context: require storeReady
+    const inNative = isProbablyNativeAppContext();
+    if (!inNative && !storeReady) {
         if (purchaseState === PurchaseState.STORE_LOADING) {
             alert('One moment — the store is loading. Please wait a few seconds and try again.');
         } else if (!canMakePayments) {
@@ -2212,6 +2220,12 @@ async function purchaseLockedAvatar(slug) {
             alert('Store is not ready. Please refresh the page and try again.');
         }
         return;
+    }
+    
+    // In native app, still check bridge exists (even if storeReady is false)
+    if (inNative && (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function')) {
+        // Bridge not ready yet - wait for it (this is handled by _waitForNativeIapBridge in purchase function)
+        console.log('[IAP] Native bridge not ready yet, will wait in purchase function');
     }
 
     // Product ID: from API only (backend uses data/avatars.catalog.json). Do not hardcode — .v2 vs non-.v2 varies by avatar.
