@@ -699,22 +699,35 @@ async function refreshAvatarUnlockStatus() {
             : [];
         
         // Create lookup map for unlock status
+        // CRITICAL: API returns 'id' but avatarsData uses 'slug' - map both
         const unlockMap = new Map();
         apiAvatars.forEach(avatar => {
-            unlockMap.set(String(avatar.id || '').toLowerCase(), {
+            const apiId = String(avatar.id || '').toLowerCase();
+            const unlockData = {
                 is_locked: avatar.is_locked || false,
                 unlock_message: avatar.unlock_message || '',
                 unlock_points: (typeof avatar.unlock_points === 'number') ? avatar.unlock_points : null,
                 tier: avatar.tier || null,
                 price: (typeof avatar.price === 'number') ? avatar.price : ((typeof avatar.price_usd === 'number') ? avatar.price_usd : null),
                 product_id: avatar.product_id || null
-            });
+            };
+            // Map by both id and slug (API uses id, avatarsData uses slug)
+            unlockMap.set(apiId, unlockData);
+            // Also map by slug if different from id
+            const apiSlug = String(avatar.slug || avatar.id || '').toLowerCase();
+            if (apiSlug !== apiId) {
+                unlockMap.set(apiSlug, unlockData);
+            }
         });
         
         // Update existing avatarsData with new unlock status (preserve pre-loaded thumbnails)
         avatarsData.forEach(avatar => {
             const slug = String(avatar.slug || '').toLowerCase();
-            const update = unlockMap.get(slug);
+            // Try slug first, then try id if different
+            let update = unlockMap.get(slug);
+            if (!update && avatar.id) {
+                update = unlockMap.get(String(avatar.id || '').toLowerCase());
+            }
             if (update) {
                 avatar.is_locked = update.is_locked;
                 avatar.unlock_message = update.unlock_message;
@@ -722,6 +735,9 @@ async function refreshAvatarUnlockStatus() {
                 avatar.tier = update.tier;
                 avatar.price = update.price;
                 avatar.product_id = update.product_id;
+                console.log(`✅ Updated unlock status for ${avatar.slug}: locked=${update.is_locked}`);
+            } else {
+                console.warn(`⚠️ Could not find unlock status for avatar: ${avatar.slug}`);
             }
         });
         
@@ -2798,19 +2814,42 @@ async function purchaseLockedAvatar(slug) {
             existingModal.remove();
         }
 
-        // Refresh the avatar unlock status (lightweight - no full reload)
+        // CRITICAL: Refresh the avatar unlock status IMMEDIATELY after purchase
+        // Wait a brief moment for backend to process the purchase
+        await new Promise(resolve => setTimeout(resolve, 500));
         await refreshAvatarUnlockStatus();
+        
+        // Check if avatar is now unlocked
         const updated = findAvatarBySlug(slug);
         if (updated && !updated.is_locked) {
+            // Success! Avatar unlocked
             alert(`✅ ${avatar.name} unlocked!`);
             const escSlug = (window.CSS && typeof CSS.escape === 'function')
                 ? CSS.escape(updated.slug)
                 : String(updated.slug).replace(/"/g, '\\"');
             const el = document.querySelector(`.avatar-hex-position[data-slug="${escSlug}"]`);
-            if (el) selectAvatar(updated, el);
+            if (el) {
+                selectAvatar(updated, el);
+            }
         } else {
-            // Purchase completed; unlock may take a moment. Positive framing, no negative message.
-            alert('Purchase complete! If this avatar doesn\'t unlock right away, tap Restore Purchases and it will sync.');
+            // Purchase completed but unlock status not updated yet
+            // This can happen if backend needs more time - show helpful message
+            console.warn('[IAP] Purchase completed but avatar still locked - may need backend sync');
+            alert('Purchase complete! The avatar should unlock shortly. If it doesn\'t, tap Restore Purchases.');
+            
+            // Try one more refresh after a delay
+            setTimeout(async () => {
+                await refreshAvatarUnlockStatus();
+                const retryUpdated = findAvatarBySlug(slug);
+                if (retryUpdated && !retryUpdated.is_locked) {
+                    alert(`✅ ${avatar.name} is now unlocked!`);
+                    const escSlug = (window.CSS && typeof CSS.escape === 'function')
+                        ? CSS.escape(retryUpdated.slug)
+                        : String(retryUpdated.slug).replace(/"/g, '\\"');
+                    const el = document.querySelector(`.avatar-hex-position[data-slug="${escSlug}"]`);
+                    if (el) selectAvatar(retryUpdated, el);
+                }
+            }, 2000);
         }
         
         // Reset state after delay
