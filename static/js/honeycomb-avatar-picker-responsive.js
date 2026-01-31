@@ -2099,7 +2099,7 @@ async function _waitForNativeIapBridge(timeoutMs){
     return !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function');
 }
 
-// Initialize IAP store on app start (called during system checks)
+// Initialize IAP store on app start (called during system checks or picker load)
 // Make globally accessible so system checks can call it
 window.initializeIAPStore = async function initializeIAPStore() {
     console.log('[IAP] Initializing store (background)...');
@@ -2110,9 +2110,9 @@ window.initializeIAPStore = async function initializeIAPStore() {
     
     try {
         const inNative = isProbablyNativeAppContext();
-        // CRITICAL FIX: Reduce timeout for faster initialization
-        // Bridge will be waited for in purchase function if needed
-        const bridgeReady = await _waitForNativeIapBridge(inNative ? 3000 : 1000);
+        // CRITICAL FIX: Use very short timeout - bridge will be waited for in purchase function if needed
+        // This prevents blocking picker loading
+        const bridgeReady = await _waitForNativeIapBridge(inNative ? 1000 : 500);
         
         if (bridgeReady && window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') {
             // CRITICAL: Check if we can make payments (iOS/Android) - non-blocking, default to true
