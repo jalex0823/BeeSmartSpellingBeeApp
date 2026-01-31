@@ -11529,37 +11529,10 @@ function playThemedSound(soundType) {
     }
 }
 
-// 📚 Enhanced Word Definition Popup System
+// 📚 Word definition popup disabled during quiz to avoid redundant interruption.
+// Definition is already shown in the question; modal was redundant.
 function showWordDefinitionPopup(word, definition) {
-    const modal = document.createElement('div');
-    modal.className = 'definition-modal';
-    modal.innerHTML = `
-        <div class="definition-overlay" onclick="this.parentElement.remove()">
-            <div class="definition-popup" onclick="event.stopPropagation()">
-                <div class="definition-header">
-                    <h3>📖 ${word.toUpperCase()}</h3>
-                    <button class="definition-close" onclick="this.closest('.definition-modal').remove()">×</button>
-                </div>
-                <div class="definition-content">
-                    <p>${definition}</p>
-                    <div class="definition-actions">
-                        <button class="btn btn-primary" onclick="this.closest('.definition-modal').remove()">
-                            Got it! 👍
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Auto-remove after 10 seconds
-    setTimeout(() => {
-        if (modal.parentElement) {
-            modal.remove();
-        }
-    }, 10000);
+    // No-op: do not show definition modal during quiz.
 }
 
 // 🎉 Enhanced Streak Celebration System
