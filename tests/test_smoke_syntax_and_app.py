@@ -117,14 +117,14 @@ def test_unified_menu_mobile_css_has_equal_sizing():
 
 
 def test_unified_menu_has_wireframe_button_labels():
-    """Main action labels match wireframe: Start Quiz, Dashboard, Settings, Sign Out; What Now? (Help); Refresh Stats."""
+    """Main action labels match wireframe: Start Quiz, Dashboard, Settings, Sign Out; About; Refresh Stats."""
     menu = REPO_ROOT / "templates" / "unified_menu.html"
     txt = _read(menu)
     assert "Dashboard" in txt
     assert "Settings" in txt
     assert "Sign Out" in txt
     assert "Start Quiz" in txt, "Wireframe: main action row 1 left is 'Start Quiz'"
-    assert "What Now?" in txt or "What Now? (Help)" in txt
+    assert "About" in txt
     assert "Refresh stats" in txt or "Refresh Stats" in txt
 
 
@@ -138,13 +138,12 @@ def test_unified_menu_main_actions_visual_order():
     assert "home-btn-signout { order: 4" in txt
 
 
-def test_what_now_modal_exists_and_has_content():
-    """What Now? modal exists with title and bullets."""
+def test_about_modal_exists_and_has_content():
+    """About modal exists with title and short copy."""
     menu = REPO_ROOT / "templates" / "unified_menu.html"
     txt = _read(menu)
-    assert "whatNowModalOverlay" in txt
-    assert "whatNowModalTitle" in txt
-    assert "What Now?" in txt
-    assert "Play as Guest" in txt
-    assert "Register / Sign In" in txt
-    assert "points, grades, and quiz history" in txt
+    assert "aboutModalOverlay" in txt
+    assert "aboutModalTitle" in txt
+    assert "About BeeSmart" in txt
+    assert "aboutModalCloseBtn" in txt
+    assert "Spelling practice" in txt or "spelling" in txt

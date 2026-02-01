@@ -42,6 +42,9 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from werkzeug.utils import secure_filename
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 
+# Create app immediately so Gunicorn always finds AjaSpellBApp:app even if later imports fail
+app = Flask(__name__)
+
 # App Review helpers
 # When enabled, we provide a reviewer-friendly path for Apple App Review to access
 # core premium flows without creating an account or relying on fragile demo creds.
@@ -50,17 +53,30 @@ from PIL import Image
 from sqlalchemy import inspect, exc as sa_exc, or_, and_, not_, text
 from sqlalchemy.exc import DisconnectionError, OperationalError, SQLAlchemyError
 
-# Database imports
-from config import get_config
-from models import db, User, QuizSession, QuizResult, WordMastery, TeacherStudent, Achievement
-from models import WordList, WordListItem
-from models import PasswordResetToken
-from models import SessionLog
-from models import SpeedRoundConfig, SpeedRoundScore
-from models import Avatar, BattleSession, PurchaseRecord, BundleKey, DynamicBundle, BundleKeyRedemption
-from models import WordBankStorage  # Single source of truth for all word operations
+# Database imports - log full traceback to stderr on failure so deploy logs show the real error
+try:
+    from config import get_config
+    from models import db, User, QuizSession, QuizResult, WordMastery, TeacherStudent, Achievement
+    from models import WordList, WordListItem
+    from models import PasswordResetToken
+    from models import SessionLog
+    from models import SpeedRoundConfig, SpeedRoundScore
+    from models import Avatar, BattleSession, PurchaseRecord, BundleKey, DynamicBundle, BundleKeyRedemption
+    from models import WordBankStorage  # Single source of truth for all word operations
+except Exception:
+    import traceback
+    sys.stderr.write("STARTUP FAILED (config/models import):\n")
+    sys.stderr.write(traceback.format_exc())
+    sys.stderr.flush()
+    raise
 from datetime import date
-from avatar_skus import AVATAR_SKUS, build_product_entitlements  # Avatar monetization mapping
+from avatar_skus import (
+    AVATAR_SKUS,
+    APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG,
+    app_store_product_id_for_avatar,
+    build_product_entitlements,
+    sku_for_slug,
+)  # Avatar monetization mapping
 try:
     from bundle_skus import build_bundle_product_entitlements, bundle_sku_for_id  # Bundle monetization mapping
 except Exception:
@@ -116,14 +132,8 @@ else:
 print(" Using built-in Simple English Wiktionary (50K+ words, kid-friendly)")
 
 # ------------------------------
-# Ensure Flask app exists BEFORE any route decorators
+# App already created at top of file for Gunicorn; ensure it exists for route decorators below
 # ------------------------------
-# Some routes (e.g., wordbank APIs) are defined early in this module. To avoid
-# NameError during module import, make sure `app` is created up front.
-try:
-    app  # type: ignore[name-defined]
-except NameError:
-    app = Flask(__name__)
 
 # ------------------------------
 # Simple in-memory cache for avatar API
@@ -1102,27 +1112,64 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
     """Compute lock state and reason for an avatar entry based on role and user state.
 
     Returns dict with keys: unlocked (bool), reason (str), points_needed (int|None)
+    
+    Locking Rules:
+    - Admin: ALL avatars unlocked (bypass all checks)
+    - Guest: Only mascot_free tier unlocked (unless purchased/restored)
+    - Registered users (student/teacher/parent):
+      - default_free/mascot_free: Always unlocked
+      - earn_or_buy: Unlocked if points >= unlock_points OR purchased
+      - premium: Unlocked if points >= unlock_points OR purchased (NOT free)
     """
-    # Admin: always unlocked
+    # Admin: always unlocked - ONLY role with all avatars available
     if role == 'admin':
         return {"unlocked": True, "reason": "Admin access", "points_needed": None}
 
-    # Guest: normally limited; in App Review / demo mode allow reviewers to explore
+    # Get avatar properties
+    tier = (entry.get('tier') or '').lower()
+    is_default_free = bool(entry.get('is_default_free'))
+    unlock_points = int(entry.get('unlock_points') or 0)
+    avatar_id = entry.get('id')
+
+    # Guest: normally limited to mascot only; in App Review / demo mode allow reviewers to explore
     if role == 'guest':
         try:
             if APP_REVIEW_MODE or bool(session.get('app_review_mode')):
                 return {"unlocked": True, "reason": "App Review mode", "points_needed": 0}
         except Exception:
             pass
-        return {"unlocked": False, "reason": "Guest access limited", "points_needed": None}
+        
+        # Guests can only access mascot_free tier avatars
+        if tier == 'mascot_free' or (avatar_id and str(avatar_id).strip().lower() in ('mascot-bee', 'honey-comb', 'honeycomb')):
+            return {"unlocked": True, "reason": "Mascot avatar (guest access)", "points_needed": 0}
+        
+        # Check for guest entitlements (anon-owned purchases)
+        anon_owned = []
+        try:
+            ent = _get_guest_entitlements()
+            ao = ent.get('anon_owned_products', []) if isinstance(ent, dict) else []
+            anon_owned = ao if isinstance(ao, list) else []
+        except Exception:
+            anon_owned = []
+        
+        # If guest owns this avatar via purchase/restore, unlock it
+        if anon_owned:
+            try:
+                avatar_id_norm = str(avatar_id or '').strip().lower().replace('_', '-')
+                for pid in anon_owned:
+                    m = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
+                    if isinstance(m, dict) and m.get('type') == 'avatar':
+                        m_avatar_id = str(m.get('avatar_id') or '').strip().lower().replace('_', '-')
+                        if m_avatar_id == avatar_id_norm:
+                            return {"unlocked": True, "reason": "Restored purchase", "points_needed": 0}
+            except Exception:
+                pass
+        
+        # All other avatars locked for guests
+        return {"unlocked": False, "reason": "Guest access limited - register to unlock", "points_needed": None}
 
-    # Registered users (student/teacher/parent)
-    tier = (entry.get('tier') or '').lower()
-    is_default_free = bool(entry.get('is_default_free'))
-    unlock_points = int(entry.get('unlock_points') or 0)
-    avatar_id = entry.get('id')
-
-    # Defaults for missing user
+    # Registered users (student/teacher/parent) - NOT admin, NOT guest
+    # Get user's unlock status
     honey_points = 0
     purchased = []
     premium_member = False
@@ -1140,97 +1187,42 @@ def _is_avatar_unlocked_for_user(entry: Dict, role: str, user: Optional["User"])
         except Exception:
             premium_member = False
 
-    # Default free tiers are unlocked
+    # Default free tiers are unlocked for registered users
     if tier in ('default_free', 'mascot_free') or is_default_free:
         return {"unlocked": True, "reason": "Default free avatar", "points_needed": 0}
 
-    # Guest entitlement support (Apple Guideline 5.1.1): allow anon-owned SKUs to
-    # unlock premium and avatar purchases without requiring login.
-    anon_owned = []
-    anon_premium = False
-    if role == 'guest' and user is None:
-        try:
-            ent = _get_guest_entitlements()
-            ao = ent.get('anon_owned_products', []) if isinstance(ent, dict) else []
-            anon_owned = ao if isinstance(ao, list) else []
-        except Exception:
-            anon_owned = []
-
-        # Treat any premium/subscription SKU as premium entitlement for guests.
-        # Note: In this codebase, subscriptions are mapped as type 'premium' with
-        # subscription=True (not as type 'subscription').
-        try:
-            for pid in anon_owned:
-                try:
-                    mapping = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
-                except Exception:
-                    mapping = None
-                if isinstance(mapping, dict):
-                    t = str(mapping.get('type') or '').strip().lower()
-                    if t == 'premium' and bool(mapping.get('subscription')):
-                        anon_premium = True
-                        break
-                    if t == 'premium':
-                        # One-time premium unlock also counts
-                        anon_premium = True
-                        break
-            if not anon_premium:
-                for pid in anon_owned:
-                    p = (pid or '').lower()
-                    if any(k in p for k in ('premium', 'subscription', 'monthly', 'yearly', 'family')):
-                        anon_premium = True
-                        break
-        except Exception:
-            anon_premium = False
-
-    # Earn-or-buy tier: unlock by points or purchase
+    # Earn-or-buy tier: unlock by points OR purchase (normalize slugs for comparison)
     if tier == 'earn_or_buy':
-        if avatar_id in purchased:
+        purchased_norm_eb = {str(x or '').strip().lower().replace('_', '-') for x in purchased}
+        avatar_id_norm_eb = str(avatar_id or '').strip().lower().replace('_', '-')
+        
+        # Check if purchased
+        if avatar_id_norm_eb in purchased_norm_eb:
             return {"unlocked": True, "reason": "Purchased", "points_needed": 0}
-        # Guest restore/purchase unlock
-        if role == 'guest' and user is None and anon_owned:
-            try:
-                for pid in anon_owned:
-                    m = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
-                    if isinstance(m, dict) and m.get('type') == 'avatar':
-                        if str(m.get('avatar_id') or '').strip().lower() == avatar_id:
-                            return {"unlocked": True, "reason": "Restored purchase", "points_needed": 0}
-            except Exception:
-                pass
+        
+        # Check if unlocked via points
         if honey_points >= unlock_points:
             return {"unlocked": True, "reason": "Sufficient points", "points_needed": 0}
+        
+        # Still locked - need more points or purchase
         return {"unlocked": False, "reason": "Earn points or purchase", "points_needed": max(unlock_points - honey_points, 0)}
 
-    # Premium tier policy (avatars):
-    # - Admin: always unlocked (handled above)
-    # - Guests: locked unless purchased/restored
-    # - Registered users (student/teacher/parent): unlock via Honey Points (higher thresholds) OR purchase
-    #
-    # IMPORTANT: `premium_member` is a subscription/feature flag and MUST NOT act as an
-    # "unlock all avatars" bypass. Avatar picker lock state must match the selection
-    # enforcement endpoint (/api/avatar/select), which validates via points/purchases.
+    # Premium tier policy:
+    # - Unlock via Honey Points (higher thresholds) OR purchase
+    # - Premium subscription does NOT auto-unlock avatars (avatars must be earned/purchased individually)
     if tier == 'premium':
-        # Points unlock path (gameplay). This is what makes "unlock_points" meaningful.
-        if role in ('student', 'teacher', 'parent') and honey_points >= unlock_points:
-            return {"unlocked": True, "reason": "Sufficient points", "points_needed": 0}
-
-        # Non-admin, non-registered fall back to entitlement-based unlock.
-        if avatar_id in purchased:
+        # Check if purchased first
+        purchased_norm = {str(x or '').strip().lower().replace('_', '-') for x in purchased}
+        avatar_id_norm = str(avatar_id or '').strip().lower().replace('_', '-')
+        if avatar_id_norm in purchased_norm:
             return {"unlocked": True, "reason": "Purchased", "points_needed": 0}
-        # Registered users can still earn toward premium unlock.
-        if role in ('student', 'teacher', 'parent'):
-            return {"unlocked": False, "reason": "Earn Honey Points or purchase", "points_needed": max(unlock_points - honey_points, 0)}
-        # If guest owns a matching avatar SKU, unlock it.
-        if anon_owned:
-            try:
-                for pid in anon_owned:
-                    m = PRODUCT_MAP.get(pid) if isinstance(PRODUCT_MAP, dict) else None
-                    if isinstance(m, dict) and m.get('type') == 'avatar':
-                        if str(m.get('avatar_id') or '').strip().lower() == avatar_id:
-                            return {"unlocked": True, "reason": "Restored purchase", "points_needed": 0}
-            except Exception:
-                pass
-        return {"unlocked": False, "reason": "Premium - purchase to unlock", "points_needed": None}
+        
+        # Check if unlocked via points
+        if honey_points >= unlock_points:
+            return {"unlocked": True, "reason": "Sufficient points", "points_needed": 0}
+        
+        # Still locked - need more points or purchase
+        return {"unlocked": False, "reason": "Earn Honey Points or purchase", "points_needed": max(unlock_points - honey_points, 0)}
 
     # Fallback - treat unknown tiers as locked
     return {"unlocked": False, "reason": "Locked", "points_needed": None}
@@ -1470,18 +1462,21 @@ def api_avatars():
         obj_file = entry.get('obj_file') or ''
         # GLB avatars are in glb_files folder, not individual avatar folders
         glb_url = f"/static/assets/avatars/glb_files/{obj_file}" if obj_file else None
-        # Optional: stable product id for store purchase flows
+        # 1:1 with App Store Connect: use exact approved product_id for this avatar (picker sends this to Apple).
         product_id = None
+        avatar_id = str(entry.get('id') or '').strip().lower()
         try:
-            tier_norm = (entry.get('tier') or '').lower()
-            avatar_id = str(entry.get('id') or '').strip().lower()
-            if tier_norm in ('earn_or_buy', 'premium') and avatar_id:
-                product_id = avatar_sku_lookup.get(avatar_id)
+            if avatar_id and not is_unlocked:
+                product_id = app_store_product_id_for_avatar(avatar_id)
+                if not product_id:
+                    product_id = avatar_sku_lookup.get(avatar_id) or sku_for_slug(avatar_id)
         except Exception:
             product_id = None
 
-        # Provide consistent unlock metadata for frontends
+        # Provide consistent unlock metadata for frontends; default price for purchasable locked avatars.
         price_val = float(entry.get('price') or 0.0) if entry.get('price') is not None else None
+        if not is_unlocked and product_id and (price_val is None or price_val <= 0):
+            price_val = 0.99  # Default so picker always shows "Purchase for $0.99" for Apple-approved avatars
         unlock_points_val = int(entry.get('unlock_points') or 0) or None
         unlock_msg = ''
         try:
@@ -1511,7 +1506,7 @@ def api_avatars():
             'tier': entry.get('tier'),
             'category': entry.get('category'),
             'description': entry.get('description'),
-            'price_usd': float(entry.get('price') or 0.0) if entry.get('price') is not None else None,
+            'price_usd': float(price_val) if price_val is not None else None,
             'unlock_requirement': int(entry.get('unlock_points') or 0) or None,
             # Back-compat + front-end friendly fields
             'price': price_val,
@@ -1749,7 +1744,10 @@ PRODUCT_MAP = {
     },
 }
 
-# Extend product map with all avatar SKUs → avatar entitlements
+# 1:1 App Store Connect approved avatar product IDs → entitlements (verify/restore use these)
+for _pid, _slug in (APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG or {}).items():
+    PRODUCT_MAP[_pid] = {'type': 'avatar', 'avatar_id': _slug}
+# Extend product map with all avatar SKUs → avatar entitlements (back-compat / aliases)
 try:
     PRODUCT_MAP.update(build_product_entitlements())
 except Exception as _e:
@@ -2101,6 +2099,41 @@ def _blank_word(text, word):
         result = re.sub(rf"\b{re.escape(variation)}\b", "_____", result, flags=re.IGNORECASE)
     
     return result
+
+
+def _edit_distance(a: str, b: str) -> int:
+    """Levenshtein distance between two strings (for near-miss detection)."""
+    if not a:
+        return len(b)
+    if not b:
+        return len(a)
+    n, m = len(a), len(b)
+    prev = list(range(m + 1))
+    for i in range(1, n + 1):
+        curr = [i] + [0] * m
+        for j in range(1, m + 1):
+            curr[j] = min(
+                prev[j] + 1,
+                curr[j - 1] + 1,
+                prev[j - 1] + (0 if a[i - 1] == b[j - 1] else 1)
+            )
+        prev = curr
+    return prev[m]
+
+
+def is_near_miss(user_normalized: str, correct_normalized: str) -> bool:
+    """True if user spelling is close (edit distance <= 2 for longer words, 1 for short)."""
+    if not user_normalized or not correct_normalized:
+        return False
+    if user_normalized == correct_normalized:
+        return False
+    dist = _edit_distance(user_normalized, correct_normalized)
+    max_len = max(len(user_normalized), len(correct_normalized))
+    if max_len <= 3:
+        return dist == 1
+    if max_len <= 6:
+        return dist <= 1
+    return dist <= 2
 
 
 def build_honey_hint_pattern(word: str) -> str:
@@ -2633,8 +2666,15 @@ else:
 
 # Load configuration from config.py (includes database settings)
 print(" Loading configuration...")
-app.config.from_object(get_config())
-print(f" Config loaded - Database: {app.config['SQLALCHEMY_DATABASE_URI'][:50]}...")
+try:
+    app.config.from_object(get_config())
+    print(f" Config loaded - Database: {app.config['SQLALCHEMY_DATABASE_URI'][:50]}...")
+except Exception as _config_err:
+    import traceback
+    sys.stderr.write("STARTUP FAILED (config):\n")
+    sys.stderr.write(traceback.format_exc())
+    sys.stderr.flush()
+    raise
 
 # Backwards compatibility: keep old secret key if not in config
 if not app.config.get('SECRET_KEY'):
@@ -2706,8 +2746,15 @@ app.config.update(
 
 # Initialize database
 print(" Initializing database...")
-db.init_app(app)
-print(" Database initialized")
+try:
+    db.init_app(app)
+    print(" Database initialized")
+except Exception as _db_err:
+    import traceback
+    sys.stderr.write("STARTUP FAILED (db.init_app):\n")
+    sys.stderr.write(traceback.format_exc())
+    sys.stderr.flush()
+    raise
 
 # Initialize Socket.IO for Battle of the Bees
 try:
@@ -3560,6 +3607,27 @@ def _require_premium_json(feature: str = "premium"):
                 "premium_required": True,
                 "feature": feature,
             }), 403
+    except Exception:
+        # Fail-safe: never break the API on guard errors.
+        return None
+    return None
+
+
+def _require_auth_json(feature: str = "feature"):
+    """Server-side authentication enforcement for features that require login but not premium.
+    
+    Contract:
+    - For unauthenticated users: return a 401 JSON response with auth_required.
+    - For authenticated users: return None (allow access).
+    """
+    try:
+        if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
+            return jsonify({
+                "ok": False,
+                "error": "auth_required",
+                "auth_required": True,
+                "feature": feature,
+            }), 401
     except Exception:
         # Fail-safe: never break the API on guard errors.
         return None
@@ -5207,9 +5275,9 @@ def _normalize_words(words_raw):
 def list_saved_wordlists():
     """GET all saved lists for current user."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5233,9 +5301,9 @@ def list_saved_wordlists():
 def create_saved_list():
     """POST create a new saved list."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5309,9 +5377,9 @@ def create_saved_list():
 def get_saved_wordlist(list_id):
     """GET one list by id."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5333,9 +5401,9 @@ def get_saved_wordlist(list_id):
 def update_saved_wordlist(list_id):
     """PUT update list metadata and/or replace words."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5414,9 +5482,9 @@ def update_saved_wordlist(list_id):
 def delete_saved_wordlist(list_id=None):
     """DELETE list."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5458,9 +5526,9 @@ def delete_saved_wordlist(list_id=None):
 def toggle_saved_list_favorite(list_id=None):
     """POST toggle favorite/pin."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5501,9 +5569,9 @@ def toggle_saved_list_favorite(list_id=None):
 def clone_saved_list(list_id):
     """POST clone list."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5560,9 +5628,9 @@ def clone_saved_list(list_id):
 def save_current_wordlist():
     """Legacy: Save current session wordbank as a new list."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5622,9 +5690,9 @@ def save_current_wordlist():
 def load_saved_wordlist():
     """Load a saved list into the current session and initialize quiz state."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         # CRITICAL DEBUG: Track session across request
         incoming_session_id = session.get("session_id", "NEW")
@@ -5763,9 +5831,9 @@ def load_saved_wordlist():
 def rename_saved_wordlist():
     """Rename a saved word list (legacy, use PUT instead)."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5805,9 +5873,9 @@ def rename_saved_wordlist():
 def upload_to_saved_list():
     """Upload a file to update an existing saved word list."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         # Get the saved list ID from form data
         saved_list_id = request.form.get('savedListId')
@@ -6188,10 +6256,32 @@ def avatar_diagnostic():
 
 @app.route("/minimal")
 def minimal_main():
-    """Minimal version of main page for testing"""
+    """Minimal version of main page for testing. Pass same auth/subscription context as home so tiles unlock correctly for all account types."""
     import time
     timestamp = str(int(time.time()))
-    return render_template("unified_menu.html", timestamp=timestamp)
+    billing_mode = os.environ.get('REGISTRATION_BILLING_MODE', 'subscription').strip().lower()
+    try:
+        subscription_product_id = os.environ.get('PRODUCT_SUBSCRIPTION_FULL_ID')
+        subscription_product_id = (subscription_product_id or '').strip() or SUBSCRIPTION_PRODUCT_IDS.get('monthly', 'com.beesmart.premium.monthly')
+    except Exception:
+        subscription_product_id = SUBSCRIPTION_PRODUCT_IDS.get('monthly', 'com.beesmart.premium.monthly')
+    try:
+        from flask_login import current_user as _cu
+        is_premium = bool(getattr(_cu, 'is_authenticated', False) and getattr(_cu, 'premium_member', False))
+    except Exception:
+        is_premium = False
+    try:
+        avatar_product_ids = AVATAR_SKUS
+    except Exception:
+        avatar_product_ids = {}
+    return render_template(
+        "unified_menu.html",
+        timestamp=timestamp,
+        registration_billing_mode=billing_mode,
+        subscription_product_id=subscription_product_id,
+        is_premium=is_premium,
+        avatar_product_ids=avatar_product_ids,
+    )
 
 @app.route("/quiz", strict_slashes=False)
 def quiz_page():
@@ -9048,8 +9138,24 @@ def api_live_status():
         "hints_used_current_word": state.get("hints_used_current_word", 0)
     })
 
+def _simple_syllable_hint(word: str) -> str:
+    """Return a simple syllable-style hint (e.g. 'spel-ling') for Honey Hint level 3."""
+    w = (word or "").strip().lower()
+    if not w or len(w) <= 4:
+        return w
+    # Simple heuristic: break at vowel-consonant boundaries for longer words
+    import re
+    # Insert hyphen before consonant clusters that start after a vowel (rough syllable break)
+    parts = re.split(r"(?<=[aeiou])(?=[^aeiou]+[aeiou])|(?<=[^aeiou])(?=[aeiou])", w, flags=re.IGNORECASE)
+    return "-".join(p for p in parts if p) if len(parts) > 1 else w
+
+
 @app.route("/api/hint", methods=["POST"])
 def api_hint():
+    """
+    Progressive Honey Hint: Level 1 = definition/sentence, Level 2 = first letter, Level 3 = letters pattern or syllable.
+    User must use prior hint to unlock next; level = hints_used_current_word (1-based).
+    """
     state = get_quiz_state()
     wb = get_wordbank()
     if not wb or state is None:
@@ -9060,20 +9166,59 @@ def api_hint():
     if idx >= len(order):
         return jsonify({"error": "Quiz finished"}), 400
 
-    # Track hint usage for points calculation
+    # Track hint usage (this is the "level" for progressive unlock)
     state["hints_used_current_word"] = state.get("hints_used_current_word", 0) + 1
     state["hints_used_total"] = state.get("hints_used_total", 0) + 1
+    level = state["hints_used_current_word"]
     session[QUIZ_STATE_KEY] = state
 
     word_rec = wb[order[idx]]
-    current_word = word_rec.get("word", "")
-    # 🍯 Honey Hint: reveal 1st, 3rd, and last letters (no definition/sentence).
-    pattern = build_honey_hint_pattern(str(current_word or ""))
+    current_word = str(word_rec.get("word", "") or "").strip()
+    hint_text = ""
+    sentence_text = ""
+    hint_type = "definition"
+
+    if level == 1:
+        # Level 1: Definition (and sentence if available)
+        definition = (word_rec.get("definition") or "").strip()
+        sentence_text = (word_rec.get("sentence") or "").strip()
+        if definition:
+            definition = sanitize_kid_friendly_text(_blank_word(definition, current_word))
+        if sentence_text:
+            sentence_text = sanitize_kid_friendly_text(_blank_word(sentence_text, current_word))
+        if not definition:
+            try:
+                enriched = get_word_info(current_word)
+                if enriched and "Fill in the blank:" in enriched:
+                    before, after = enriched.split("Fill in the blank:", 1)
+                    definition = sanitize_kid_friendly_text(_blank_word(before.strip(), current_word))
+                    sentence_text = sentence_text or sanitize_kid_friendly_text(_blank_word(after.strip(), current_word))
+                else:
+                    definition = sanitize_kid_friendly_text(_blank_word((enriched or "").strip(), current_word))
+            except Exception:
+                definition = "Listen carefully and spell the word you hear."
+        hint_text = definition or "Listen carefully and spell the word you hear."
+        hint_type = "definition"
+    elif level == 2:
+        # Level 2: First letter only
+        first = current_word[0].upper() if current_word else ""
+        hint_text = f"The word starts with: {first}" if first else ""
+        hint_type = "first_letter"
+    else:
+        # Level 3+: Letters pattern (1st, 3rd, last) or syllable-style
+        pattern = build_honey_hint_pattern(current_word)
+        syllable_hint = _simple_syllable_hint(current_word)
+        hint_text = f"Letters: {pattern}. Sounds like: {syllable_hint}" if syllable_hint != current_word else pattern
+        if not hint_text.strip():
+            hint_text = pattern
+        hint_type = "honey_letters"
+
     return jsonify({
-        "hint": pattern,
-        "type": "honey_letters",
-        "word_length": len(str(current_word or "")),
-        "sentence": ""  # keep key for frontend compatibility; intentionally blank
+        "hint": hint_text,
+        "type": hint_type,
+        "hint_level": level,
+        "word_length": len(current_word),
+        "sentence": sentence_text
     })
 
 # ---  LEVEL PROGRESSION SYSTEM ------------------------------------------
@@ -9421,6 +9566,13 @@ def api_answer():
     print(f"")
 
     is_correct = False if skip_requested else normalized_input == normalized_correct
+    almost_right = False
+    if not is_correct and not skip_requested and user_input:
+        almost_right = is_near_miss(normalized_input, normalized_correct)
+        if almost_right:
+            # Softer feedback and reduced penalty: partial points, don't reset streak
+            is_correct = False  # still counts as incorrect for accuracy
+            print(f" ALMOST RIGHT (near-miss): '{user_input}' vs '{correct_spelling}'")
 
     #  HONEY POINTS CALCULATION
     points_earned = 0
@@ -9478,6 +9630,13 @@ def api_answer():
             points_earned += 25
         
         print(f" Points earned: {points_earned} (breakdown: {points_breakdown})")
+
+    # Almost right: partial points (reduced penalty), don't reset streak
+    if almost_right:
+        points_earned = 25
+        points_breakdown["almost_right"] = 25
+        state["session_points"] = state.get("session_points", 0) + points_earned
+        print(f" Almost right: +25 partial points (streak preserved)")
 
     # Update stats and advance index for any completed attempt
     if is_correct:
@@ -9552,7 +9711,8 @@ def api_answer():
                 db.session.rollback()
     else:
         state["incorrect"] += 1
-        state["streak"] = 0
+        if not almost_right:
+            state["streak"] = 0
 
     #  ADVANCE INDEX AFTER RECORDING ANSWER - This is the correct place for advancement
     # /api/next shows current word, /api/answer records result and advances to next
@@ -9607,7 +9767,7 @@ def api_answer():
                 correct_spelling=correct_spelling,
                 time_taken_seconds=(elapsed_ms / 1000.0) if elapsed_ms else None,
                 input_method=method,
-                points_earned=points_earned if is_correct else 0,
+                points_earned=points_earned if (is_correct or almost_right) else 0,
                 base_points=points_breakdown.get("base", 0) if is_correct else 0,
                 time_bonus=points_breakdown.get("time_bonus", 0) if is_correct else 0,
                 streak_bonus=points_breakdown.get("streak_bonus", 0) if is_correct else 0,
@@ -9662,7 +9822,9 @@ def api_answer():
         phonetic_spelling = build_phonetic_spelling(correct_spelling)
 
     feedback_message = "Great job!" if is_correct else (
-        "Skipping this word. Let's try a new one!" if skip_requested else f"Try again! The word is spelled: {correct_spelling}"
+        "Skipping this word. Let's try a new one!" if skip_requested else (
+            "So close! One small change — try the next word." if almost_right else f"Try again! The word is spelled: {correct_spelling}"
+        )
     )
 
     # Next index position for UI progress (1-based).
@@ -10140,6 +10302,7 @@ def api_answer():
 
     return jsonify({
         "correct": is_correct,
+        "almost_right": almost_right,
         "word": correct_spelling,  # Add word for frontend reference
         "expected": correct_spelling,
         "skipped": skip_requested,
@@ -13066,18 +13229,34 @@ def login():
         db.session.commit()
 
         # Redirect based on role
-        if user.role == 'teacher' or user.role == 'parent':
-            redirect_url = url_for('teacher_dashboard') if user.role == 'teacher' else url_for('parent_dashboard')
-        elif user.role == 'admin':
-            redirect_url = url_for('admin_dashboard')
-        else:
-            redirect_url = url_for('student_dashboard')
+        try:
+            if user.role == 'teacher' or user.role == 'parent':
+                redirect_url = url_for('teacher_dashboard') if user.role == 'teacher' else url_for('parent_dashboard')
+            elif user.role == 'admin':
+                redirect_url = url_for('admin_dashboard')
+            else:
+                redirect_url = url_for('student_dashboard')
+        except Exception as e:
+            app.logger.error(f"Failed to generate redirect URL for role {user.role}: {e}")
+            redirect_url = url_for('home')  # Fallback to home
+        
+        # Ensure redirect_url is valid
+        if not redirect_url or redirect_url == '':
+            app.logger.warning(f"Redirect URL was empty for role {user.role}, using home")
+            redirect_url = url_for('home')
+        
+        # Get entitlements (handle errors gracefully)
+        try:
+            entitlements = _entitlements_summary(user)
+        except Exception as e:
+            app.logger.error(f"Failed to get entitlements for user {user.id}: {e}")
+            entitlements = {}
 
         return jsonify({
             "success": True,
             "message": f"Welcome back, {user.display_name}! ",
             "redirect": redirect_url,
-            "entitlements": _entitlements_summary(user)
+            "entitlements": entitlements
         })
     except sa_exc.ProgrammingError as e:
         db.session.rollback()
@@ -13690,8 +13869,12 @@ def api_update_user_avatar_legacy():
                 user_honey_points = getattr(current_user, 'honey_points', 0) or 0
                 purchased_avatars = getattr(current_user, 'purchased_avatars', []) or []
                 
-                # Check if avatar is unlocked
-                unlock_result = check_avatar_unlocked(avatar_id, user_honey_points, purchased_avatars)
+                # Check if avatar is unlocked (subscription can unlock premium set)
+                has_premium = bool(getattr(current_user, 'premium_member', False))
+                unlock_result = check_avatar_unlocked(
+                    avatar_id, user_honey_points, purchased_avatars,
+                    has_premium_subscription=has_premium
+                )
                 
                 if not unlock_result.get('unlocked', False):
                     # Forbidden: User has not earned/purchased this avatar
@@ -16936,9 +17119,11 @@ def api_admin_or_user_update_avatar(user_id):
                 # Get user's unlock eligibility
                 user_honey_points = getattr(user, 'honey_points', 0) or 0
                 purchased_avatars = getattr(user, 'purchased_avatars', []) or []
-                
-                # Check if avatar is unlocked
-                unlock_result = check_avatar_unlocked(avatar_id, user_honey_points, purchased_avatars)
+                has_premium = bool(getattr(user, 'premium_member', False))
+                unlock_result = check_avatar_unlocked(
+                    avatar_id, user_honey_points, purchased_avatars,
+                    has_premium_subscription=has_premium
+                )
                 
                 if not unlock_result.get('unlocked', False):
                     # Forbidden: User has not earned/purchased this avatar
@@ -17151,15 +17336,15 @@ def api_select_avatar():
             try:
                 from avatar_catalog import check_avatar_unlocked, AVATAR_CATALOG
                 
-                # Get user's unlock eligibility
+                # Get user's unlock eligibility (subscription can unlock premium set)
                 user_honey_points = getattr(current_user, 'honey_points', 0) or 0
                 purchased_avatars = getattr(current_user, 'purchased_avatars', []) or []
-                
-                # Check if avatar is unlocked
+                has_premium = bool(getattr(current_user, 'premium_member', False))
                 unlock_result = check_avatar_unlocked(
                     selected_avatar_id,
                     user_honey_points,
-                    purchased_avatars
+                    purchased_avatars,
+                    has_premium_subscription=has_premium
                 )
                 
                 if not unlock_result.get('unlocked', False):
@@ -17395,16 +17580,25 @@ def api_get_current_user():
                 }), 401
 
             data = request.get_json(silent=True) or {}
+            # Optional: update preferences (e.g. difficulty_feel: gentle | standard | challenge)
+            prefs_data = data.get("preferences")
+            if isinstance(prefs_data, dict):
+                prefs = dict(current_user.preferences or {})
+                if "difficulty_feel" in prefs_data:
+                    v = (prefs_data.get("difficulty_feel") or "").strip().lower()
+                    if v in ("gentle", "standard", "challenge"):
+                        prefs["difficulty_feel"] = v
+                current_user.preferences = prefs
             new_name = (data.get("display_name") or "").strip()
-            if not new_name:
+            if new_name:
+                if len(new_name) > 40:
+                    new_name = new_name[:40].strip()
+                current_user.display_name = new_name
+            if not new_name and not isinstance(prefs_data, dict):
                 return jsonify({
                     "status": "error",
-                    "message": "display_name is required"
+                    "message": "display_name or preferences is required"
                 }), 400
-            # Keep it kid-friendly + safe for headers/UI.
-            if len(new_name) > 40:
-                new_name = new_name[:40].strip()
-            current_user.display_name = new_name
             db.session.commit()
             try:
                 db.session.refresh(current_user)
@@ -17437,24 +17631,28 @@ def api_get_current_user():
                 print(f"WARNING /api/users/me: Failed to auto-refresh GPA/accuracy: {_e}")
 
 
+            user_payload = {
+                'id': current_user.id,
+                'username': current_user.username,
+                'display_name': getattr(current_user, 'display_name', current_user.username),
+                'email': getattr(current_user, 'email', None),
+                'role': getattr(current_user, 'role', 'student'),
+                #  Extended real-time progress fields
+                'total_quizzes_completed': getattr(current_user, 'total_quizzes_completed', 0),
+                'total_lifetime_points': getattr(current_user, 'total_lifetime_points', 0),
+                'honey_points': getattr(current_user, 'honey_points', 0),
+                'cumulative_gpa': getattr(current_user, 'cumulative_gpa', 0.0),
+                'average_accuracy': getattr(current_user, 'average_accuracy', 0.0),
+                'best_grade': getattr(current_user, 'best_grade', None),
+                'best_streak': getattr(current_user, 'best_streak', 0)
+            }
+            prefs = getattr(current_user, 'preferences', None) or {}
+            if isinstance(prefs, dict):
+                user_payload['preferences'] = prefs
             resp = jsonify({
                 'status': 'success',
                 'authenticated': True,
-                'user': {
-                    'id': current_user.id,
-                    'username': current_user.username,
-                    'display_name': getattr(current_user, 'display_name', current_user.username),
-                    'email': getattr(current_user, 'email', None),
-                    'role': getattr(current_user, 'role', 'student'),
-                    #  Extended real-time progress fields
-                    'total_quizzes_completed': getattr(current_user, 'total_quizzes_completed', 0),
-                    'total_lifetime_points': getattr(current_user, 'total_lifetime_points', 0),
-                    'honey_points': getattr(current_user, 'honey_points', 0),
-                    'cumulative_gpa': getattr(current_user, 'cumulative_gpa', 0.0),
-                    'average_accuracy': getattr(current_user, 'average_accuracy', 0.0),
-                    'best_grade': getattr(current_user, 'best_grade', None),
-                    'best_streak': getattr(current_user, 'best_streak', 0)
-                }
+                'user': user_payload
             })
             try:
                 resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'

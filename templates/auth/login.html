@@ -19,11 +19,49 @@
   .card-header{ text-align:center; padding: 1.5rem 2rem 0.75rem; }
   .card-header h1{ margin:0; font-size:1.75rem; }
   .card-sub{ color:#7F8C8D; margin-top:0.35rem; }
-  .card-body{ position:relative; z-index:2; padding: 1.25rem 1.75rem 1.75rem; }
-  .form-group{ margin: 0.9rem 0; }
-  label{ display:block; font-weight:600; margin-bottom: 0.35rem; }
-  input{ width:100%; padding: 0.75rem 0.9rem; border:2px solid #E0E0E0; border-radius:10px; transition: box-shadow .2s ease, border-color .2s ease; background:#fff; }
-  input:focus{ outline:none; border-color:#FF9AA2; box-shadow: 0 0 0 3px rgba(255,170,200,0.25); }
+  .card-body{ 
+    position:relative; 
+    z-index:2; 
+    padding: 1.25rem 1.75rem 1.75rem; 
+    overflow: visible !important; 
+    min-height: auto !important;
+  }
+  /* Ensure form and form fields are always visible */
+  #loginForm{ 
+    display: block !important; 
+    visibility: visible !important; 
+    opacity: 1 !important; 
+    position: relative !important;
+    z-index: 10 !important;
+  }
+  .card-body #loginForm{ display: block !important; visibility: visible !important; opacity: 1 !important; }
+  .form-group{ 
+    margin: 0.9rem 0 !important; 
+    display: block !important; 
+    visibility: visible !important; 
+    opacity: 1 !important; 
+    height: auto !important; 
+    width: 100% !important; 
+    position: relative !important;
+  }
+  .card-body .form-group{ display: block !important; visibility: visible !important; opacity: 1 !important; }
+  #loginForm .form-group{ display: block !important; visibility: visible !important; opacity: 1 !important; }
+  label{ display:block !important; visibility: visible !important; font-weight:600; margin-bottom: 0.35rem; }
+  input[type="text"], input[type="password"]{ 
+    width:100% !important; 
+    padding: 0.75rem 0.9rem !important; 
+    border:2px solid #E0E0E0 !important; 
+    border-radius:10px !important; 
+    transition: box-shadow .2s ease, border-color .2s ease; 
+    background:#fff !important; 
+    display: block !important; 
+    visibility: visible !important; 
+    opacity: 1 !important; 
+    height: auto !important; 
+    min-height: 44px !important;
+    box-sizing: border-box !important;
+  }
+  input:focus{ outline:none; border-color:#FF9AA2 !important; box-shadow: 0 0 0 3px rgba(255,170,200,0.25) !important; }
   .remember-row{ display:flex; align-items:center; justify-content:center; margin: 0.5rem 0 1rem; font-size:0.9rem; color:#5A6C7D }
   .remember-row label{ display:flex; align-items:center; gap: 0.5rem; }
   .remember-row input[type="checkbox"]{ width: 18px; height: 18px; accent-color: #FFB300; }
@@ -45,16 +83,16 @@
   .forgot-actions{ display:flex; gap:0.5rem; margin-top:0.6rem }
   .btn-secondary{ padding: 0.7rem 1rem; border-radius:10px; border:1px solid #FFD08A; background:#FFF5DD; color:#6a4e00; font-weight:700; cursor:pointer }
   .btn-secondary[disabled]{ opacity:.6; cursor:not-allowed }
-  /* Back to main menu link */
-  .back-link{ position:absolute; top:12px; left:12px; display:inline-flex; align-items:center; gap:.4rem; padding:.45rem .75rem; border-radius:999px; background:#FFF5DD; border:1px solid #FFE08A; color:#7A5B00; text-decoration:none; font-weight:700; box-shadow:0 4px 10px rgba(255, 200, 80, .18); z-index:2 }
-  .back-link:hover{ background:#FFF0C2 }
+  /* Back to Main Menu - centered at top of page */
+  .btn-back-to-menu{ position: fixed; top: 1.25rem; left: 50%; transform: translateX(-50%); padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #FFF5DD, #FFE08A); color: #7A5B00; text-decoration: none; border-radius: 12px; font-weight: 700; box-shadow: 0 5px 15px rgba(0,0,0,0.15); transition: all 0.3s ease; z-index: 1000; display: inline-flex; align-items: center; gap: 0.5rem; border: 1px solid #FFE08A; }
+  .btn-back-to-menu:hover{ color: #7A5B00; opacity: 0.95; transform: translateX(-50%) translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-center">
+  <a href="{{ url_for('home') }}" class="btn-back-to-menu" aria-label="Back to main menu"><span>⟵</span><span>Back to Main Menu</span></a>
   <section class="content-card" aria-label="Sign in to BeeSmart">
-    <a href="{{ url_for('home') }}" class="back-link" aria-label="Back to main menu">⟵ Back to Main Menu</a>
     <div class="card-header">
       <h1>Welcome Back</h1>
       <div class="card-sub">Sign in to continue your spelling practice</div>
@@ -130,6 +168,52 @@
 </div>
 
 <script>
+// Ensure form fields are visible on page load
+(function() {
+  function ensureFormFieldsVisible() {
+    const formGroups = document.querySelectorAll('#loginForm .form-group');
+    const inputs = document.querySelectorAll('#loginForm input[type="text"], #loginForm input[type="password"]');
+    const labels = document.querySelectorAll('#loginForm label');
+    
+    formGroups.forEach(el => {
+      if (el) {
+        el.style.display = 'block';
+        el.style.visibility = 'visible';
+        el.style.opacity = '1';
+        el.style.height = 'auto';
+      }
+    });
+    
+    inputs.forEach(el => {
+      if (el) {
+        el.style.display = 'block';
+        el.style.visibility = 'visible';
+        el.style.opacity = '1';
+        el.style.height = 'auto';
+        el.style.width = '100%';
+      }
+    });
+    
+    labels.forEach(el => {
+      if (el) {
+        el.style.display = 'block';
+        el.style.visibility = 'visible';
+      }
+    });
+  }
+  
+  // Run immediately and on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ensureFormFieldsVisible);
+  } else {
+    ensureFormFieldsVisible();
+  }
+  
+  // Also run after a short delay to catch any late-loading CSS
+  setTimeout(ensureFormFieldsVisible, 100);
+  setTimeout(ensureFormFieldsVisible, 500);
+})();
+
 const loginForm = document.getElementById('loginForm');
 const loginBtn = document.getElementById('loginBtn');
 const errorAlert = document.getElementById('errorAlert');
@@ -170,9 +254,42 @@ loginForm.addEventListener('submit', async (e) => {
     const resp = await fetch(loginUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      credentials: 'include' // Ensure cookies are sent
     });
-    const data = await resp.json();
+    
+    // Parse JSON response (only consume once)
+    let data;
+    try {
+      if (!resp.ok) {
+        // Try to get error message from response
+        const errorText = await resp.text().catch(() => '');
+        let errorData = {};
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          // Not JSON, use text
+        }
+        throw new Error(errorData.error || errorData.message || `HTTP ${resp.status}: ${resp.statusText}`);
+      }
+      
+      // Parse successful response
+      data = await resp.json();
+      console.log('Login response data:', data);
+    } catch (parseError) {
+      console.error('Login request failed:', parseError);
+      if (parseError.message) {
+        throw parseError; // Re-throw if it's our error
+      }
+      throw new Error('Invalid response from server. Please try again.');
+    }
+    
+    // Verify response structure
+    if (!data || typeof data !== 'object') {
+      console.error('Invalid response structure:', data);
+      throw new Error('Invalid response format from server.');
+    }
+    
     if (data.success) {
       successAlert.textContent = data.message || 'Welcome back!';
       successAlert.style.display = 'block';
@@ -188,11 +305,133 @@ loginForm.addEventListener('submit', async (e) => {
         }
       } catch (e) {
         // Non-fatal: localStorage might be unavailable in some privacy modes.
+        console.warn('Could not save entitlements to localStorage:', e);
       }
 
+      // Determine redirect URL with fallbacks
+      let redirectUrl = data.redirect;
+      
+      console.log('Initial redirect URL from response:', redirectUrl);
+      console.log('Full response data:', JSON.stringify(data, null, 2));
+      
+      // Check for ?next= parameter in current URL (takes precedence)
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const nextParam = urlParams.get('next');
+        if (nextParam && nextParam.startsWith('/')) {
+          // Use next parameter if provided and valid
+          redirectUrl = nextParam;
+          console.log('Using next parameter for redirect:', redirectUrl);
+        }
+      } catch (e) {
+        console.warn('Could not parse next parameter:', e);
+      }
+      
+      // If no redirect provided or invalid, use fallback
+      if (!redirectUrl || redirectUrl === '' || redirectUrl === 'None' || redirectUrl === 'null') {
+        console.warn('Redirect URL was empty or invalid, using home page fallback');
+        redirectUrl = '{{ url_for("home") }}';
+      }
+      
+      // Ensure redirect URL is valid (starts with / or http)
+      if (!redirectUrl.startsWith('/') && !redirectUrl.startsWith('http')) {
+        console.warn('Invalid redirect URL format:', redirectUrl, '- using home page');
+        redirectUrl = '{{ url_for("home") }}';
+      }
+      
+      // Final validation - ensure we have a valid URL
+      if (!redirectUrl || redirectUrl === '') {
+        console.error('CRITICAL: No valid redirect URL found! Using home page');
+        redirectUrl = '/';
+      }
+      
+      // Log for debugging
+      console.log('Final redirect URL:', redirectUrl);
+      console.log('Current location:', window.location.href);
+      
+      // Update button to show redirecting state
+      loginBtn.textContent = 'Redirecting...';
+      loginBtn.disabled = true;
+      
+      // Redirect function with multiple fallbacks
+      const doRedirect = () => {
+        const currentPath = window.location.pathname;
+        console.log('Attempting redirect from', currentPath, 'to:', redirectUrl);
+        
+        // Check if we're already there
+        if (currentPath === redirectUrl || window.location.href.endsWith(redirectUrl)) {
+          console.log('Already at redirect URL, forcing reload');
+          window.location.reload(true);
+          return;
+        }
+        
+        // Build full URL if redirectUrl is relative
+        let fullRedirectUrl = redirectUrl;
+        if (redirectUrl.startsWith('/')) {
+          fullRedirectUrl = window.location.origin + redirectUrl;
+        }
+        
+        console.log('Full redirect URL:', fullRedirectUrl);
+        
+        // Try multiple redirect methods
+        let redirectAttempted = false;
+        
+        // Method 1: window.location.href (most reliable)
+        try {
+          window.location.href = fullRedirectUrl;
+          redirectAttempted = true;
+          console.log('Redirect method 1 (href) executed');
+        } catch (e) {
+          console.error('Redirect method 1 (href) failed:', e);
+        }
+        
+        // Method 2: window.location.assign (fallback)
+        if (!redirectAttempted) {
+          try {
+            setTimeout(() => {
+              window.location.assign(fullRedirectUrl);
+              console.log('Redirect method 2 (assign) executed');
+            }, 100);
+            redirectAttempted = true;
+          } catch (e) {
+            console.error('Redirect method 2 (assign) failed:', e);
+          }
+        }
+        
+        // Method 3: window.location.replace (last resort)
+        if (!redirectAttempted) {
+          try {
+            setTimeout(() => {
+              window.location.replace(fullRedirectUrl);
+              console.log('Redirect method 3 (replace) executed');
+            }, 200);
+          } catch (e) {
+            console.error('Redirect method 3 (replace) failed:', e);
+            // Last resort: show manual navigation message
+            errorAlert.innerHTML = `Login successful! <a href="${fullRedirectUrl}" style="color: #FF69B4; text-decoration: underline;">Click here to continue</a>`;
+            errorAlert.style.display = 'block';
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Sign In';
+          }
+        }
+      };
+      
+      // Redirect after a very brief delay to show success message
+      setTimeout(doRedirect, 300);
+      
+      // Backup redirect check - verify we actually navigated away
       setTimeout(() => {
-        window.location.href = data.redirect || '{{ url_for("home") }}';
-      }, 800);
+        const stillOnLoginPage = window.location.pathname === '/auth/login' || 
+                                 window.location.pathname.includes('/auth/login');
+        if (stillOnLoginPage) {
+          console.warn('Still on login page after redirect attempt, retrying...');
+          console.warn('Current URL:', window.location.href);
+          console.warn('Target redirect:', redirectUrl);
+          doRedirect();
+        } else {
+          console.log('Successfully redirected to:', window.location.pathname);
+        }
+      }, 2000);
     } else {
       errorAlert.textContent = data.error || data.message || 'Invalid username or password.';
       errorAlert.style.display = 'block';
@@ -200,7 +439,8 @@ loginForm.addEventListener('submit', async (e) => {
       loginBtn.textContent = 'Sign In';
     }
   } catch (err) {
-    errorAlert.textContent = 'Network error. Please try again.';
+    console.error('Login error:', err);
+    errorAlert.textContent = err.message || 'Network error. Please try again.';
     errorAlert.style.display = 'block';
     loginBtn.disabled = false;
     loginBtn.textContent = 'Sign In';

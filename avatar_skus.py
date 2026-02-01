@@ -18,6 +18,7 @@ Exports:
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from typing import Dict, Iterable
@@ -238,8 +239,86 @@ _PNG_NAMES = [
     'SpaceBee.png', 'SuperBee.png', 'VampBee.png', 'WareBee.png', 'ZomBee.png'
 ]
 
-# Public: avatars → product IDs
+# Single source of truth: data/avatars.catalog.json (avatarKey, iapProductId).
+# Load from file so UI and backend use exact Apple-approved product IDs; fallback to built-in if missing.
+def _load_app_store_ids_from_catalog() -> Dict[str, str]:
+    """Build product_id -> avatar_key from data/avatars.catalog.json. No hardcoded IDs in UI."""
+    try:
+        base = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(base, 'data', 'avatars.catalog.json')
+        if not os.path.isfile(path):
+            return _APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG_FALLBACK
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        avatars = data.get('avatars') if isinstance(data, dict) else []
+        out: Dict[str, str] = {}
+        for a in avatars if isinstance(avatars, list) else []:
+            pid = (a.get('iapProductId') or '').strip()
+            key = (a.get('avatarKey') or '').strip().lower().replace('_', '-')
+            if pid and key:
+                out[pid] = key
+        return out if out else _APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG_FALLBACK
+    except Exception:
+        return _APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG_FALLBACK
+
+
+# Fallback when data/avatars.catalog.json is missing (e.g. tests).
+_APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG_FALLBACK: Dict[str, str] = {
+    'beesmart.avatar.firefighter_bee': 'firefighter-bee',
+    'beesmart.avatar.bk_bee': 'bk-bee',
+    'beesmart.avatar.franken_bee.v2': 'franken-bee',
+    'beesmart.avatar.yeti_bee.v2': 'yeti-bee',
+    'beesmart.avatar.al_bee.v2': 'al-bee',
+    'beesmart.avatar.knight_bee.v2': 'knight-bee',
+    'beesmart.avatar.inventor_bee.v2': 'inventor-bee',
+    'beesmart.avatar.vamp_bee.v2': 'vamp-bee',
+    'beesmart.avatar.doc_bee.v2': 'doc-bee',
+    'beesmart.avatar.o_bee.v2': 'o-bee',
+    'beesmart.avatar.xray_bee.v2': 'xray-bee',
+    'beesmart.avatar.fairy_bee': 'fairy-bee',
+    'beesmart.avatar.buda_bee.v2': 'buda-bee',
+    'beesmart.avatar.j_rock_bee.v2': 'j-rock-bee',
+    'beesmart.avatar.super_bee.v2': 'super-bee',
+    'beesmart.avatar.nurse_bee.v2': 'nurse-bee',
+    'beesmart.avatar.motor_bee.v2': 'motor-bee',
+    'beesmart.avatar.honey_comb.v2': 'honey-comb',
+    'beesmart.avatar.gamer_bee': 'gamer-bee',
+    'beesmart.avatar.selfie_bee.v2': 'selfie-bee',
+    'beesmart.avatar.umpire_bee.v2': 'umpire-bee',
+    'beesmart.avatar.lumberjack_bee.v2': 'lumberjack-bee',
+    'beesmart.avatar.cutie_bee.v2': 'cutie-bee',
+    'beesmart.avatar.singer_bee.v2': 'singer-bee',
+    'beesmart.avatar.sea_bee.v2': 'sea-bee',
+    'beesmart.avatar.professor_bee.v2': 'professor-bee',
+    'beesmart.avatar.plumber_bee.v2': 'plumber-bee',
+    'beesmart.avatar.space_bee.v2': 'space-bee',
+    'beesmart.avatar.robo_bee.v2': 'robo-bee',
+    'beesmart.avatar.zom_bee.v2': 'zom-bee',
+    'beesmart.avatar.ware_bee.v2': 'ware-bee',
+    'beesmart.avatar.rocker_bee.v2': 'rocker-bee',
+    'beesmart.avatar.diva_bee.v2': 'diva-bee',
+    'beesmart.avatar.techno_bee.v2': 'techno-bee',
+    'beesmart.avatar.queen_bee.v2': 'queen-bee',
+    'beesmart.avatar.buzz_bee.v2': 'buzz-bee',
+}
+
+APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG: Dict[str, str] = _load_app_store_ids_from_catalog()
+
+# Reverse: catalog slug -> exact App Store product ID (for API response so picker sends correct product_id).
+AVATAR_SLUG_TO_APP_STORE_PRODUCT_ID: Dict[str, str] = {v: k for k, v in APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG.items()}
+
+
+def app_store_product_id_for_avatar(avatar_slug: str) -> str | None:
+    """Return the exact App Store product ID for this avatar slug, or None."""
+    if not avatar_slug:
+        return None
+    slug = (avatar_slug or '').strip().lower().replace('_', '-')
+    return AVATAR_SLUG_TO_APP_STORE_PRODUCT_ID.get(slug)
+
+
+# Public: avatars → product IDs (fallback when not in App Store map; prefer app_store_product_id_for_avatar for API).
 AVATAR_SKUS: Dict[str, str] = {
+    **{slug: pid for pid, slug in APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG.items()},
     **build_skus_from_catalog(),
     **build_skus_from_names(_PNG_NAMES),
 }

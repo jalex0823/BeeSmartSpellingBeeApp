@@ -32,6 +32,9 @@
     <!-- Avatar Theme System (must load before picker) -->
     <script src="{{ url_for('static', filename='js/avatar-theme-system.js') }}?v={{ timestamp }}"></script>
     
+    <!-- Native IAP bridge: needed for purchases in TestFlight/app wrappers -->
+    <script src="{{ url_for('static', filename='js/native-iap-bridge.js') }}?v={{ timestamp }}" defer></script>
+    
     <!-- CRITICAL: Inject user context for frontend authentication checks -->
     <script>
         window.avatarUserInfo = {{ user_data | tojson | safe }};

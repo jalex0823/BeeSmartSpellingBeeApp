@@ -204,7 +204,12 @@
             --primary-color: #FF69B4;
             --secondary-color: #fbc2eb;
 
-        /* Bee friends buzzing across the background */
+        /* Bee friends buzzing across the background - disabled by default to avoid mobile scroll/touch issues */
+        html.beesmart-no-bg-anim .bee-swarm,
+        html.beesmart-no-motion .bee-swarm {
+            display: none !important;
+            pointer-events: none !important;
+        }
         .bee-swarm {
             position: fixed;
             top: 0;
@@ -436,7 +441,12 @@
             padding: 2rem;
         }
         
-        /* Fairy Animation Container */
+        /* Fairy Animation Container - disabled by default to avoid mobile scroll/touch issues */
+        html.beesmart-no-bg-anim .fairy-container,
+        html.beesmart-no-motion .fairy-container {
+            display: none !important;
+            pointer-events: none !important;
+        }
         .fairy-container {
             position: fixed;
             top: 0;

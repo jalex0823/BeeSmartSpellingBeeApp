@@ -1,5 +1,23 @@
 # Android Studio Packaging Guide - BeeSmart Spelling Bee
 
+**Android package files** for Google Play (Play Console) live in the **`mobile/android/`** folder. Use this guide to build and submit the app bundle (.aab).
+
+**Important:** Google Play **does not accept IPA (iOS) or raw APK** for production. You must upload an **Android App Bundle (.aab)**. See **`ANDROID_STEP2_AAB.md`** for Step 2 — Generate the AAB.
+
+## Where the Android files are
+
+| Purpose | Path |
+|--------|------|
+| **Android project root** | `mobile/android/` |
+| **Version & package (for Play Console)** | `mobile/android/app/build.gradle` → `versionCode`, `versionName`, `applicationId` |
+| **App manifest** | `mobile/android/app/src/main/AndroidManifest.xml` |
+| **Signing (release)** | `mobile/android/keystore.properties` + `mobile/android/upload-keystore.jks` (create per ANDROID_PACKAGING_GUIDE) |
+| **Capacitor config (server URL)** | `mobile/capacitor.config.ts` |
+
+See also: **`GOOGLE_PLAY_ANDROID_FILES.md`** (quick reference for which files to update per release) and **`store/Release_1.7_Checklist.md`**, **`store/PlayStoreListing.md`**, **`mobile/STORE_CHECKLIST.md`**.
+
+---
+
 ## Prerequisites Checklist
 ✅ Android Studio installed (downloading now)
 ✅ Capacitor project structure exists (`mobile/` folder)
@@ -24,7 +42,7 @@
 
 3. **Set Environment Variables** (PowerShell as Admin):
 ```powershell
-# Add to your system PATH
+# Add to your system PATH (adjust path if your SDK is elsewhere)
 $androidHome = "C:\Users\jeff\AppData\Local\Android\Sdk"
 [Environment]::SetEnvironmentVariable("ANDROID_HOME", $androidHome, "User")
 $path = [Environment]::GetEnvironmentVariable("Path", "User")
@@ -41,14 +59,14 @@ adb --version
 
 ### Option A: Via Command Line
 ```powershell
-cd "c:\Users\jeff\Dropbox\BeeSmartSpellingBeeApp\mobile"
+cd "c:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile"
 npm run cap:open:android
 ```
 
 ### Option B: Via Android Studio
 1. Open Android Studio
 2. **File → Open**
-3. Navigate to: `c:\Users\jeff\Dropbox\BeeSmartSpellingBeeApp\mobile\android`
+3. Navigate to: `mobile\android` inside your repo (e.g. `BeeSmartSpellingBeeApp\mobile\android`)
 4. Click **OK** (Android Studio will recognize it as a Gradle project)
 
 ---
@@ -181,19 +199,21 @@ storeFile=upload-keystore.jks
 
 ## Step 7: Build Release AAB (Android App Bundle)
 
+**Google requires AAB for production** — not IPA, not raw APK. See **`ANDROID_STEP2_AAB.md`** for a focused Step 2 checklist.
+
 ### In Android Studio:
 1. **Build → Generate Signed Bundle / APK**
 2. Select **Android App Bundle**
 3. Follow signing prompts
-4. Output: `mobile/android/app/release/app-release.aab`
+4. Output: `app/build/outputs/bundle/release/app-release.aab`
 
-### Via Command Line:
+### Via Command Line (from repo root):
 ```powershell
-cd "c:\Users\jeff\Dropbox\BeeSmartSpellingBeeApp\mobile\android"
+cd "c:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile\android"
 .\gradlew bundleRelease
 ```
 
-Output location: `app\build\outputs\bundle\release\app-release.aab`
+**Output:** `app\build\outputs\bundle\release\app-release.aab` — upload this file to Play Console.
 
 ---
 

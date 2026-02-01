@@ -727,19 +727,23 @@
                 <div class="stat-label">Quizzes Completed</div>
             </div>
 
+            {% if (current_user.total_quizzes_completed or 0) > 0 %}
             <div class="stat-card stat-highlight">
                 <div class="stat-icon">🎓</div>
                 <div class="stat-value grade-display" id="dash-grade-letter">{{ current_user.cumulative_gpa|gpa_to_grade }}</div>
                 <div class="stat-label">Cumulative Grade</div>
                 <div class="stat-sublabel">GPA: <span id="dash-gpa">{{ "%.2f"|format(current_user.cumulative_gpa|float) if current_user.cumulative_gpa else "0.00" }}</span></div>
             </div>
+            {% endif %}
 
             <!-- Row 2: GPA, Accuracy, and Best Streak -->
+            {% if (current_user.total_quizzes_completed or 0) > 0 %}
             <div class="stat-card">
                 <div class="stat-icon">📊</div>
                 <div class="stat-value" id="dash-gpa-secondary">{{ "%.2f"|format(current_user.cumulative_gpa|float) if current_user.cumulative_gpa else "0.00" }}</div>
                 <div class="stat-label">GPA (0-4.0)</div>
             </div>
+            {% endif %}
 
             <div class="stat-card">
                 <div class="stat-icon">🎯</div>
@@ -814,12 +818,34 @@
                             if(d.status!=='success' || !d.authenticated) return;
                             const s = d.stats||{};
                             if($('#dash-points')) $('#dash-points').textContent = (s.total_lifetime_points||0).toLocaleString();
-                            if($('#dash-quizzes')) $('#dash-quizzes').textContent = (s.total_quizzes_completed||0).toLocaleString();
-                            const letter = s.best_grade || gradeFromGpa(s.cumulative_gpa);
-                            if($('#dash-grade-letter')) $('#dash-grade-letter').textContent = letter;
-                            const gpaText = Number(s.cumulative_gpa||0).toFixed(2);
-                            if($('#dash-gpa')) $('#dash-gpa').textContent = gpaText;
-                            if($('#dash-gpa-secondary')) $('#dash-gpa-secondary').textContent = gpaText;
+                            const quizzesCompleted = Number(s.total_quizzes_completed||0);
+                            if($('#dash-quizzes')) $('#dash-quizzes').textContent = quizzesCompleted.toLocaleString();
+                            
+                            // Only update grade elements if user has completed at least one quiz
+                            if(quizzesCompleted > 0) {
+                                const letter = s.best_grade || gradeFromGpa(s.cumulative_gpa);
+                                if($('#dash-grade-letter')) {
+                                    $('#dash-grade-letter').textContent = letter;
+                                    // Show the grade card if it was hidden
+                                    const gradeCard = $('#dash-grade-letter').closest('.stat-card');
+                                    if(gradeCard.length) gradeCard.show();
+                                }
+                                const gpaText = Number(s.cumulative_gpa||0).toFixed(2);
+                                if($('#dash-gpa')) $('#dash-gpa').textContent = gpaText;
+                                if($('#dash-gpa-secondary')) {
+                                    $('#dash-gpa-secondary').textContent = gpaText;
+                                    // Show the GPA card if it was hidden
+                                    const gpaCard = $('#dash-gpa-secondary').closest('.stat-card');
+                                    if(gpaCard.length) gpaCard.show();
+                                }
+                            } else {
+                                // Hide grade cards if no quizzes completed
+                                const gradeCard = $('#dash-grade-letter').closest('.stat-card');
+                                if(gradeCard.length) gradeCard.hide();
+                                const gpaCard = $('#dash-gpa-secondary').closest('.stat-card');
+                                if(gpaCard.length) gpaCard.hide();
+                            }
+                            
                             if($('#dash-accuracy')) $('#dash-accuracy').textContent = Number(s.average_accuracy||0).toFixed(1) + '%';
                             if($('#dash-best-streak')) $('#dash-best-streak').textContent = s.best_streak||0;
                             

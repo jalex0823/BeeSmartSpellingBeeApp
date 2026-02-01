@@ -5,6 +5,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/speed-round.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/QuizKeyboard.css') }}">
 
 <script>
 // 🛡️ Prevent service worker controllerchange from auto-reloading this quiz-like page.
@@ -843,6 +844,7 @@ if ('speechSynthesis' in window) {
                 autocorrect="off"
                 autocapitalize="off"
                 spellcheck="false"
+                inputmode="none"
             />
 
             <div class="action-buttons">
@@ -879,12 +881,15 @@ if ('speechSynthesis' in window) {
                 
             </div>
         </div>
+        <!-- Custom on-screen keyboard (speed round); prevents system keyboard, spellcheck off -->
+        <div id="quizKeyboardContainer" role="region" aria-label="Speed round spelling keyboard"></div>
     </div>
 </div>
 
 <!-- Removed duplicate loading overlay: rely on unified global honey pot loading screen -->
 
-<script src="/static/js/voice-visualizer-config.js"></script>
+<script src="{{ url_for('static', filename='js/QuizKeyboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/voice-visualizer-config.js') }}"></script>
 <script>
 // Speed Round Quiz State
 let currentWord = null;
@@ -1102,6 +1107,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // iOS Critical Fix: Set up event listeners IMMEDIATELY on page load
     // Don't wait for speech synthesis to complete
     setupEventListeners();
+
+    // Custom keyboard: do NOT mount on page load. Mount only when countdown/answer phase starts (startAnswerPhase).
 
     // IMPORTANT (iOS Safari): speech + audio + even some fetches can behave differently
     // unless triggered from a direct user gesture. To avoid stalls, we require a one-tap
@@ -1498,6 +1505,7 @@ async function loadNextWord() {
         if (spellInput) {
             spellInput.disabled = true;
             spellInput.placeholder = "Wait for countdown...";
+            if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(false);
         }
         if (submitBtn) {
             submitBtn.disabled = true;
@@ -1661,8 +1669,10 @@ function updateStats() {
 }
 
 function clearInput() {
-    document.getElementById('spellInput').value = '';
-    document.getElementById('spellInput').focus();
+    const el = document.getElementById('spellInput');
+    if (el) el.value = '';
+    if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+    if (el) el.focus();
 }
 
 function announceWord(wordIndex, totalWords) {
@@ -1760,13 +1770,27 @@ function pronounceWord() {
 
     if (!('speechSynthesis' in window)) {
         status.textContent = '🔇 Speech not supported';
-        // Fallback: unlock input and start timer immediately
+        // Fallback: unlock input and start timer immediately (mount keyboard here too)
         try {
             const spellInput = document.getElementById('spellInput');
             const submitBtn = document.getElementById('submitBtn');
+            const keyboardContainer = document.getElementById('quizKeyboardContainer');
             if (spellInput) {
                 spellInput.disabled = false;
                 spellInput.placeholder = 'Type your answer...';
+                if (keyboardContainer && spellInput && typeof initQuizKeyboard === 'function' && !window.quizKeyboardInstance) {
+                    window.quizKeyboardInstance = initQuizKeyboard({
+                        targetEl: keyboardContainer,
+                        inputEl: spellInput,
+                        onSubmit: () => submitAnswer(),
+                        allowSpaces: true,
+                        autoCaps: true,
+                        disableInputWhenRoundEnds: true,
+                        showSubmitKey: true
+                    });
+                    if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+                    if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
+                }
                 spellInput.focus();
             }
             if (submitBtn) submitBtn.disabled = false;
@@ -1803,9 +1827,27 @@ function pronounceWord() {
             try {
                 const spellInput = document.getElementById('spellInput');
                 const submitBtn = document.getElementById('submitBtn');
+                const keyboardContainer = document.getElementById('quizKeyboardContainer');
                 if (spellInput) {
                     spellInput.disabled = false;
                     spellInput.placeholder = 'Type your answer...';
+                    // ROUND_COUNTDOWN_STARTED: mount keyboard only when answer phase (timer) starts
+                    if (keyboardContainer && spellInput && typeof initQuizKeyboard === 'function') {
+                        if (!window.quizKeyboardInstance) {
+                            window.quizKeyboardInstance = initQuizKeyboard({
+                                targetEl: keyboardContainer,
+                                inputEl: spellInput,
+                                onSubmit: () => submitAnswer(),
+                                allowSpaces: true,
+                                autoCaps: true,
+                                disableInputWhenRoundEnds: true,
+                                showSubmitKey: true
+                            });
+                            console.log('✅ Speed round keyboard mounted (countdown started)');
+                        }
+                        if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+                        if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
+                    }
                     spellInput.focus();
                 }
                 if (submitBtn) submitBtn.disabled = false;
@@ -1886,6 +1928,10 @@ function pronounceWord() {
 }
 
 async function submitAnswer(isSkip = false) {
+    // ROUND_ENDED: disable and unmount keyboard when answer is submitted
+    if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(false);
+    if (typeof destroyQuizKeyboard === 'function') destroyQuizKeyboard();
+    window.quizKeyboardInstance = null;
     const userInput = document.getElementById('spellInput').value.trim();
     
     if (!userInput && !isSkip) {
@@ -2114,6 +2160,12 @@ function showTimeBonusPopup(bonusPoints, timePercentage) {
 }
 
 async function completeRound() {
+    // GAME_OVER_SHOWN: unmount keyboard when round complete
+    try {
+        if (typeof destroyQuizKeyboard === 'function') destroyQuizKeyboard();
+        window.quizKeyboardInstance = null;
+    } catch (_) {}
+    
     // Announce end of quiz before redirecting
     try {
         if ('speechSynthesis' in window) {

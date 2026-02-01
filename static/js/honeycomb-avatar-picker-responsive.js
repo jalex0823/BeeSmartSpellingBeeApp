@@ -1,4 +1,4 @@
-/**
+2/**
  * Responsive Honeycomb Avatar Picker
  * No absolute positioning - uses CSS Grid
  * Enhanced with real-time 3D model loading progress
@@ -18,6 +18,95 @@ let previewLoadProgress = 0;
 let currentUserHoneyPoints = 0;
 // Bundle catalog for bundle shop modal
 let bundlesData = [];
+
+// Purchase state machine - CRITICAL for preventing purchase loops
+const PurchaseState = {
+    IDLE: 'IDLE',
+    STORE_LOADING: 'STORE_LOADING',
+    READY: 'READY',
+    PURCHASING: 'PURCHASING',
+    PURCHASED: 'PURCHASED',
+    FAILED: 'FAILED',
+    CANCELLED: 'CANCELLED'
+};
+
+let purchaseState = PurchaseState.IDLE;
+let storeReady = false;
+let productsLoaded = false; // Products fetched and cached
+let canMakePayments = true; // Apple allows IAP (default true, will be checked)
+let currentPurchaseSlug = null; // Track which avatar is being purchased
+let currentPurchaseProductId = null; // Track productId being purchased
+let purchaseUpdateSubscription = null;
+let purchaseErrorSubscription = null;
+let lastPurchaseAttempt = 0; // For debouncing
+let purchasingStartTime = 0; // Track when purchase started for timeout
+const PURCHASE_DEBOUNCE_MS = 3000; // 3 second debounce
+const PURCHASE_TIMEOUT_MS = 60000; // 60 second hard timeout
+const PURCHASE_STATE_KEY = 'beesmart_purchase_state_v1'; // localStorage key for persistence
+
+// Restore purchase state from localStorage (survives page refresh)
+function restorePurchaseState() {
+    try {
+        if (!window.localStorage) return;
+        const stored = window.localStorage.getItem(PURCHASE_STATE_KEY);
+        if (!stored) return;
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.state === PurchaseState.PURCHASING && parsed.slug) {
+            const age = Date.now() - (parsed.timestamp || 0);
+            // Only restore if less than 30 seconds old (prevents stuck state)
+            if (age < 30000) {
+                purchaseState = PurchaseState.PURCHASING;
+                currentPurchaseSlug = parsed.slug;
+                currentPurchaseProductId = parsed.productId;
+                purchasingStartTime = parsed.timestamp;
+                console.log('[IAP] Restored purchase state:', parsed.slug);
+                // Set timeout to recover if purchase never completes
+                setTimeout(() => {
+                    if (purchaseState === PurchaseState.PURCHASING) {
+                        console.warn('[IAP] Purchase timeout - resetting state');
+                        purchaseState = PurchaseState.IDLE;
+                        currentPurchaseSlug = null;
+                        currentPurchaseProductId = null;
+                        clearPurchaseState();
+                    }
+                }, PURCHASE_TIMEOUT_MS - age);
+            } else {
+                // Stale state - clear it
+                clearPurchaseState();
+            }
+        }
+    } catch (e) {
+        console.warn('[IAP] Failed to restore purchase state:', e);
+    }
+}
+
+// Persist purchase state to localStorage
+function persistPurchaseState() {
+    try {
+        if (!window.localStorage) return;
+        if (purchaseState === PurchaseState.PURCHASING && currentPurchaseSlug) {
+            window.localStorage.setItem(PURCHASE_STATE_KEY, JSON.stringify({
+                state: purchaseState,
+                slug: currentPurchaseSlug,
+                productId: currentPurchaseProductId,
+                timestamp: purchasingStartTime || Date.now()
+            }));
+        } else {
+            clearPurchaseState();
+        }
+    } catch (e) {
+        console.warn('[IAP] Failed to persist purchase state:', e);
+    }
+}
+
+// Clear persisted purchase state
+function clearPurchaseState() {
+    try {
+        if (window.localStorage) {
+            window.localStorage.removeItem(PURCHASE_STATE_KEY);
+        }
+    } catch (e) { /* ignore */ }
+}
 // 3D viewer state to support zoom/rotate/reset controls
 const avatarViewerState = {
     scene: null,
@@ -39,10 +128,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     console.log('GLTFLoader available:', typeof THREE !== 'undefined' && typeof THREE.GLTFLoader !== 'undefined');
     console.log('DRACOLoader available:', typeof THREE !== 'undefined' && typeof THREE.DRACOLoader !== 'undefined');
     
-    // CRITICAL: Verify user authentication FIRST during loading screen
-    await verifyUserAuthentication();
-    // Apply initial role-based UI before heavy loading
-    applyRoleBasedUI();
+    // CRITICAL: Authentication and avatar loading moved to system checks
+    // Picker just uses pre-loaded data - no blocking operations here
+    // If data not pre-loaded, use template data or load in background
+    if (!window.userSessionData) {
+        // Try to get from template data or load in background (non-blocking)
+        verifyUserAuthentication().catch(err => {
+            console.warn('[Picker] Auth check failed (non-blocking):', err);
+        });
+    } else {
+        // Use pre-loaded session data
+        applyRoleBasedUI();
+    }
 
     // If the native IAP bridge is missing/late (common in TestFlight),
     // native-iap-bridge.js will do a server reconcile and emit events.
@@ -60,7 +157,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 refreshTimer = setTimeout(async function() {
                     try {
                         console.log('🔄 IAP event refresh avatars:', reason);
-                        await loadAvatars();
+                        // CRITICAL: Use lightweight refresh function (updates unlock status only)
+                        // DO NOT call loadAvatars() - all loading happens in system checks
+                        await refreshAvatarUnlockStatus();
                     } catch (e) {
                         // Non-fatal: avoid breaking the avatar page if refresh fails.
                         console.warn('🐞 IAP-triggered avatar refresh failed:', e);
@@ -70,6 +169,59 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             window.addEventListener('beesmart:iap-reconciled', function(ev) {
                 const ok = ev && ev.detail ? ev.detail.ok : null;
+                const detail = ev && ev.detail ? ev.detail : {};
+                const owned = detail.owned || [];
+                const data = detail.data || {};
+                
+                // CRITICAL: Log reconciliation event for debugging
+                console.log('[IAP] beesmart:iap-reconciled event:', {
+                    ok,
+                    owned: owned.length,
+                    productIds: owned.slice(0, 5), // First 5 for logging
+                    purchaseState,
+                    currentPurchaseSlug,
+                    currentPurchaseProductId
+                });
+                
+                // CRITICAL: If we're purchasing and the productId is in owned list, mark as purchased
+                if (purchaseState === PurchaseState.PURCHASING && currentPurchaseProductId && Array.isArray(owned)) {
+                    const ownedNormalized = owned.map(p => String(p || '').toLowerCase().trim());
+                    const productIdNormalized = String(currentPurchaseProductId || '').toLowerCase().trim();
+                    
+                    if (ownedNormalized.includes(productIdNormalized)) {
+                        console.log('[IAP] Purchase confirmed via reconciliation:', currentPurchaseProductId);
+                        purchaseState = PurchaseState.PURCHASED;
+                        clearPurchaseState();
+                        
+                        // Close modal and refresh avatars
+                        const existingModal = document.querySelector(`.locked-avatar-modal[data-avatar-slug="${currentPurchaseSlug}"]`);
+                        if (existingModal) {
+                            existingModal.remove();
+                        }
+                        
+                        // Refresh avatar unlock status (lightweight - no full reload)
+                        refreshAvatarUnlockStatus().then(() => {
+                            const updated = findAvatarBySlug(currentPurchaseSlug);
+                            if (updated && !updated.is_locked) {
+                                alert(`✅ ${updated.name || 'Avatar'} unlocked!`);
+                                const escSlug = (window.CSS && typeof CSS.escape === 'function')
+                                    ? CSS.escape(updated.slug)
+                                    : String(updated.slug).replace(/"/g, '\\"');
+                                const el = document.querySelector(`.avatar-hex-position[data-slug="${escSlug}"]`);
+                                if (el) selectAvatar(updated, el);
+                            }
+                            
+                            // Reset state after delay
+                            setTimeout(() => {
+                                purchaseState = PurchaseState.IDLE;
+                                currentPurchaseSlug = null;
+                                currentPurchaseProductId = null;
+                            }, 2000);
+                        });
+                        return; // Don't schedule another refresh
+                    }
+                }
+                
                 scheduleRefresh('iap-reconciled' + (ok === false ? ':fail' : ''));
             });
             window.addEventListener('beesmart:iap-ready', function(ev) {
@@ -79,33 +231,114 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch (e) { /* ignore */ }
     })();
     
-    loadAvatars();
+    // Restore purchase state from localStorage (survives page refresh)
+    restorePurchaseState();
+    
+    // IAP store initialization moved to system checks (unified_menu.html)
+    // It will be initialized before picker loads, so it's ready when needed
+    
+    // CRITICAL: ALL avatar loading MUST happen during system checks
+    // Picker NEVER loads avatars - only uses pre-loaded data
+    const overlay = document.getElementById('avatar-loading-overlay');
+    
+    if (!window.preloadedAvatars || !Array.isArray(window.preloadedAvatars) || window.preloadedAvatars.length === 0) {
+        console.error('❌ CRITICAL: Avatars not pre-loaded during system checks!');
+        console.error('❌ Falling back to loading avatars directly...');
+        
+        // CRITICAL FIX: Fallback to loading avatars if pre-loading failed
+        // This ensures picker ALWAYS works, even if system checks failed
+        try {
+            console.log('🔄 Loading avatars as fallback...');
+            await loadAvatars();
+            // If loadAvatars succeeds, it will render the grid and return
+            return; // loadAvatars() handles rendering
+        } catch (loadError) {
+            console.error('❌ Fallback avatar loading also failed:', loadError);
+            
+            // Show error message - override base.html's display:none !important rule
+            if (overlay) {
+                // Force show overlay with !important inline styles to override base.html CSS
+                overlay.style.setProperty('display', 'flex', 'important');
+                overlay.style.setProperty('opacity', '1', 'important');
+                overlay.style.setProperty('pointer-events', 'auto', 'important');
+                overlay.style.setProperty('visibility', 'visible', 'important');
+                overlay.classList.remove('hidden');
+                
+                overlay.innerHTML = `
+                    <div class="loading-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
+                        <h2 style="color: #FFD700; font-size: 1.5rem; margin-bottom: 0.5rem;">Avatars Not Loaded</h2>
+                        <p style="color: rgba(255, 215, 0, 0.9); font-size: 1rem; margin-bottom: 1rem;">Unable to load avatar catalog.</p>
+                        <p style="color: rgba(255, 215, 0, 0.7); font-size: 0.9rem; margin-top: 0.5rem;">Please refresh the page to try again.</p>
+                        <button onclick="window.location.reload()" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: #FFD700; color: #1a1a1a; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;">Refresh Page</button>
+                    </div>
+                `;
+            }
+            
+            // Fallback: Show error in grid container so page isn't blank
+            const gridContainer = document.querySelector('.honeycomb-grid');
+            if (gridContainer) {
+                gridContainer.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: #FFD700;">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
+                        <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Avatars Not Loaded</h2>
+                        <p style="font-size: 1rem; margin-bottom: 1rem;">Unable to load avatar catalog.</p>
+                        <p style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 1.5rem;">Please refresh the page to try again.</p>
+                        <button onclick="window.location.reload()" style="padding: 0.75rem 1.5rem; background: #FFD700; color: #1a1a1a; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;">Refresh Page</button>
+                    </div>
+                `;
+            }
+            return; // STOP - can't proceed without avatars
+        }
+    }
+    
+    console.log('✅ Using pre-loaded avatars from system checks:', window.preloadedAvatars.length);
+    
+    // Use pre-loaded avatars immediately - NO loading, NO API calls
+    avatarsData = window.preloadedAvatars.map(avatar => ({
+        ...avatar,
+        // Use cached thumbnail if available (pre-loaded during system checks)
+        _preloadedThumbnail: avatar._thumbnailCache || null
+    }));
+    
+    // Set thumbnail tracking for immediate render
+    totalThumbnails = avatarsData.length;
+    loadedThumbnails = avatarsData.filter(a => a._preloadedThumbnail).length;
+    failedThumbnails = avatarsData.length - loadedThumbnails;
+    pendingThumbnails.clear();
+    
+    // CRITICAL: Update progress to 100% immediately (all thumbnails pre-loaded)
+    const progressBar = document.getElementById('loading-progress');
+    const loadingText = document.getElementById('loading-text');
+    const loadingContent = document.getElementById('loading-status');
+    const loadingDetail = document.getElementById('loading-detail');
+    
+    if (progressBar) progressBar.style.width = '100%';
+    if (loadingText) loadingText.textContent = '100%';
+    if (loadingContent) loadingContent.textContent = 'All Bees Ready! 🎉';
+    if (loadingDetail) loadingDetail.textContent = `Ready to choose your bee! (${loadedThumbnails}/${totalThumbnails} loaded)`;
+    
+    updateDynamicMarquee(avatarsData);
+    renderAvatarGrid();
+    
+    // CRITICAL: Hide loading overlay IMMEDIATELY (thumbnails already loaded)
+    if (overlay) {
+        // Update to show completion
+        overlay.style.transition = 'opacity 0.5s ease, visibility 0.5s ease';
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            if (overlay) {
+                overlay.classList.add('hidden');
+                overlay.style.display = 'none';
+                console.log('✅ Loading overlay hidden - picker ready instantly');
+            }
+        }, 500);
+    }
+    
+    console.log(`✅ Picker loaded instantly: ${loadedThumbnails}/${totalThumbnails} thumbnails pre-loaded`);
+    
     setupSearchFilter();
     setupBundleShop();
-
-    // Safety: hide loading overlay after 15s even if some thumbnails stall
-    // Also force-complete any remaining pending thumbnails
-    setTimeout(() => {
-        const overlay = document.getElementById('avatar-loading-overlay');
-        if (overlay && !overlay.classList.contains('hidden')) {
-            // Force-complete any remaining pending thumbnails
-            if (pendingThumbnails.size > 0) {
-                console.warn(`⚠️ Timeout: Force-completing ${pendingThumbnails.size} pending thumbnail(s)`);
-                const pendingCount = pendingThumbnails.size;
-                pendingThumbnails.clear();
-                failedThumbnails += pendingCount;
-            }
-            console.warn('⚠️ Hiding loading overlay due to timeout safeguard (15s)');
-            updateLoadingProgress(); // Trigger final check
-            // Force hide if still visible after update
-            setTimeout(() => {
-                if (overlay && !overlay.classList.contains('hidden')) {
-                    overlay.classList.add('hidden');
-                    overlay.style.display = 'none';
-                }
-            }, 100);
-        }
-    }, 15000);
 });
 
 // Verify user authentication before loading avatars
@@ -435,7 +668,127 @@ function computeLockedMessage(avatar) {
     return avatar.unlock_message || 'Complete more quizzes to unlock this bee!';
 }
 
+// Lightweight refresh function - ONLY updates unlock status, NO loading
+// Used after purchases/IAP events - all heavy loading happens in system checks
+async function refreshAvatarUnlockStatus() {
+    try {
+        // Fetch ONLY unlock status (lightweight API call)
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/avatars?force=1&t=${timestamp}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-cache',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+        
+        if (!response.ok) {
+            console.warn('⚠️ Failed to refresh unlock status');
+            return;
+        }
+        
+        const data = await response.json();
+        let apiAvatars = null;
+        if (Array.isArray(data)) {
+            apiAvatars = data;
+        } else if (data && Array.isArray(data.avatars)) {
+            apiAvatars = data.avatars;
+        } else if (data && data.status === 'success' && data.data && Array.isArray(data.data)) {
+            apiAvatars = data.data;
+        }
+        
+        if (!apiAvatars || apiAvatars.length === 0) return;
+        
+        // Update user session data
+        const userData = data.user || {};
+        if (userData) {
+            window.userSessionData = {
+                authenticated: userData.is_authenticated || false,
+                username: userData.username || null,
+                role: userData.role || null,
+                is_admin: userData.is_admin || false,
+                is_guest: userData.is_guest || false,
+                honey_points: userData.honey_points || 0
+            };
+            window.avatarUserInfo = {
+                is_guest: userData.is_guest || false,
+                is_admin: userData.is_admin || false,
+                user_role: userData.role || null,
+                user_authenticated: userData.is_authenticated || false,
+                purchased_avatars: data.purchased_avatars || []
+            };
+            if (typeof userData.honey_points === 'number') {
+                currentUserHoneyPoints = userData.honey_points;
+            }
+        }
+        
+        // Update purchased avatar IDs
+        purchasedAvatarIds = Array.isArray(data && data.purchased_avatars)
+            ? data.purchased_avatars.map(x => String(x || '').toLowerCase())
+            : [];
+        
+        // Create lookup map for unlock status
+        // CRITICAL: API returns 'id' but avatarsData uses 'slug' - map both
+        const unlockMap = new Map();
+        apiAvatars.forEach(avatar => {
+            const apiId = String(avatar.id || '').toLowerCase();
+            const unlockData = {
+                is_locked: avatar.is_locked || false,
+                unlock_message: avatar.unlock_message || '',
+                unlock_points: (typeof avatar.unlock_points === 'number') ? avatar.unlock_points : null,
+                tier: avatar.tier || null,
+                price: (typeof avatar.price === 'number') ? avatar.price : ((typeof avatar.price_usd === 'number') ? avatar.price_usd : null),
+                product_id: avatar.product_id || null
+            };
+            // Map by both id and slug (API uses id, avatarsData uses slug)
+            unlockMap.set(apiId, unlockData);
+            // Also map by slug if different from id
+            const apiSlug = String(avatar.slug || avatar.id || '').toLowerCase();
+            if (apiSlug !== apiId) {
+                unlockMap.set(apiSlug, unlockData);
+            }
+        });
+        
+        // Update existing avatarsData with new unlock status (preserve pre-loaded thumbnails)
+        avatarsData.forEach(avatar => {
+            const slug = String(avatar.slug || '').toLowerCase();
+            // Try slug first, then try id if different
+            let update = unlockMap.get(slug);
+            if (!update && avatar.id) {
+                update = unlockMap.get(String(avatar.id || '').toLowerCase());
+            }
+            if (update) {
+                avatar.is_locked = update.is_locked;
+                avatar.unlock_message = update.unlock_message;
+                avatar.unlock_points = update.unlock_points;
+                avatar.tier = update.tier;
+                avatar.price = update.price;
+                avatar.product_id = update.product_id;
+                console.log(`✅ Updated unlock status for ${avatar.slug}: locked=${update.is_locked}`);
+            } else {
+                console.warn(`⚠️ Could not find unlock status for avatar: ${avatar.slug}`);
+            }
+        });
+        
+        // Re-apply role UI
+        applyRoleBasedUI();
+        
+        // Re-render grid to show updated lock status
+        updateDynamicMarquee(avatarsData);
+        renderAvatarGrid();
+        
+        console.log('✅ Avatar unlock status refreshed');
+    } catch (error) {
+        console.warn('⚠️ Failed to refresh avatar unlock status:', error);
+    }
+}
+
 // Load avatars from API
+// NOTE: This function should ONLY be called during system checks
+// Picker should NEVER call this - use refreshAvatarUnlockStatus() for updates
 async function loadAvatars() {
     try {
         // Add timestamp to bypass stale cache + force=1 for server-side cache bypass
@@ -802,7 +1155,18 @@ function createAvatarElement(avatar, index) {
     // Use 2D thumbnail for fast loading (like original picker)
     // 3D model will load in preview panel when selected
     
-    if (avatar.thumbnail) {
+    // CRITICAL: Use pre-loaded thumbnail if available (from system checks)
+    if (avatar._preloadedThumbnail && avatar._preloadedThumbnail instanceof Image) {
+        // Thumbnail already loaded during system checks - use it instantly
+        thumbDiv.classList.remove('loading');
+        const img = avatar._preloadedThumbnail.cloneNode(false); // Clone the pre-loaded image
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        thumbDiv.appendChild(img);
+        // Already counted as loaded, no need to track
+    } else if (avatar.thumbnail) {
+        // Fallback: Load thumbnail normally (shouldn't happen if pre-loaded correctly)
         const img = document.createElement('img');
         // Intelligent thumbnail loading with fallbacks for filename/casing/punctuation mismatches
         const fallbackCandidates = buildThumbnailFallbacks(avatar, avatar.thumbnail);
@@ -914,6 +1278,223 @@ function isAvatarPurchased(avatar) {
     if (!slug) return false;
     return Array.isArray(purchasedAvatarIds) && purchasedAvatarIds.includes(slug);
 }
+
+// Pre-load avatars with thumbnails - REAL progress tracking for system checks
+// This function loads avatars AND pre-loads all thumbnails with actual progress
+window.preloadAvatarsWithThumbnails = async function(progressCallback) {
+    try {
+        // Step 1: Fetch avatar data from API
+        if (progressCallback) progressCallback(5, 'Fetching avatar catalog...');
+        
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/avatars?force=1&t=${timestamp}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-cache',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to load avatars (HTTP ${response.status})`);
+        }
+        
+        const data = await response.json();
+        
+        // Store user session data
+        const userData = data.user || {};
+        window.userSessionData = {
+            authenticated: userData.is_authenticated || false,
+            username: userData.username || null,
+            role: userData.role || null,
+            is_admin: userData.is_admin || false,
+            is_guest: userData.is_guest || false,
+            honey_points: userData.honey_points || 0
+        };
+        window.avatarUserInfo = {
+            is_guest: userData.is_guest || false,
+            is_admin: userData.is_admin || false,
+            user_role: userData.role || null,
+            user_authenticated: userData.is_authenticated || false,
+            purchased_avatars: data.purchased_avatars || []
+        };
+        
+        // Parse avatar data
+        let apiAvatars = null;
+        if (Array.isArray(data)) {
+            apiAvatars = data;
+        } else if (data && Array.isArray(data.avatars)) {
+            apiAvatars = data.avatars;
+        } else if (data && data.status === 'success' && data.data && Array.isArray(data.data)) {
+            apiAvatars = data.data;
+        }
+        
+        if (!apiAvatars || apiAvatars.length === 0) {
+            throw new Error('No avatars found in API response');
+        }
+        
+        // Step 2: Process avatar data (same logic as loadAvatars)
+        if (progressCallback) progressCallback(15, 'Processing avatar data...');
+        
+        const rawAvatars = apiAvatars.map(avatar => ({
+            slug: avatar.id,
+            name: avatar.name,
+            description: avatar.description,
+            category: avatar.category,
+            folder_path: avatar.folder,
+            is_glb: true,
+            glb_url: (avatar.urls && avatar.urls.glb) || null,
+            thumbnail: (avatar.urls && avatar.urls.thumbnail) || avatar.thumbnail || null,
+            is_locked: avatar.is_locked || false,
+            unlock_message: avatar.unlock_message || '',
+            unlock_points: (typeof avatar.unlock_points === 'number') ? avatar.unlock_points : null,
+            tier: avatar.tier || null,
+            price: (typeof avatar.price === 'number') ? avatar.price : ((typeof avatar.price_usd === 'number') ? avatar.price_usd : null),
+            product_id: avatar.product_id || null,
+        }));
+        
+        // Dedupe logic (same as loadAvatars)
+        const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        const baseKeyFor = (av) => {
+            const slugKey = norm(av.slug);
+            if (slugKey) return slugKey;
+            const thumbName = (av.thumbnail || '').split('/').pop().replace(/\.[^.]+$/,'').replace(/!+$/,'');
+            if (thumbName) return norm(thumbName);
+            return norm(av.name);
+        };
+        const normThumb = (url) => {
+            const file = (url || '').split('/').pop();
+            return (file || '').toLowerCase().replace(/!+/g,'');
+        };
+        const pickPreferGLB = (a, b) => {
+            if (a.thumbnail && !b.thumbnail) return a;
+            if (!a.thumbnail && b.thumbnail) return b;
+            return a;
+        };
+        
+        const byBase = new Map();
+        for (const avatar of rawAvatars) {
+            const key = baseKeyFor(avatar);
+            if (!byBase.has(key)) {
+                byBase.set(key, avatar);
+            } else {
+                const chosen = pickPreferGLB(avatar, byBase.get(key));
+                if (chosen !== byBase.get(key)) {
+                    byBase.set(key, chosen);
+                }
+            }
+        }
+        
+        const seenThumb = new Set();
+        const processedAvatars = [];
+        for (const av of byBase.values()) {
+            const t = normThumb(av.thumbnail);
+            const isGenericThumb = t === 'honeycomb!.png' || t === 'honeycomb.png';
+            if (t && !isGenericThumb && seenThumb.has(t)) continue;
+            if (t && !isGenericThumb) seenThumb.add(t);
+            processedAvatars.push(av);
+        }
+        
+        // Filter banned avatars
+        const banned = new Set(['anxious-bee','monster-bee']);
+        const finalAvatars = processedAvatars.filter(av => !banned.has((av.slug||'').toLowerCase()));
+        
+        // Sort alphabetically
+        finalAvatars.sort((a, b) => {
+            const an = (a.name || '').toLowerCase();
+            const bn = (b.name || '').toLowerCase();
+            return an.localeCompare(bn);
+        });
+        
+        // Step 3: Pre-load ALL thumbnails with REAL progress tracking
+        if (progressCallback) progressCallback(25, `Pre-loading ${finalAvatars.length} thumbnails...`);
+        
+        const totalThumbs = finalAvatars.length;
+        let loadedThumbs = 0;
+        let failedThumbs = 0;
+        const thumbnailCache = new Map(); // Cache loaded thumbnails
+        
+        // Pre-load all thumbnails in parallel (with concurrency limit)
+        const CONCURRENT_LOADS = 10; // Load 10 at a time to avoid overwhelming browser
+        const loadThumbnail = (avatar) => {
+            return new Promise((resolve) => {
+                if (!avatar.thumbnail) {
+                    failedThumbs++;
+                    resolve(null);
+                    return;
+                }
+                
+                const fallbackCandidates = buildThumbnailFallbacks(avatar, avatar.thumbnail);
+                let candidateIdx = 0;
+                const img = new Image();
+                
+                const tryNext = () => {
+                    if (candidateIdx >= fallbackCandidates.length) {
+                        // All fallbacks exhausted
+                        failedThumbs++;
+                        resolve(null);
+                        return;
+                    }
+                    
+                    img.src = fallbackCandidates[candidateIdx];
+                };
+                
+                img.onload = () => {
+                    loadedThumbs++;
+                    thumbnailCache.set(avatar.slug, img); // Cache the loaded image
+                    const progress = 25 + Math.round((loadedThumbs + failedThumbs) / totalThumbs * 70);
+                    if (progressCallback) {
+                        progressCallback(progress, `Loaded ${loadedThumbs}/${totalThumbs} thumbnails`);
+                    }
+                    resolve(img);
+                };
+                
+                img.onerror = () => {
+                    candidateIdx++;
+                    tryNext();
+                };
+                
+                tryNext();
+            });
+        };
+        
+        // Load thumbnails in batches
+        for (let i = 0; i < finalAvatars.length; i += CONCURRENT_LOADS) {
+            const batch = finalAvatars.slice(i, i + CONCURRENT_LOADS);
+            await Promise.all(batch.map(loadThumbnail));
+        }
+        
+        // Step 4: Store pre-loaded avatars with cached thumbnails
+        window.preloadedAvatars = finalAvatars.map(avatar => ({
+            ...avatar,
+            _thumbnailCache: thumbnailCache.get(avatar.slug) || null // Pre-loaded image
+        }));
+        
+        // Store purchased avatar IDs
+        purchasedAvatarIds = Array.isArray(data && data.purchased_avatars)
+            ? data.purchased_avatars.map(x => String(x || '').toLowerCase())
+            : [];
+        
+        if (progressCallback) progressCallback(100, `Ready: ${loadedThumbs} loaded, ${failedThumbs} failed`);
+        
+        console.log(`✅ Pre-loaded ${finalAvatars.length} avatars (${loadedThumbs} thumbnails loaded, ${failedThumbs} failed)`);
+        
+        return {
+            avatars: window.preloadedAvatars,
+            loaded: loadedThumbs,
+            failed: failedThumbs,
+            total: totalThumbs
+        };
+        
+    } catch (error) {
+        console.error('❌ Avatar pre-load error:', error);
+        if (progressCallback) progressCallback(0, `Error: ${error.message}`);
+        throw error;
+    }
+};
 
 // Build a minimal, stable set of thumbnail candidates (server now provides robust URLs)
 function buildThumbnailFallbacks(avatar, initialUrl) {
@@ -1627,6 +2208,11 @@ function chooseAvatar() {
     
     // Check if avatar is locked before attempting selection (skip for admins)
     if (!isAdmin && selectedAvatar.is_locked) {
+        // CRITICAL FIX: Don't show modal if we're purchasing this avatar
+        if (purchaseState === PurchaseState.PURCHASING && currentPurchaseSlug === selectedAvatar.slug) {
+            console.log('[IAP] Blocking chooseAvatar modal during purchase:', selectedAvatar.slug);
+            return;
+        }
         console.log('🔒 Avatar is locked for non-admin user');
         showLockedMessage(selectedAvatar);
         return;
@@ -1781,6 +2367,18 @@ function filterAvatars(query) {
 
 // Show locked avatar message
 function showLockedMessage(avatar) {
+    // CRITICAL FIX: Don't show modal if we're already purchasing this avatar
+    if (purchaseState === PurchaseState.PURCHASING && currentPurchaseSlug === avatar.slug) {
+        console.log('[IAP] Blocking modal re-open during purchase:', avatar.slug);
+        return;
+    }
+    
+    // CRITICAL FIX: Don't show modal if we're in any non-idle purchase state for this avatar
+    if (purchaseState !== PurchaseState.IDLE && currentPurchaseSlug === avatar.slug) {
+        console.log('[IAP] Blocking modal re-open - purchase state:', purchaseState);
+        return;
+    }
+    
     // Use the unified computation for consistency across UI
     const message = computeLockedMessage(avatar);
     
@@ -1800,19 +2398,31 @@ function showLockedMessage(avatar) {
                 <button class="locked-modal-btn-secondary" onclick="this.closest('.locked-avatar-modal').remove()">Maybe Later</button>
             </div>
         `;
-    } else if (tier === 'premium' || tier === 'earn_or_buy') {
+    } else if (tier === 'premium' || tier === 'earn_or_buy' || (isProbablyNativeAppContext() && avatar.is_locked)) {
+        const inNativeApp = isProbablyNativeAppContext();
         const canPurchase = canPurchaseAvatar(avatar);
+        // All Apple-approved avatars are purchasable in native app: show Purchase for any locked avatar (backend sends product_id/price).
+        const showPurchaseBtn = inNativeApp ? true : canPurchase;
         const purchaseLabel = avatar.price ? `Purchase for $${Number(avatar.price).toFixed(2)}` : 'Purchase to Unlock';
-        const notReadyMsg = isProbablyNativeAppContext()
-            ? 'In-app purchases are still loading. If you are in TestFlight, wait a few seconds and try again.'
-            : 'Purchases are available in the BeeSmart iOS/Android app.';
+        
+        // CRITICAL FIX: In native app, don't disable based on storeReady (bridge may still be initializing)
+        // Only disable if actively purchasing or if in web context and store not ready
+        const isDisabled = purchaseState === PurchaseState.PURCHASING || 
+                          (purchaseState === PurchaseState.STORE_LOADING && !inNativeApp) ||
+                          (!inNativeApp && !storeReady && !canPurchase);
+        
+        const disabledClass = isDisabled ? 'disabled' : '';
+        const disabledAttr = isDisabled ? 'disabled' : '';
+        const buttonText = purchaseState === PurchaseState.PURCHASING ? 'Processing...' : 
+                          (purchaseState === PurchaseState.STORE_LOADING && !inNativeApp) ? 'Loading Store...' : 
+                          purchaseLabel;
         actionHtml = `
             <p style="margin-top: 1rem; color: #FFB300;">💎 This bee is available for purchase.</p>
             <div style="display:flex; gap:1rem; justify-content:center; margin-top: 1.25rem; flex-wrap: wrap;">
-                ${canPurchase ? `<button class="locked-modal-btn" onclick="purchaseLockedAvatar('${escapeAttr(avatar.slug)}')">${purchaseLabel}</button>` : ''}
+                ${showPurchaseBtn ? `<button class="locked-modal-btn ${disabledClass}" ${disabledAttr} onclick="purchaseLockedAvatar('${escapeAttr(avatar.slug)}')" id="purchase-btn-${escapeAttr(avatar.slug)}">${buttonText}</button>` : ''}
                 <button class="locked-modal-btn-secondary" onclick="this.closest('.locked-avatar-modal').remove()">Not now</button>
             </div>
-            ${!canPurchase ? `<p style="margin-top: 0.75rem; color: rgba(255,215,0,0.85); font-weight: 600;">${notReadyMsg}</p>` : ''}
+            ${!showPurchaseBtn ? `<p style="margin-top: 0.75rem; color: rgba(255,215,0,0.85); font-weight: 600;">Purchases are available in the BeeSmart iOS/Android app.</p>` : ''}
         `;
     } else {
         actionHtml = `
@@ -1823,6 +2433,7 @@ function showLockedMessage(avatar) {
     
     const modal = document.createElement('div');
     modal.className = 'locked-avatar-modal';
+    modal.setAttribute('data-avatar-slug', avatar.slug);
     modal.innerHTML = `
         <div class="locked-modal-content">
             <button class="locked-modal-close" onclick="this.parentElement.parentElement.remove()">×</button>
@@ -1866,9 +2477,13 @@ function isUserAuthenticated() {
 
 function canPurchaseAvatar(avatar) {
     if (!avatar || !avatar.product_id) return false;
-    if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function')) return false;
     // Purchases require an authenticated user (server verify endpoint is login_required)
-    return isUserAuthenticated();
+    if (!isUserAuthenticated()) return false;
+    // In native app (TestFlight/Capacitor): always show Purchase button — purchase flow will wait for bridge.
+    // Avatars are commissioned for sale; don't hide the button while the IAP bridge is still loading.
+    if (isProbablyNativeAppContext()) return true;
+    // On web: only show button if bridge is present (e.g. embedded wrapper)
+    return !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function');
 }
 
 function isProbablyNativeAppContext() {
@@ -1917,58 +2532,269 @@ async function _waitForNativeIapBridge(timeoutMs){
     return !!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function');
 }
 
+// Initialize IAP store on app start (called during system checks or picker load)
+// Make globally accessible so system checks can call it
+window.initializeIAPStore = async function initializeIAPStore() {
+    console.log('[IAP] Initializing store (background)...');
+    purchaseState = PurchaseState.STORE_LOADING;
+    storeReady = false;
+    productsLoaded = false;
+    canMakePayments = true;
+    
+    try {
+        const isNativeApp = isProbablyNativeAppContext();
+        // CRITICAL FIX: Use very short timeout - bridge will be waited for in purchase function if needed
+        // This prevents blocking picker loading
+        const bridgeReady = await _waitForNativeIapBridge(isNativeApp ? 1000 : 500);
+        
+        if (bridgeReady && window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') {
+            // CRITICAL: Check if we can make payments (iOS/Android) - non-blocking, default to true
+            canMakePayments = true; // Default to true, check async if available
+            if (typeof window.BeeSmartIAP.canMakePayments === 'function') {
+                // Check async but don't block
+                Promise.resolve(window.BeeSmartIAP.canMakePayments()).then(result => {
+                    canMakePayments = result !== false;
+                }).catch(e => {
+                    console.warn('[IAP] Could not check canMakePayments:', e);
+                    canMakePayments = true; // Default to true
+                });
+            }
+            
+            // CRITICAL: Products are considered "loaded" when bridge is ready
+            // The native layer handles product fetching internally
+            // For web, we'll mark as loaded when bridge exists
+            productsLoaded = true;
+            
+            // Set up transaction listeners
+            setupPurchaseListeners();
+            
+            // CRITICAL: In native app, mark as ready immediately (canMakePayments check is async)
+            // Purchase function will handle any edge cases
+            if (bridgeReady && productsLoaded) {
+                purchaseState = PurchaseState.READY;
+                storeReady = true;
+                console.log('[IAP] Store ready:', { bridgeReady, productsLoaded });
+            } else {
+                purchaseState = PurchaseState.READY;
+                storeReady = false;
+                console.log('[IAP] Store not fully ready:', { bridgeReady, productsLoaded });
+            }
+        } else {
+            // Store not available (web context) - mark as ready so UI doesn't block
+            purchaseState = PurchaseState.READY;
+            storeReady = false;
+            productsLoaded = false;
+            console.log('[IAP] Store not available (web context)');
+        }
+    } catch (err) {
+        console.error('[IAP] Store initialization failed:', err);
+        purchaseState = PurchaseState.FAILED;
+        storeReady = false;
+        productsLoaded = false;
+        // Reset after delay
+        setTimeout(() => {
+            purchaseState = PurchaseState.IDLE;
+        }, 5000);
+    }
+}
+
+// Set up purchase transaction listeners
+function setupPurchaseListeners() {
+    // Remove existing listeners if any
+    if (purchaseUpdateSubscription) {
+        try {
+            purchaseUpdateSubscription.remove();
+        } catch (e) { /* ignore */ }
+    }
+    if (purchaseErrorSubscription) {
+        try {
+            purchaseErrorSubscription.remove();
+        } catch (e) { /* ignore */ }
+    }
+    
+    // Note: The native bridge handles reconciliation automatically
+    // We just need to listen for the reconciliation events
+    console.log('[IAP] Purchase listeners set up (using event-based reconciliation)');
+}
+
 async function purchaseLockedAvatar(slug) {
+    console.log('[IAP] purchaseLockedAvatar called:', slug, 'State:', purchaseState);
+    
+    // CRITICAL FIX #1: Debounce multiple rapid taps
+    const now = Date.now();
+    if (now - lastPurchaseAttempt < PURCHASE_DEBOUNCE_MS) {
+        console.log('[IAP] Purchase debounced - too soon after last attempt');
+        return;
+    }
+    lastPurchaseAttempt = now;
+    
+    // CRITICAL FIX #2: Block if already purchasing
+    if (purchaseState === PurchaseState.PURCHASING) {
+        console.log('[IAP] Purchase already in progress - blocking');
+        return;
+    }
+    
     const avatar = findAvatarBySlug(slug);
     if (!avatar) {
         alert('Could not find that avatar. Please refresh and try again.');
         return;
     }
 
-    // Apple Guideline 5.1.1: Allow IAP purchases without requiring registration
-    // Registration is optional - users can purchase without an account
-    // If user is not authenticated, they can still purchase (purchase will be tied to device/Apple ID)
-    // We'll suggest registration after purchase for cross-device access
-
-    // Capacitor plugins can register after page JS runs; wait a bit longer in TestFlight
-    // and prefer the explicit iap-ready event.
-    await _waitForNativeIapBridge(isProbablyNativeAppContext() ? 5000 : 2000);
-    if (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function') {
-        // Don't hard-block TestFlight if bridge detection is flaky.
-        // Try a quick server-side restore/reconcile for users who already own premium/avatars.
-        try {
-            const res = await fetch('/api/iap/restore', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'same-origin',
-                body: JSON.stringify({ platform: 'web', product_ids: [] })
-            });
-            const data = await res.json().catch(() => ({}));
-            const restored = !!(data && (data.ok === true || data.success === true));
-            if (restored) {
-                await loadAvatars();
-                alert('Restored purchases. If you already owned this avatar, it should be unlocked now.');
-                return;
-            }
-        } catch (e) {
-            // ignore
+    // CRITICAL FIX #3: Check store readiness BEFORE proceeding
+    // In native app: allow purchase even if storeReady is false (bridge may still be initializing)
+    // In web context: require storeReady
+    const inNative = isProbablyNativeAppContext();
+    if (!inNative && !storeReady) {
+        if (purchaseState === PurchaseState.STORE_LOADING) {
+            alert('One moment — the store is loading. Please wait a few seconds and try again.');
+        } else if (!canMakePayments) {
+            alert('In-app purchases are not available on this device. Please check your device settings.');
+        } else if (!productsLoaded) {
+            alert('Products are still loading. Please wait a moment and try again.');
+        } else {
+            alert('Store is not ready. Please refresh the page and try again.');
         }
+        return;
+    }
+    
+    // In native app, still check bridge exists (even if storeReady is false)
+    if (inNative && (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function')) {
+        // Bridge not ready yet - wait for it (this is handled by _waitForNativeIapBridge in purchase function)
+        console.log('[IAP] Native bridge not ready yet, will wait in purchase function');
+    }
 
-        alert('In-app purchase is not ready yet. If you are in TestFlight, please wait a few seconds and try again. If this continues, reinstall the TestFlight build.');
+    // Product ID: from API only (backend uses data/avatars.catalog.json). Do not hardcode — .v2 vs non-.v2 varies by avatar.
+    const productId = avatar.product_id || null;
+    if (!productId) {
+        console.error('[IAP] No product_id for avatar:', slug);
+        alert('This avatar is not available for purchase. Please try another one.');
         return;
     }
 
-    if (!avatar.product_id) {
-        alert('This avatar is not available for purchase right now.');
+    // In native app, do not block on "bridge not ready" — try purchase so Apple sheet can appear.
+    // Reuse inNative variable declared above (line 2619)
+    if (!inNative && (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function')) {
+        alert('In-app purchase is only available in the BeeSmart app. Install from the App Store to purchase avatars.');
         return;
+    }
+
+    // Get references to UI elements before state changes
+    const purchaseBtn = document.getElementById(`purchase-btn-${slug}`);
+    const existingModal = document.querySelector(`.locked-avatar-modal[data-avatar-slug="${slug}"]`);
+    
+    // CRITICAL FIX #4: Set purchasing state BEFORE confirmation dialog
+    purchaseState = PurchaseState.PURCHASING;
+    currentPurchaseSlug = slug;
+    currentPurchaseProductId = productId;
+    purchasingStartTime = Date.now();
+    persistPurchaseState(); // Persist to survive page refresh
+    
+    // Set timeout to recover if purchase never completes
+    let timeoutId = setTimeout(() => {
+        if (purchaseState === PurchaseState.PURCHASING && currentPurchaseSlug === slug) {
+            console.warn('[IAP] Purchase timeout after', PURCHASE_TIMEOUT_MS, 'ms');
+            purchaseState = PurchaseState.FAILED;
+            clearPurchaseState();
+            
+            // Close modal and show message
+            const timeoutModal = document.querySelector(`.locked-avatar-modal[data-avatar-slug="${slug}"]`);
+            if (timeoutModal) {
+                timeoutModal.remove();
+            }
+            
+            alert('Purchase is taking longer than expected. Please try Restore Purchases if the purchase completed, or try again.');
+            
+            // Reset state
+            setTimeout(() => {
+                purchaseState = PurchaseState.IDLE;
+                currentPurchaseSlug = null;
+                currentPurchaseProductId = null;
+            }, 3000);
+        }
+    }, PURCHASE_TIMEOUT_MS);
+    
+    // Update button state
+    if (purchaseBtn) {
+        purchaseBtn.disabled = true;
+        purchaseBtn.textContent = 'Processing...';
+    }
+    
+    // Close any existing modals for this avatar (but keep reference)
+    if (existingModal) {
+        // Don't remove - just disable buttons
+        const buttons = existingModal.querySelectorAll('button');
+        buttons.forEach(btn => {
+            if (btn.id !== `purchase-btn-${slug}`) {
+                btn.disabled = true;
+            }
+        });
     }
 
     const proceed = confirm(`Purchase ${avatar.name}? You can manage purchases in your App Store / Play settings.`);
-    if (!proceed) return;
+    if (!proceed) {
+        // CRITICAL FIX: User cancelled - set CANCELLED state (not FAILED)
+        clearTimeout(timeoutId);
+        purchaseState = PurchaseState.CANCELLED;
+        clearPurchaseState();
+        
+        // Reset state after brief delay
+        setTimeout(() => {
+            purchaseState = PurchaseState.IDLE;
+            currentPurchaseSlug = null;
+            currentPurchaseProductId = null;
+        }, 500);
+        
+        if (purchaseBtn) {
+            purchaseBtn.disabled = false;
+            purchaseBtn.textContent = avatar.price ? `Purchase for $${Number(avatar.price).toFixed(2)}` : 'Purchase to Unlock';
+        }
+        return;
+    }
 
     try {
         const platform = getIapPlatform();
-        const productId = avatar.product_id;
+        
+        // Double-check bridge is ready
+        if (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function') {
+            throw new Error('Store bridge not ready');
+        }
+        
+        console.log('[IAP] Initiating purchase:', {
+            productId,
+            slug,
+            purchaseState,
+            storeReady,
+            canMakePayments,
+            productsLoaded
+        });
+        
         const result = await Promise.resolve(window.BeeSmartIAP.purchase(productId));
+        
+        console.log('[IAP] Purchase result:', {
+            result,
+            transaction_id: result?.transaction_id || result?.transactionId,
+            cancelled: result?.cancelled
+        });
+        
+        // CRITICAL: Check for explicit cancellation
+        if (result && (result.cancelled === true || result.cancelled === 'true')) {
+            clearTimeout(timeoutId);
+            purchaseState = PurchaseState.CANCELLED;
+            clearPurchaseState();
+            
+            // Close modal
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Reset state
+            setTimeout(() => {
+                purchaseState = PurchaseState.IDLE;
+                currentPurchaseSlug = null;
+                currentPurchaseProductId = null;
+            }, 500);
+            return; // Silent return - user cancelled intentionally
+        }
 
         // Important: On iOS (StoreKit2), the native layer already returns VERIFIED transactions
         // and `native-iap-bridge.js` immediately reconciles owned products via `/api/iap/restore`.
@@ -1990,6 +2816,7 @@ async function purchaseLockedAvatar(slug) {
             const json = await resp.json().catch(() => ({}));
             verifyOk = !!(resp.ok && json && json.success);
         } catch (e) {
+            console.warn('[IAP] Verification failed (non-fatal):', e);
             verifyOk = false;
         }
 
@@ -2005,30 +2832,139 @@ async function purchaseLockedAvatar(slug) {
                     body: JSON.stringify({ platform: 'web', product_ids: [] })
                 });
             }
-        } catch (e) { /* ignore */ }
-
-        // Refresh the avatar list to reflect new entitlements
-        await loadAvatars();
-        const updated = findAvatarBySlug(slug);
-        if (updated && !updated.is_locked) {
-            alert(`✅ ${avatar.name} unlocked!`);
-            const escSlug = (window.CSS && typeof CSS.escape === 'function')
-                ? CSS.escape(updated.slug)
-                : String(updated.slug).replace(/"/g, '\\"');
-            const el = document.querySelector(`.avatar-hex-position[data-slug="${escSlug}"]`);
-            if (el) selectAvatar(updated, el);
-            return;
+        } catch (e) { 
+            console.warn('[IAP] Reconciliation failed (non-fatal):', e);
         }
 
-        // If we got here, the purchase likely completed but the entitlement didn't apply yet.
-        // Give a clear next step rather than a hard failure.
-        const note = verifyOk
-            ? 'Purchase completed, but the unlock has not appeared yet. Please tap Restore Purchases and try again.'
-            : 'Purchase completed, but verification/reconcile is still catching up. Please tap Restore Purchases and try again.';
-        alert(note);
+        // CRITICAL FIX #5: Clear timeout and set purchased state
+        clearTimeout(timeoutId);
+        purchaseState = PurchaseState.PURCHASED;
+        clearPurchaseState();
+        
+        // Close modal
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // CRITICAL: Refresh the avatar unlock status IMMEDIATELY after purchase
+        // Wait a brief moment for backend to process the purchase
+        console.log(`[IAP] Refreshing unlock status for purchased avatar: ${slug}`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await refreshAvatarUnlockStatus();
+        
+        // Check if avatar is now unlocked (with multiple attempts for backend sync delays)
+        let unlocked = false;
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts && !unlocked) {
+            attempts++;
+            const updated = findAvatarBySlug(slug);
+            
+            if (updated) {
+                console.log(`[IAP] Attempt ${attempts}/${maxAttempts}: Avatar ${slug} - is_locked=${updated.is_locked}`);
+                
+                if (!updated.is_locked) {
+                    // Success! Avatar unlocked
+                    unlocked = true;
+                    console.log(`✅ [IAP] Avatar ${slug} successfully unlocked!`);
+                    
+                    // Ensure UI is updated (renderAvatarGrid should have been called by refreshAvatarUnlockStatus)
+                    // Wait a moment for DOM to update
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    const escSlug = (window.CSS && typeof CSS.escape === 'function')
+                        ? CSS.escape(updated.slug)
+                        : String(updated.slug).replace(/"/g, '\\"');
+                    const el = document.querySelector(`.avatar-hex-position[data-slug="${escSlug}"]`);
+                    
+                    if (el) {
+                        // Verify element shows unlocked state
+                        const isLockedAttr = el.getAttribute('data-locked');
+                        const hasLockedClass = el.classList.contains('avatar-locked');
+                        console.log(`[IAP] DOM element state - data-locked="${isLockedAttr}", has avatar-locked class: ${hasLockedClass}`);
+                        
+                        // Remove locked class if still present (safety check)
+                        if (hasLockedClass) {
+                            el.classList.remove('avatar-locked');
+                            el.setAttribute('data-locked', 'false');
+                        }
+                        
+                        selectAvatar(updated, el);
+                        alert(`✅ ${avatar.name} unlocked!`);
+                    } else {
+                        console.warn(`[IAP] Avatar element not found in DOM for ${slug}, but avatar is unlocked`);
+                        alert(`✅ ${avatar.name} unlocked! Refresh the page to see it.`);
+                    }
+                    break;
+                }
+            } else {
+                console.warn(`[IAP] Attempt ${attempts}/${maxAttempts}: Avatar ${slug} not found in avatarsData`);
+            }
+            
+            // If not unlocked yet, wait and retry
+            if (!unlocked && attempts < maxAttempts) {
+                console.log(`[IAP] Avatar still locked, waiting before retry ${attempts + 1}/${maxAttempts}...`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                await refreshAvatarUnlockStatus();
+            }
+        }
+        
+        if (!unlocked) {
+            // Purchase completed but unlock status not updated after all attempts
+            console.warn('[IAP] Purchase completed but avatar still locked after', maxAttempts, 'attempts - may need backend sync');
+            alert('Purchase complete! The avatar should unlock shortly. If it doesn\'t appear unlocked, tap Restore Purchases.');
+        }
+        
+        // Reset state after delay
+        setTimeout(() => {
+            purchaseState = PurchaseState.IDLE;
+            currentPurchaseSlug = null;
+        }, 2000);
+        
     } catch (err) {
-        console.error('❌ Avatar purchase failed:', err);
-        alert(`Purchase failed: ${(err && err.message) ? err.message : 'Unknown error'}`);
+        console.error('[IAP] Avatar purchase failed:', err);
+        purchaseState = PurchaseState.FAILED;
+        
+        // Close modal on error
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        clearTimeout(timeoutId);
+        
+        const msg = (err && err.message) ? err.message : 'Unknown error';
+        if (/cancel|user cancelled|skipped/i.test(msg)) {
+            // CRITICAL FIX: User cancelled - set CANCELLED state (not IDLE)
+            purchaseState = PurchaseState.CANCELLED;
+            clearPurchaseState();
+            
+            // Close modal silently
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Reset state after brief delay
+            setTimeout(() => {
+                purchaseState = PurchaseState.IDLE;
+                currentPurchaseSlug = null;
+                currentPurchaseProductId = null;
+            }, 500);
+            return; // Silent return - user cancelled intentionally
+        }
+        
+        // Actual error - show message
+        purchaseState = PurchaseState.FAILED;
+        clearPurchaseState();
+        
+        alert('The purchase didn\'t go through. Please try again or use Restore Purchases if you already bought this bee.');
+        
+        // Reset state after delay
+        setTimeout(() => {
+            purchaseState = PurchaseState.IDLE;
+            currentPurchaseSlug = null;
+            currentPurchaseProductId = null;
+        }, 3000);
     }
 }
 
@@ -2172,7 +3108,6 @@ function renderBundles(bundles, user) {
 
 async function purchaseBundle(productId, bundleName) {
     if (!productId) {
-        alert('This bundle is not available for purchase right now.');
         return;
     }
     // Apple Guideline 5.1.1: Allow IAP purchases without requiring registration
@@ -2226,7 +3161,7 @@ async function purchaseBundle(productId, bundleName) {
 
         // Refresh both bundles and avatars so locks update immediately
         await loadBundles();
-        await loadAvatars();
+        await refreshAvatarUnlockStatus(); // Lightweight refresh - no full reload
 
         alert(`✅ Bundle unlocked: ${bundleName}${verifyOk ? '' : ' (syncing...)'}`);
     } catch (err) {
@@ -2234,5 +3169,4 @@ async function purchaseBundle(productId, bundleName) {
         alert(`Purchase failed: ${(err && err.message) ? err.message : 'Unknown error'}`);
     }
 }
-
 

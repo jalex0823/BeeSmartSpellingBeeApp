@@ -801,56 +801,69 @@ def get_avatars_by_tier(tier):
     """Returns avatars filtered by tier (default_free, earn_or_buy, premium, mascot, special)"""
     return [a for a in get_avatar_catalog() if a.get("tier") == tier]
 
-def check_avatar_unlocked(avatar_id, user_honey_points=0, purchased_avatars=None, is_guest=False):
+def _norm_slug(s):
+    """Normalize avatar id/slug for comparison (entitlements store by product_id -> avatar slug)."""
+    return (s or "").strip().lower().replace("_", "-")
+
+
+def check_avatar_unlocked(avatar_id, user_honey_points=0, purchased_avatars=None, is_guest=False, has_premium_subscription=False):
     """
-    Check if user has unlocked an avatar via points or purchase.
+    Check if user has unlocked an avatar via points, purchase, or subscription.
     Admin users bypass all checks via their user profile.
-    
+
+    Unlock rule: isFree OR avatar_id in purchased_avatars OR (has_premium_subscription AND avatar is premium/included).
+
     Args:
         avatar_id: The avatar ID to check
         user_honey_points: User's current Honey Points balance
-        purchased_avatars: List of avatar IDs user has purchased
+        purchased_avatars: List of avatar IDs (slugs) user has purchased — compared by normalized slug
         is_guest: Whether the user is a guest (restricts to mascot only)
-        
+        has_premium_subscription: If True, premium-tier (or is_premium_included) avatars are unlocked
+
     Returns:
         dict with keys: unlocked (bool), reason (str), required_points (int), price (float)
     """
     if purchased_avatars is None:
         purchased_avatars = []
-    
-    avatar = next((a for a in AVATAR_CATALOG if a["id"] == avatar_id), None)
+    avatar_id_norm = _norm_slug(avatar_id)
+    purchased_norm = {_norm_slug(x) for x in (purchased_avatars or []) if x}
+
+    avatar = next((a for a in AVATAR_CATALOG if _norm_slug(a.get("id")) == avatar_id_norm), None)
     if not avatar:
         return {"unlocked": False, "reason": "Avatar not found", "required_points": 0, "price": 0}
-    
+
     # MONETIZATION: Guest users can only access mascot avatar
     if is_guest:
         tier = avatar.get("tier", "premium")
         if tier == "mascot_free":
             return {"unlocked": True, "reason": "Mascot avatar (guest access)", "required_points": 0, "price": 0}
-        else:
-            return {
-                "unlocked": False, 
-                "reason": "Guest users must register to unlock avatars",
-                "required_points": 0,
-                "price": 0
-            }
-    
+        return {
+            "unlocked": False,
+            "reason": "Guest users must register to unlock avatars",
+            "required_points": 0,
+            "price": 0
+        }
+
     # Default free avatars are always unlocked for registered users
     if avatar.get("is_default_free", False):
         return {"unlocked": True, "reason": "Free avatar", "required_points": 0, "price": 0}
-    
-    # Check if purchased
-    if avatar_id in purchased_avatars:
+
+    # Subscription: premium subscription optionally unlocks premium avatar set
+    if has_premium_subscription and (avatar.get("tier") == "premium" or avatar.get("is_premium_included")):
+        return {"unlocked": True, "reason": "Included with Premium", "required_points": 0, "price": avatar.get("price", 0)}
+
+    # Check if purchased (string-exact by normalized slug; restores store by product_id -> avatar slug)
+    if avatar_id_norm in purchased_norm:
         return {"unlocked": True, "reason": "Purchased", "required_points": avatar.get("unlock_points", 0), "price": avatar.get("price", 0)}
-    
+
     # Check Honey Points
     required_points = avatar.get("unlock_points", 0)
     if user_honey_points >= required_points:
         return {"unlocked": True, "reason": "Earned via Honey Points", "required_points": required_points, "price": avatar.get("price", 0)}
-    
+
     # Not unlocked
     return {
-        "unlocked": False, 
+        "unlocked": False,
         "reason": f"Requires {required_points - user_honey_points} more Honey Points or ${avatar.get('price', 0):.2f}",
         "required_points": required_points,
         "price": avatar.get("price", 0)

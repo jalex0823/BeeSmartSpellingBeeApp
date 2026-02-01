@@ -203,6 +203,7 @@ Before sign-off, confirm:
 | 5.4 | **No** “For All Ages” **button** on the menu (Submission 1.1). | ☐ |
 | 5.5 | **Student** does not see subscription, Restore, Help, or support; direct URLs redirect to /app (Submission 1.1). | ☐ |
 | 5.6 | **Student** role cannot purchase or restore (UI hidden + server blocks). | ☐ |
+| 5.6a | **Avatar IAP (TestFlight):** As Parent/Teacher, open Avatars, tap a **locked** avatar. | **Purchase** button is visible (e.g. "Purchase for $0.99"); **no** "In-app purchases are still loading" message. Tapping Purchase proceeds (or waits for bridge then proceeds). | ☐ |
 | 5.7 | Subscription screen clearly states **price** and **auto-renew** on the same screen, near the CTA. | ☐ |
 | 5.8 | Sandbox/test accounts **reset** (subscription data cleared) and re-tested. | ☐ |
 | 5.9 | App behavior and claims **match** the App Store description (including role-agnostic “features” copy). | ☐ |

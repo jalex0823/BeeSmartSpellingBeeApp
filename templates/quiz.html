@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v=20251213-1745">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251213-1745">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20251213-1745">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/QuizKeyboard.css') }}?v={{ timestamp }}">
 
 <script>
 // 🛡️ DISABLE SERVICE WORKER AUTO-RELOAD on quiz page to prevent reload loops
@@ -1519,6 +1520,17 @@ if ('speechSynthesis' in window) {
         background: rgba(255, 160, 122, 0.14);
         border: 2px solid rgba(255, 112, 67, 0.65);
         color: #bf360c;
+    }
+
+    .feedback-area.feedback-almost {
+        background: rgba(255, 193, 7, 0.12);
+        border: 2px solid rgba(255, 152, 0, 0.5);
+        color: #E65100;
+    }
+
+    .quiz-feedback.almost-right {
+        border-color: rgba(255, 152, 0, 0.5);
+        box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2);
     }
 
     /* Retry Countdown Timer Styling */
@@ -3942,9 +3954,11 @@ document.addEventListener('DOMContentLoaded', () => {
                    autocorrect="off"
                    autocapitalize="off"
                    spellcheck="false"
-                   inputmode="text"
+                   inputmode="none"
                    style="font-size: 16px;">
         </div>
+        <!-- Custom on-screen keyboard (quiz only); prevents system keyboard on mobile -->
+        <div id="quizKeyboardContainer" role="region" aria-label="Quiz spelling keyboard"></div>
 
         <script>
         // Ensure desktop intro voice plays reliably by triggering on first user interaction
@@ -4176,6 +4190,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/QuizKeyboard.js') }}?v={{ timestamp }}"></script>
 <script>
 console.log('✅ Quiz script loading - Dec 13, 2025 @ 6:15pm - VISUALIZATION REMOVED');
 
@@ -5075,7 +5090,7 @@ class BeeDelightManager {
             return;
         }
 
-        this.quizCard.classList.remove('correct', 'incorrect');
+        this.quizCard.classList.remove('correct', 'incorrect', 'almost-right');
         this.quizCard.classList.add('quiz-feedback');
 
         if (result.correct) {
@@ -5086,11 +5101,15 @@ class BeeDelightManager {
                 this.createSparkleBurst(this.inputWrapper || this.quizCard, 8);
             }
             this.showPhonetic('');
+        } else if (result.almost_right) {
+            this.quizCard.classList.add('almost-right');
+            this.soundboard.play('incorrect');
+            this.setMascotState('speaking', 1200);
+            this.showPhonetic('');
         } else {
             this.quizCard.classList.add('incorrect');
             this.soundboard.play(result.skipped ? 'skip' : 'incorrect');
             this.setMascotState(result.skipped ? 'speaking' : 'sad', result.skipped ? 1000 : 1400);
-            // ❌ DO NOT show phonetic on first attempt - user hasn't chosen yet
             this.showPhonetic('');
         }
     }
@@ -5117,7 +5136,7 @@ class BeeDelightManager {
 
     clearFeedbackState() {
         if (this.quizCard) {
-            this.quizCard.classList.remove('quiz-feedback', 'correct', 'incorrect');
+            this.quizCard.classList.remove('quiz-feedback', 'correct', 'incorrect', 'almost-right');
         }
     }
 
@@ -5214,6 +5233,25 @@ class QuizManager {
         this.timerMode = 'normal'; // 'easy' (90s), 'normal' (60s), 'challenge' (30s), 'dynamic'
         this.timerStrictMode = true; // Auto-advance when time expires (changed from false)
         this.countdownTimer = null;
+        // Difficulty feel from menu: gentle (90s, retry) | standard (60s, one retry) | challenge (30s, no retry)
+        this.retryPolicy = 'one';
+        try {
+            const params = new URLSearchParams(window.location.search || '');
+            let feel = (params.get('feel') || '').toLowerCase();
+            if (!feel) {
+                try { feel = (localStorage.getItem('beesmart_difficulty_feel') || '').toLowerCase(); } catch (e) {}
+            }
+            if (feel === 'gentle') {
+                this.timerMode = 'easy';
+                this.retryPolicy = 'allowed';
+            } else if (feel === 'challenge') {
+                this.timerMode = 'challenge';
+                this.retryPolicy = 'none';
+            } else if (feel === 'standard') {
+                this.timerMode = 'normal';
+                this.retryPolicy = 'one';
+            }
+        } catch (e) {}
         
         // 🏆 Points System Settings
         this.pointsEnabled = true; // Enable points tracking
@@ -5423,6 +5461,9 @@ class QuizManager {
         } catch (e) {
             console.error('❌ Error in initializeEventListeners:', e);
         }
+
+        // 🎹 Custom quiz keyboard: mount only when countdown starts (see startCountdownTimer), not on page load
+        // ROUND_COUNTDOWN_STARTED → mount + setEnabled(true); ROUND_ENDED / GAME_OVER_SHOWN → setEnabled(false) / unmount
         
         // 🍎 iOS-specific optimizations
         if (this.isIOS || this.isSafari) {
@@ -6340,6 +6381,8 @@ class QuizManager {
                     spellingInput.disabled = false;
                     spellingInput.value = '';
                     spellingInput.placeholder = 'Type your answer...';
+                    if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+                    if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
                 }
             }
 
@@ -6534,8 +6577,33 @@ class QuizManager {
         // Start the timer
         this.countdownTimer.start();
         
-        // ENABLE input now that timer has started
+        // ROUND_COUNTDOWN_STARTED: mount keyboard only when countdown becomes visible and starts
         const spellingInput = document.getElementById('spellingInput');
+        try {
+            const keyboardContainer = document.getElementById('quizKeyboardContainer');
+            if (keyboardContainer && spellingInput && typeof initQuizKeyboard === 'function') {
+                if (!window.quizKeyboardInstance) {
+                    window.quizKeyboardInstance = initQuizKeyboard({
+                        targetEl: keyboardContainer,
+                        inputEl: spellingInput,
+                        onSubmit: () => { if (this.submitAnswer) this.submitAnswer(); },
+                        allowSpaces: true,
+                        autoCaps: true,
+                        maxLength: null,
+                        disableInputWhenRoundEnds: true,
+                        practiceMode: false,
+                        showSubmitKey: false
+                    });
+                    console.log('✅ Quiz keyboard mounted (countdown started)');
+                }
+                if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
+                if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+            }
+        } catch (e) {
+            console.warn('Quiz keyboard mount failed:', e);
+        }
+        
+        // ENABLE input now that timer has started
         if (spellingInput) {
             spellingInput.disabled = false;
             spellingInput.placeholder = 'Type your answer...';
@@ -6573,6 +6641,9 @@ class QuizManager {
     handleTimerExpired() {
         console.log('⏰ Timer expired! Auto-advancing to next word...');
 
+        // ROUND_ENDED (timer hit 0): disable keyboard
+        if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(false);
+        
         // Clean up timer visuals
         this.stopCountdownTimer();
         
@@ -7632,6 +7703,8 @@ class QuizManager {
             spellingInput.disabled = false;
             spellingInput.value = '';
             spellingInput.placeholder = 'Type your answer...';
+            if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+            if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
             this.isAnswering = false; // Reset flag for new word
             console.log('✅ Input enabled and ready for answer');
             // Do not force focus here to avoid interrupting TTS; users can start typing anytime
@@ -8092,8 +8165,9 @@ class QuizManager {
         }
 
         this.isAnswering = true;
-        // Keep submit button enabled - only disable input field
+        // Keep submit button enabled - only disable input field and custom keyboard
         document.getElementById('spellingInput').disabled = true;
+        if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(false);
         
         // ⏱️ Stop countdown timer when answer submitted
         this.stopCountdownTimer();
@@ -8136,13 +8210,14 @@ class QuizManager {
             
             this.updateScoreDisplay(result.progress);
             
-            // 🔄 CRITICAL FIX: If answer was INCORRECT, STOP HERE and wait for user choice
-            if (!result.correct) {
+            // 🔄 If answer was INCORRECT (and not "almost right"), STOP and wait for user choice
+            if (!result.correct && !result.almost_right) {
                 console.log('❌ INCORRECT - Halting auto-advance. Waiting for user to click Retry or Show Answer...');
-                // DON'T load next word - wait for user to make a choice via retry buttons
                 this.isAnswering = false;
-                // Note: Next Word button will be shown by showRetryUI if retry window closes
-                return;  // ⬅️ STOP HERE - DON'T CONTINUE
+                return;
+            }
+            if (result.almost_right) {
+                console.log('🍯 Almost right - partial credit, advancing to next word.');
             }
             
             // 🏆 Check if quiz is complete and show badges/level-up
@@ -8344,15 +8419,16 @@ class QuizManager {
         
         try {
             const isCorrect = !!(result && result.correct);
+            const isAlmostRight = !!(result && result.almost_right);
             if (window.BeeVoiceViz && window.BeeVoiceViz.react) {
-                window.BeeVoiceViz.react(isCorrect ? 'feedback-correct' : 'feedback-incorrect');
+                window.BeeVoiceViz.react(isCorrect ? 'feedback-correct' : (isAlmostRight ? 'feedback-incorrect' : 'feedback-incorrect'));
             }
         } catch (e) {}
         const feedbackArea = document.getElementById('feedbackArea');
         feedbackArea.style.display = 'block';
         
-        // Use randomized feedback instead of server message
-        const randomMessage = this.getRandomFeedback(result.correct);
+        // Use randomized feedback instead of server message (or server message for almost_right)
+        const randomMessage = result.almost_right ? (result.feedback_message || 'So close! One small change.') : this.getRandomFeedback(result.correct);
         
     // Get audio announcement (may be a string or an object {phrase, name, pauseMs})
     const audioAnnouncement = this.getRandomAudioAnnouncement(result.correct);
@@ -8422,6 +8498,21 @@ class QuizManager {
             
             // Visual explosion effect!
             this.createExplosion();
+        } else if (result.almost_right) {
+            // Almost right: supportive message, partial points, advance to next word (no retry)
+            const pointsData = result.points || {};
+            const earnedPoints = pointsData.earned || 0;
+            const breakdown = pointsData.breakdown || {};
+            this.currentStreak = (result.progress && result.progress.streak) || this.currentStreak;
+            feedbackArea.className = 'feedback-area feedback-almost';
+            feedbackArea.innerHTML = `
+                <div style="font-size: 1.1rem; font-weight: 700; color: #E65100;">${randomMessage}</div>
+                <div style="margin-top: 0.4rem; font-size: 0.95rem;">Moving to the next word...</div>
+            `;
+            if (earnedPoints > 0) {
+                this.showPointsPopup(earnedPoints, breakdown);
+            }
+            playThemedSound('incorrect'); // softer than full wrong
         } else {
             // Reset streak on incorrect answer
             this.currentStreak = 0;
@@ -8429,8 +8520,9 @@ class QuizManager {
             // Get the correct spelling from the current word data
             const correctWord = (this.currentWordData && this.currentWordData.word) || result.word || '';
             
-            // 🔄 RETRY LOGIC: Show choice buttons if this is first failure and retry not used
-            if (!this.isRetryAttempt && !this.hasRetried) {
+            // 🔄 RETRY LOGIC: Show choice buttons if this is first failure and retry not used (and feel !== challenge)
+            const offerRetry = !this.isRetryAttempt && !this.hasRetried && this.retryPolicy !== 'none';
+            if (offerRetry) {
                 // This is first failure - offer choice
                 // 🔴 CRITICAL: Show ABSOLUTELY NOTHING except buttons!
                 // NO feedback message, NO phonetic, NO hints - JUST the choice buttons
@@ -8620,6 +8712,7 @@ class QuizManager {
     enableInput() {
         const spellingInput = document.getElementById('spellingInput');
         spellingInput.disabled = false;
+        if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
         
         // 🍎 iOS FIX: Delay focus to allow keyboard to properly show after interaction
         if (this.isIOS || this.isSafari) {
@@ -8670,6 +8763,8 @@ class QuizManager {
             spellingInput.value = '';
             spellingInput.disabled = false;
             spellingInput.placeholder = 'Retry your spelling...';
+            if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+            if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
             
             // 🍎 iOS FIX: Delay focus to ensure keyboard shows properly after retry
             if (this.isIOS || this.isSafari) {
@@ -8828,6 +8923,8 @@ class QuizManager {
             spellingInput.value = '';
             spellingInput.disabled = false;
             spellingInput.placeholder = 'Retry your spelling...';
+            if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+            if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
             spellingInput.focus();
             console.log('   - Input field enabled and focused');
         }
@@ -8995,6 +9092,8 @@ class QuizManager {
             spellingInput.value = '';
             spellingInput.disabled = false;
             spellingInput.placeholder = 'Retry spelling... (33% points)';
+            if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+            if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
             spellingInput.focus();
         }
         
@@ -9216,6 +9315,12 @@ class QuizManager {
     }
 
     async showQuizComplete(summary) {
+        // GAME_OVER_SHOWN: unmount keyboard when quiz complete screen is shown
+        try {
+            if (typeof destroyQuizKeyboard === 'function') destroyQuizKeyboard();
+            window.quizKeyboardInstance = null;
+        } catch (_) {}
+        
         document.getElementById('quizCard').style.display = 'none';
         const completeDiv = document.getElementById('quizComplete');
         completeDiv.style.display = 'block';
@@ -9380,6 +9485,25 @@ class QuizManager {
             `;
         }
         
+        // One Win: single positive takeaway before stats (BeeSmart P0)
+        const sessionPoints = Number(summary.session_points) || 0;
+        const maxStreak = Number(summary.max_streak) || 0;
+        let oneWinText = '';
+        if (total > 0 && correct === total) {
+            oneWinText = "One win: You got every word right! 🌟";
+        } else if (maxStreak >= 3) {
+            oneWinText = "One win: Your best streak was " + maxStreak + " words in a row! 🔥";
+        } else if (sessionPoints > 0) {
+            oneWinText = "One win: You earned " + sessionPoints.toLocaleString() + " Buzz Dust this round! ✨";
+        } else if (correct > 0) {
+            oneWinText = correct === 1
+                ? "One win: You spelled 1 word correctly! 🐝"
+                : "One win: You spelled " + correct + " words correctly! ✅";
+        } else {
+            oneWinText = "One win: You showed up and practiced — that's what matters! 💪";
+        }
+        const oneWinHTML = oneWinText ? '<div class="one-win-banner" role="status">' + oneWinText + '</div>' : '';
+
         document.getElementById('completionStats').innerHTML = `
             <div class="report-card">
                 <div class="report-header">
@@ -9390,6 +9514,7 @@ class QuizManager {
                     })()}</h2>
                     <p class="sub">Great job practicing your spelling!</p>
                 </div>
+                ${oneWinHTML}
 
                 <div class="grade-block">
                     <div class="grade-bubble" style="background: linear-gradient(135deg, ${gradeColor} 0%, ${gradeColor}dd 100%);">
@@ -9499,6 +9624,15 @@ class QuizManager {
                 .report-header h2 { margin: 0; font-size: 1.4rem; color: #5A2C15; }
                 .report-header .sub { margin: 0.35rem 0 0; color: #7A4A2A; font-weight: 600; font-size: 0.95rem; opacity: 0.9; }
 
+                .one-win-banner {
+                    text-align: center; margin: 0.75rem 0 1rem; padding: 0.85rem 1rem;
+                    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+                    border-radius: 16px; border: 2px solid rgba(76, 175, 80, 0.5);
+                    font-size: 1.05rem; font-weight: 700; color: #2E7D32;
+                    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+                    animation: slideInDown 0.5s ease backwards;
+                }
+
                 .grade-block { text-align: center; margin: 0.75rem 0 1.25rem; }
                 .grade-bubble {
                     display: inline-flex; align-items: center; justify-content: center;
@@ -9574,6 +9708,17 @@ class QuizManager {
                     }
                     to {
                         transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+
+                @keyframes slideInDown {
+                    from {
+                        transform: translateY(-24px);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateY(0);
                         opacity: 1;
                     }
                 }
@@ -9786,6 +9931,17 @@ function confirmBackToMenu(event) {
     
     // 🛑 FULL CLEANUP: Stop all quiz activities immediately
     console.log('🛑 Starting full quiz cleanup for back navigation...');
+    
+    // 0. Unmount custom keyboard if it exists
+    try {
+        if (typeof destroyQuizKeyboard === 'function') {
+            destroyQuizKeyboard();
+            console.log('⌨️ Destroyed custom keyboard');
+        }
+        window.quizKeyboardInstance = null;
+    } catch (e) {
+        console.warn('Keyboard cleanup error:', e);
+    }
     
     // 1. Stop any ongoing announcer speech immediately
     if ('speechSynthesis' in window) {
@@ -11456,37 +11612,10 @@ function playThemedSound(soundType) {
     }
 }
 
-// 📚 Enhanced Word Definition Popup System
+// 📚 Word definition popup disabled during quiz to avoid redundant interruption.
+// Definition is already shown in the question; modal was redundant.
 function showWordDefinitionPopup(word, definition) {
-    const modal = document.createElement('div');
-    modal.className = 'definition-modal';
-    modal.innerHTML = `
-        <div class="definition-overlay" onclick="this.parentElement.remove()">
-            <div class="definition-popup" onclick="event.stopPropagation()">
-                <div class="definition-header">
-                    <h3>📖 ${word.toUpperCase()}</h3>
-                    <button class="definition-close" onclick="this.closest('.definition-modal').remove()">×</button>
-                </div>
-                <div class="definition-content">
-                    <p>${definition}</p>
-                    <div class="definition-actions">
-                        <button class="btn btn-primary" onclick="this.closest('.definition-modal').remove()">
-                            Got it! 👍
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Auto-remove after 10 seconds
-    setTimeout(() => {
-        if (modal.parentElement) {
-            modal.remove();
-        }
-    }, 10000);
+    // No-op: do not show definition modal during quiz.
 }
 
 // 🎉 Enhanced Streak Celebration System
