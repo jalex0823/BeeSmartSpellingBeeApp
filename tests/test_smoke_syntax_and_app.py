@@ -139,11 +139,12 @@ def test_unified_menu_main_actions_visual_order():
 
 
 def test_about_modal_exists_and_has_content():
-    """About modal exists with title and short copy."""
+    """Help/What Now modal exists with overlay, title, close button, and spelling-related copy."""
     menu = REPO_ROOT / "templates" / "unified_menu.html"
     txt = _read(menu)
-    assert "aboutModalOverlay" in txt
-    assert "aboutModalTitle" in txt
-    assert "About BeeSmart" in txt
-    assert "aboutModalCloseBtn" in txt
-    assert "Spelling practice" in txt or "spelling" in txt
+    # Current UI uses "What Now? (Help)" modal; assert same contract: overlay, title, close, copy
+    assert "whatNowModalOverlay" in txt
+    assert "whatNowModalTitle" in txt
+    assert "whatNowCloseBtn" in txt
+    assert "What Now?" in txt
+    assert "spelling" in txt.lower()
