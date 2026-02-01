@@ -10966,8 +10966,9 @@ function showRestoreDialog(title, message, isSuccess) {
 
         function showPremiumPageErrorModal() {
             var overlay = document.createElement('div');
-            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10001;';
-            overlay.innerHTML = '<div style="background:#FFF9E6;border:3px solid #FFB300;border-radius:24px;padding:2rem;max-width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10001;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem;box-sizing:border-box;min-height:100vh;min-height:100dvh;';
+            var dialogId = 'premiumErrorDialog_' + Date.now();
+            overlay.innerHTML = '<div id="' + dialogId + '" style="margin:auto;background:#FFF9E6;border:3px solid #FFB300;border-radius:24px;padding:2rem;max-width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);flex-shrink:0;">' +
                 '<div style="font-size:2rem;margin-bottom:0.75rem;">⚠️</div>' +
                 '<div style="font-size:1.1rem;font-weight:700;color:#5A2C15;margin-bottom:1rem;">Unable to open Premium page.</div>' +
                 '<div style="font-size:0.95rem;color:#8B4513;margin-bottom:1.25rem;">Please try again.</div>' +
@@ -10975,6 +10976,14 @@ function showRestoreDialog(title, message, isSuccess) {
                 '</div>';
             overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
             document.body.appendChild(overlay);
+            var dialogEl = document.getElementById(dialogId);
+            if (dialogEl) {
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        try { dialogEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); } catch (_) { dialogEl.scrollIntoView({ block: 'center', inline: 'nearest' }); }
+                    });
+                });
+            }
         }
 
         // Show locked feature: guest -> Sign In; authenticated non-premium -> Subscribe (goToPremiumPage)
@@ -11013,9 +11022,14 @@ function showRestoreDialog(title, message, isSuccess) {
             }
 
             var modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;animation:fadeIn 0.3s ease;';
+            modal.className = 'lock-feature-modal-overlay';
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            modal.setAttribute('aria-label', title);
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;animation:fadeIn 0.3s ease;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem;box-sizing:border-box;';
             var btnId = 'lockModalPrimary_' + Date.now();
-            modal.innerHTML = '<div style="background:linear-gradient(135deg,#FFF9E6 0%,#FFF0CC 100%);border:3px solid rgba(255,215,0,0.5);border-radius:24px;padding:2rem;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:slideUp 0.3s ease;">' +
+            var dialogId = 'lockModalDialog_' + Date.now();
+            modal.innerHTML = '<div id="' + dialogId + '" class="lock-feature-modal-dialog" style="position:relative;margin:auto;background:linear-gradient(135deg,#FFF9E6 0%,#FFF0CC 100%);border:3px solid rgba(255,215,0,0.5);border-radius:24px;padding:2rem;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:slideUp 0.3s ease;max-height:90vh;overflow-y:auto;flex-shrink:0;">' +
                 '<div style="font-size:4rem;margin-bottom:1rem;">🔒</div>' +
                 '<div style="font-size:1.5rem;font-weight:700;color:#5A2C15;margin-bottom:1rem;">' + title.replace(/</g,'&lt;') + '</div>' +
                 '<div style="font-size:1rem;color:#8B4513;margin-bottom:1.5rem;line-height:1.5;">' + message.replace(/</g,'&lt;') + '</div>' +
@@ -11027,7 +11041,7 @@ function showRestoreDialog(title, message, isSuccess) {
             if (!document.getElementById('lockModalStyles')) {
                 var style = document.createElement('style');
                 style.id = 'lockModalStyles';
-                style.textContent = '@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes slideUp{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}';
+                style.textContent = '@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes slideUp{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}.lock-feature-modal-overlay{min-height:100vh;min-height:100dvh}.lock-feature-modal-dialog{scroll-margin:1rem}';
                 document.head.appendChild(style);
             }
 
@@ -11040,6 +11054,18 @@ function showRestoreDialog(title, message, isSuccess) {
                 btn.addEventListener('click', function() { modal.remove(); });
             });
             document.body.appendChild(modal);
+            var dialogEl = document.getElementById(dialogId);
+            if (dialogEl) {
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        try {
+                            dialogEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                        } catch (_) {
+                            dialogEl.scrollIntoView({ block: 'center', inline: 'nearest' });
+                        }
+                    });
+                });
+            }
         }
         
         function startQuiz() {
