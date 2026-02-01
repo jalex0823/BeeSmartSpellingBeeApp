@@ -13208,18 +13208,34 @@ def login():
         db.session.commit()
 
         # Redirect based on role
-        if user.role == 'teacher' or user.role == 'parent':
-            redirect_url = url_for('teacher_dashboard') if user.role == 'teacher' else url_for('parent_dashboard')
-        elif user.role == 'admin':
-            redirect_url = url_for('admin_dashboard')
-        else:
-            redirect_url = url_for('student_dashboard')
+        try:
+            if user.role == 'teacher' or user.role == 'parent':
+                redirect_url = url_for('teacher_dashboard') if user.role == 'teacher' else url_for('parent_dashboard')
+            elif user.role == 'admin':
+                redirect_url = url_for('admin_dashboard')
+            else:
+                redirect_url = url_for('student_dashboard')
+        except Exception as e:
+            app.logger.error(f"Failed to generate redirect URL for role {user.role}: {e}")
+            redirect_url = url_for('home')  # Fallback to home
+        
+        # Ensure redirect_url is valid
+        if not redirect_url or redirect_url == '':
+            app.logger.warning(f"Redirect URL was empty for role {user.role}, using home")
+            redirect_url = url_for('home')
+        
+        # Get entitlements (handle errors gracefully)
+        try:
+            entitlements = _entitlements_summary(user)
+        except Exception as e:
+            app.logger.error(f"Failed to get entitlements for user {user.id}: {e}")
+            entitlements = {}
 
         return jsonify({
             "success": True,
             "message": f"Welcome back, {user.display_name}! ",
             "redirect": redirect_url,
-            "entitlements": _entitlements_summary(user)
+            "entitlements": entitlements
         })
     except sa_exc.ProgrammingError as e:
         db.session.rollback()
