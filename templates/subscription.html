@@ -1080,6 +1080,7 @@
                 }
 
                 // Show a dedicated "Restoring…" dialog with Cancel.
+                console.log('IAP: restore started');
                 // NOTE: We cannot cancel the OS-level restore, but Cancel must immediately
                 // exit *our* restore UI flow and return control to the user.
                 const cancelToken = { cancelled: false };
@@ -1278,6 +1279,7 @@
                 }
 
                 if (ok && (premium || ownedCount > 0 || appliedCount > 0)) {
+                    console.log('IAP: restore success entitlement active');
                     const message = appliedCount > 0
                         ? `Successfully restored ${appliedCount} purchase${appliedCount === 1 ? '' : 's'}!`
                         : 'Restore complete. Your purchases are already active.';
@@ -1649,6 +1651,7 @@ function showRestoreDialog(title, message, isSuccess) {
                 });
                 window.addEventListener('beesmart:iap-ready', function(ev) {
                     const platform = ev && ev.detail ? ev.detail.platform : null;
+                    console.log('IAP: store initialized' + (platform ? ' platform=' + platform : ''));
                     schedule('iap-ready' + (platform ? ':' + platform : ''));
                 });
 
@@ -1696,6 +1699,8 @@ function showRestoreDialog(title, message, isSuccess) {
 
             window.__beesmartPurchaseInFlight = true;
             _setPrimaryCtaState({ disabled: true, label: 'Opening App Store…', variant: 'loading' });
+            console.log('IAP: product fetched id=' + productId);
+            console.log('IAP: purchase started');
 
             try {
                 const result = await Promise.resolve(window.BeeSmartIAP.purchase(productId));
@@ -1703,6 +1708,11 @@ function showRestoreDialog(title, message, isSuccess) {
                     window.__beesmartPurchaseInFlight = false;
                     _applyPremiumUiState();
                     return;
+                }
+                if (result && (result.pending !== true)) {
+                    const txId = (result && (result.transactionId || result.transaction_id)) || (result && result.id) || 'unknown';
+                    console.log('IAP: purchase success transaction=' + txId);
+                    console.log('IAP: entitlement active');
                 }
                 if (result && (result.pending === true)) {
                     // Pending transactions may complete later; keep UI usable.

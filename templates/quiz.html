@@ -5508,6 +5508,19 @@ class QuizManager {
         return id === this._speechSequenceId;
     }
     
+    // 🍎 iOS/keyboard: spacer so system keyboard does not overlay quiz area (standard bottom placement, non-intrusive)
+    applyKeyboardSpacer(pixels) {
+        const quizContainer = document.querySelector('.quiz-container');
+        if (!quizContainer) return;
+        const base = typeof pixels === 'number' && pixels > 0 ? pixels : 0;
+        const safe = 34;
+        quizContainer.style.paddingBottom = base > 0 ? (base + safe) + 'px' : '';
+    }
+    clearKeyboardSpacer() {
+        const quizContainer = document.querySelector('.quiz-container');
+        if (quizContainer) quizContainer.style.paddingBottom = '';
+    }
+
     // 🍎 iOS-specific keyboard and viewport handling
     setupiOSKeyboardHandling() {
         const spellingInput = document.getElementById('spellingInput');
@@ -5515,31 +5528,37 @@ class QuizManager {
         
         console.log('🍎 Setting up iOS keyboard handling');
         
-        // Prevent page zoom when focusing input (already handled by 16px font size)
-        // Scroll input into view when keyboard appears
-        spellingInput.addEventListener('focus', () => {
-            console.log('🍎 iOS input focused - ensuring visibility');
-            
-            // Small delay to let keyboard animate in
+        const self = this;
+        function getKeyboardHeight() {
+            if (typeof window.visualViewport !== 'undefined' && window.visualViewport.height > 0) {
+                const diff = window.innerHeight - window.visualViewport.height;
+                if (diff > 50) return Math.min(diff, 400);
+            }
+            return Math.min(280, Math.round(window.innerHeight * 0.35));
+        }
+        function onInputFocus() {
+            const h = getKeyboardHeight();
+            self.applyKeyboardSpacer(h + 12);
             setTimeout(() => {
-                // Scroll the input into view smoothly
-                spellingInput.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'center',
-                    inline: 'nearest'
-                });
+                spellingInput.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
             }, 300);
-        });
+        }
+        function onInputBlur() {
+            self.clearKeyboardSpacer();
+            setTimeout(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, 100);
+        }
         
-        // Handle blur (keyboard dismissal)
-        spellingInput.addEventListener('blur', () => {
-            console.log('🍎 iOS input blurred - keyboard likely dismissed');
-            
-            // Scroll back to top of quiz area if needed
-            setTimeout(() => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }, 100);
-        });
+        spellingInput.addEventListener('focus', onInputFocus);
+        spellingInput.addEventListener('blur', onInputBlur);
+        
+        if (typeof window.visualViewport !== 'undefined') {
+            window.visualViewport.addEventListener('resize', () => {
+                if (document.activeElement === spellingInput) {
+                    const h = getKeyboardHeight();
+                    self.applyKeyboardSpacer(h + 12);
+                }
+            });
+        }
         
         // Prevent unwanted scrolling during keyboard appearance
         document.body.addEventListener('touchmove', (e) => {

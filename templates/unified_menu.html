@@ -1901,6 +1901,10 @@ function showRestoreDialog(title, message, isSuccess) {
                 width: 100%;
                 border-radius: 999px;
                 padding: 0.5rem 1rem;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.25rem;
             }
             .home-main-actions {
                 display: grid !important;
@@ -4788,7 +4792,7 @@ function showRestoreDialog(title, message, isSuccess) {
                             }
 
                             if (requiresPremium && !window.IS_PREMIUM) {
-                                try { if (typeof showLockedFeature === 'function') showLockedFeature('BeeSmart Premium'); } catch(e){}
+                                try { if (typeof showLockedFeature === 'function') showLockedFeature('BeeSmart Premium', { requirePremium: true }); } catch(e){}
                                 return;
                             }
 
@@ -4796,6 +4800,14 @@ function showRestoreDialog(title, message, isSuccess) {
                         }, { passive: true });
                     });
                 } catch(e) { console.warn('Tile binding failed', e); }
+                    // Upgrade to Premium button: single source of truth
+                    document.querySelectorAll('.upgrade-premium-btn').forEach(function(btn) {
+                        btn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            var source = (btn.getAttribute && btn.getAttribute('data-premium-source')) || 'upgrade_button';
+                            if (typeof goToPremiumPage === 'function') goToPremiumPage(source);
+                        });
+                    });
             });
             </script>
             
@@ -5008,6 +5020,7 @@ function showRestoreDialog(title, message, isSuccess) {
                                             cursor: pointer;
                                             display: inline-flex;
                                             align-items: center;
+                                            justify-content: center;
                                             gap: 0.25rem;
                                         "
                                         title="Refresh your stats from the server">
@@ -5604,7 +5617,7 @@ function showRestoreDialog(title, message, isSuccess) {
                 </div>
                 
                 {% set _monthly_usd_for_display = subscription_monthly_usd|default(3.99) %}
-                <a href="/subscription" class="action-btn" style="
+                <a href="/subscription" class="action-btn upgrade-premium-btn" data-premium-source="upgrade_button" style="
                     text-decoration: none; 
                     display: inline-block; 
                     margin-bottom: 15px;
@@ -10932,106 +10945,100 @@ function showRestoreDialog(title, message, isSuccess) {
             });
         }
         
-        // Show locked feature message for guest users
-        function showLockedFeature(featureName) {
-            console.log('🔒 Locked feature clicked:', featureName);
-            
-            // Play a soft "denied" sound if available
-            if (window.kidSounds && window.kidSounds.playBuzz) {
-                window.kidSounds.playBuzz();
+        // Single source of truth: navigate to Premium subscription page
+        function goToPremiumPage(source) {
+            var s = (source && String(source)) || 'unknown';
+            try {
+                console.log('PremiumNav: from=' + s + ' -> premium page');
+                var url = '/subscription';
+                if (window.location && window.location.origin) {
+                    window.location.href = url;
+                } else {
+                    throw new Error('no origin');
+                }
+                console.log('PremiumNav: success');
+            } catch (err) {
+                var msg = (err && (err.message || String(err))) || 'unknown';
+                console.warn('PremiumNav: failure error=' + msg);
+                showPremiumPageErrorModal();
             }
-            
-            // Create a friendly modal/alert
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.7);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 10000;
-                animation: fadeIn 0.3s ease;
-            `;
-            
-            modal.innerHTML = `
-                <div style="
-                    background: linear-gradient(135deg, #FFF9E6 0%, #FFF0CC 100%);
-                    border: 3px solid rgba(255, 215, 0, 0.5);
-                    border-radius: 24px;
-                    padding: 2rem;
-                    max-width: 400px;
-                    width: 90%;
-                    text-align: center;
-                    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-                    animation: slideUp 0.3s ease;
-                ">
-                    <div style="font-size: 4rem; margin-bottom: 1rem;">🔒</div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #5A2C15; margin-bottom: 1rem;">
-                        ${featureName} is Locked!
-                    </div>
-                    <div style="font-size: 1rem; color: #8B4513; margin-bottom: 1.5rem; line-height: 1.5;">
-                        Sign in to unlock this feature and save your progress!
-                    </div>
-                    <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
-                        <a href="/auth/login" style="
-                            padding: 0.75rem 1.5rem;
-                            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-                            color: #5A2C15;
-                            border-radius: 12px;
-                            text-decoration: none;
-                            font-weight: 700;
-                            font-size: 1rem;
-                            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
-                            border: 2px solid rgba(255, 215, 0, 0.6);
-                            transition: all 0.3s ease;
-                        " onmouseover="this.style.transform='translateY(-2px)'"
-                           onmouseout="this.style.transform='translateY(0)'">
-                            🔓 Sign In
-                        </a>
-                        <button onclick="this.closest('div').parentElement.remove()" style="
-                            padding: 0.75rem 1.5rem;
-                            background: linear-gradient(135deg, #E0E0E0 0%, #BDBDBD 100%);
-                            color: #5A2C15;
-                            border-radius: 12px;
-                            font-weight: 700;
-                            font-size: 1rem;
-                            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-                            border: 2px solid rgba(0, 0, 0, 0.1);
-                            cursor: pointer;
-                            transition: all 0.3s ease;
-                        " onmouseover="this.style.transform='translateY(-2px)'"
-                           onmouseout="this.style.transform='translateY(0)'">
-                            Maybe Later
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            // Add animations
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes slideUp {
-                    from { transform: translateY(50px); opacity: 0; }
-                    to { transform: translateY(0); opacity: 1; }
-                }
-            `;
-            document.head.appendChild(style);
-            
-            // Close on background click
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.remove();
-                }
+        }
+
+        function showPremiumPageErrorModal() {
+            var overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10001;';
+            overlay.innerHTML = '<div style="background:#FFF9E6;border:3px solid #FFB300;border-radius:24px;padding:2rem;max-width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
+                '<div style="font-size:2rem;margin-bottom:0.75rem;">⚠️</div>' +
+                '<div style="font-size:1.1rem;font-weight:700;color:#5A2C15;margin-bottom:1rem;">Unable to open Premium page.</div>' +
+                '<div style="font-size:0.95rem;color:#8B4513;margin-bottom:1.25rem;">Please try again.</div>' +
+                '<button type="button" onclick="this.closest(\'div\').parentElement.remove()" style="padding:0.75rem 1.5rem;background:linear-gradient(135deg,#FFD700,#FFA500);color:#5A2C15;border-radius:12px;font-weight:700;border:2px solid rgba(255,215,0,0.6);cursor:pointer;">OK</button>' +
+                '</div>';
+            overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+            document.body.appendChild(overlay);
+        }
+
+        // Show locked feature: guest -> Sign In; authenticated non-premium -> Subscribe (goToPremiumPage)
+        function showLockedFeature(featureName, options) {
+            options = options || {};
+            var requirePremium = options.requirePremium === true;
+            var isAuth = !!(window.IS_AUTH);
+            console.log('🔒 Locked feature clicked:', featureName, 'requirePremium:', requirePremium, 'isAuth:', isAuth);
+
+            if (window.kidSounds && window.kidSounds.playBuzz) {
+                try { window.kidSounds.playBuzz(); } catch (_) {}
+            }
+
+            var title = featureName + ' is Locked!';
+            var message;
+            var primaryLabel;
+            var primaryAction = function() {};
+
+            if (!isAuth) {
+                message = 'Sign in to unlock this feature and save your progress!';
+                primaryLabel = '🔓 Sign In';
+                primaryAction = function() {
+                    var next = '/subscription';
+                    window.location.href = '/auth/login?next=' + encodeURIComponent(next);
+                };
+            } else if (requirePremium) {
+                message = 'Subscribe to BeeSmart Premium to unlock this feature and more!';
+                primaryLabel = '⭐ Subscribe to Premium';
+                primaryAction = function() { goToPremiumPage(featureName); };
+            } else {
+                message = 'Sign in to unlock this feature and save your progress!';
+                primaryLabel = '🔓 Sign In';
+                primaryAction = function() {
+                    window.location.href = '/auth/login?next=' + encodeURIComponent('/subscription');
+                };
+            }
+
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:10000;animation:fadeIn 0.3s ease;';
+            var btnId = 'lockModalPrimary_' + Date.now();
+            modal.innerHTML = '<div style="background:linear-gradient(135deg,#FFF9E6 0%,#FFF0CC 100%);border:3px solid rgba(255,215,0,0.5);border-radius:24px;padding:2rem;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:slideUp 0.3s ease;">' +
+                '<div style="font-size:4rem;margin-bottom:1rem;">🔒</div>' +
+                '<div style="font-size:1.5rem;font-weight:700;color:#5A2C15;margin-bottom:1rem;">' + title.replace(/</g,'&lt;') + '</div>' +
+                '<div style="font-size:1rem;color:#8B4513;margin-bottom:1.5rem;line-height:1.5;">' + message.replace(/</g,'&lt;') + '</div>' +
+                '<div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">' +
+                '<button type="button" id="' + btnId + '" style="padding:0.75rem 1.5rem;background:linear-gradient(135deg,#FFD700 0%,#FFA500 100%);color:#5A2C15;border-radius:12px;font-weight:700;font-size:1rem;box-shadow:0 4px 12px rgba(255,215,0,0.4);border:2px solid rgba(255,215,0,0.6);cursor:pointer;">' + primaryLabel + '</button>' +
+                '<button type="button" class="lock-modal-later" style="padding:0.75rem 1.5rem;background:linear-gradient(135deg,#E0E0E0,#BDBDBD);color:#5A2C15;border-radius:12px;font-weight:700;font-size:1rem;border:2px solid rgba(0,0,0,0.1);cursor:pointer;">Maybe Later</button>' +
+                '</div></div>';
+
+            if (!document.getElementById('lockModalStyles')) {
+                var style = document.createElement('style');
+                style.id = 'lockModalStyles';
+                style.textContent = '@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes slideUp{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}';
+                document.head.appendChild(style);
+            }
+
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) modal.remove();
             });
-            
+            var primaryBtn = modal.querySelector('#' + btnId);
+            if (primaryBtn) primaryBtn.addEventListener('click', function() { modal.remove(); primaryAction(); });
+            modal.querySelectorAll('.lock-modal-later').forEach(function(btn) {
+                btn.addEventListener('click', function() { modal.remove(); });
+            });
             document.body.appendChild(modal);
         }
         
