@@ -209,15 +209,26 @@
         container.classList.add('quiz-keyboard-enter');
 
         function applyKeyboardSpacer() {
-            if (!spacerTargetEl) return;
             try {
                 const h = container.getBoundingClientRect().height;
                 if (typeof h === 'number' && h > 0) {
-                    spacerTargetEl.style.paddingBottom = (h + 12) + 'px';
+                    document.documentElement.style.setProperty('--quiz-kb-height', Math.ceil(h) + 'px');
+                    if (spacerTargetEl) spacerTargetEl.style.paddingBottom = (h + 12) + 'px';
                 }
             } catch (_) {}
         }
         applyKeyboardSpacer();
+        requestAnimationFrame(function reapply() {
+            applyKeyboardSpacer();
+            setTimeout(applyKeyboardSpacer, 300);
+        });
+        if (spacerTargetEl && inputEl) {
+            setTimeout(function scrollInputIntoView() {
+                try {
+                    inputEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                } catch (_) {}
+            }, 100);
+        }
         if (typeof onMounted === 'function') {
             try { onMounted(container); } catch (_) {}
         }
@@ -281,6 +292,9 @@
                 if (opts.maxLength !== undefined) state.maxLength = opts.maxLength;
             },
             destroy() {
+                try {
+                    document.documentElement.style.removeProperty('--quiz-kb-height');
+                } catch (_) {}
                 if (spacerTargetEl) {
                     try { spacerTargetEl.style.paddingBottom = ''; } catch (_) {}
                 }

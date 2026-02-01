@@ -1782,6 +1782,7 @@ function pronounceWord() {
                     window.quizKeyboardInstance = initQuizKeyboard({
                         targetEl: keyboardContainer,
                         inputEl: spellInput,
+                        spacerTargetEl: document.querySelector('.speed-quiz-container'),
                         onSubmit: () => submitAnswer(),
                         allowSpaces: true,
                         autoCaps: true,
@@ -1837,6 +1838,7 @@ function pronounceWord() {
                             window.quizKeyboardInstance = initQuizKeyboard({
                                 targetEl: keyboardContainer,
                                 inputEl: spellInput,
+                                spacerTargetEl: document.querySelector('.speed-quiz-container'),
                                 onSubmit: () => submitAnswer(),
                                 allowSpaces: true,
                                 autoCaps: true,

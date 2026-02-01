@@ -96,6 +96,26 @@ if ('speechSynthesis' in window) {
         padding: 0.35rem 1rem 3rem;
         position: relative;
     }
+
+    /* === CRITICAL: Reserve space so quiz content is not hidden behind keyboard === */
+    .quiz-content {
+        padding-bottom: calc(var(--quiz-kb-height, 260px) + env(safe-area-inset-bottom, 0px));
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    body {
+        overflow-x: hidden;
+    }
+
+    /* Pin answer area so spelling input / sentence stay visible when scrolling */
+    .quiz-answer-area {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: linear-gradient(180deg, #FFFDE7 0%, #FFF8E1 100%);
+        padding: 10px 12px;
+    }
     
     /* Progress tracker fixed at bottom of viewport */
     .progress-tracker {
@@ -3438,7 +3458,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </button>
 </div>
 
-<div class="quiz-container quiz-shell">
+<div class="quiz-container quiz-shell quiz-content">
     <!-- Quiz Header -->
     <div class="quiz-header">
         <!-- Modern header layout: progress left, exit right -->
@@ -3939,23 +3959,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-        <!-- Letter Hint Display -->
-        <div class="letter-hint hidden" id="letterHint" aria-live="polite">
-            <span class="hint-label">💡 Hint:</span>
-            <span class="hint-letters" id="hintLetters"></span>
-        </div>
+        <!-- Answer area: letter hint + spelling input (sticky so user always sees where to type) -->
+        <div class="quiz-answer-area">
+            <div class="letter-hint hidden" id="letterHint" aria-live="polite">
+                <span class="hint-label">💡 Hint:</span>
+                <span class="hint-letters" id="hintLetters"></span>
+            </div>
 
-        <!-- Answer Input Field - Moved Higher -->
-        <div class="bee-input" id="beeInputWrapper">
-            <input type="text"
-                   id="spellingInput"
-                   placeholder="Type your spelling here..."
-                   autocomplete="off"
-                   autocorrect="off"
-                   autocapitalize="off"
-                   spellcheck="false"
-                   inputmode="none"
-                   style="font-size: 16px;">
+            <!-- Answer Input Field - Moved Higher -->
+            <div class="bee-input" id="beeInputWrapper">
+                <input type="text"
+                       id="spellingInput"
+                       placeholder="Type your spelling here..."
+                       autocomplete="off"
+                       autocorrect="off"
+                       autocapitalize="off"
+                       spellcheck="false"
+                       inputmode="none"
+                       style="font-size: 16px;">
+            </div>
         </div>
         <!-- Custom on-screen keyboard (quiz only); prevents system keyboard on mobile -->
         <div id="quizKeyboardContainer" role="region" aria-label="Quiz spelling keyboard"></div>
@@ -4191,6 +4213,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/QuizKeyboard.js') }}?v={{ timestamp }}"></script>
+<script>
+(function () {
+  function updateKeyboardHeight() {
+    var el = document.querySelector('.quiz-keyboard');
+    if (!el) return;
+    var h = el.getBoundingClientRect().height;
+    document.documentElement.style.setProperty('--quiz-kb-height', Math.ceil(h) + 'px');
+  }
+
+  window.addEventListener('resize', updateKeyboardHeight, { passive: true });
+  window.addEventListener('orientationchange', updateKeyboardHeight, { passive: true });
+  document.addEventListener('DOMContentLoaded', updateKeyboardHeight);
+  setTimeout(updateKeyboardHeight, 200);
+  setTimeout(updateKeyboardHeight, 600);
+})();
+</script>
 <script>
 console.log('✅ Quiz script loading - Dec 13, 2025 @ 6:15pm - VISUALIZATION REMOVED');
 
@@ -6586,6 +6624,7 @@ class QuizManager {
                     window.quizKeyboardInstance = initQuizKeyboard({
                         targetEl: keyboardContainer,
                         inputEl: spellingInput,
+                        spacerTargetEl: document.querySelector('.quiz-container'),
                         onSubmit: () => { if (this.submitAnswer) this.submitAnswer(); },
                         allowSpaces: true,
                         autoCaps: true,
