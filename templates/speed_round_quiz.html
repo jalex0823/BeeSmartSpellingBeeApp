@@ -393,14 +393,52 @@ if ('speechSynthesis' in window) {
         letter-spacing: 1px;
     }
 
-    /* Quiz Content */
-    .quiz-card {
+    /* Quiz Content – card layout with keyboard shell (same as main quiz) */
+    .speed-quiz-container .quiz-card {
         background: #FFFFFF;
         border-radius: 24px;
-        padding: 2rem 1.5rem;
         box-shadow: 0 15px 40px rgba(66, 165, 245, 0.3);
         border: 3px solid #42A5F5;
         margin-bottom: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        max-height: calc(100dvh - 220px);
+        padding: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .speed-quiz-container .quiz-card .speed-quiz-card-content {
+        padding: 1.5rem 1.5rem 12px;
+        min-height: 0;
+        overflow-y: auto;
+        flex-shrink: 0;
+    }
+    /* Keyboard shell: same behavior as main quiz – hide by default, show when kb-open */
+    .speed-quiz-container .keyboard-shell {
+        position: relative;
+        z-index: 20;
+        flex-shrink: 0;
+        min-width: 0;
+        overflow: visible;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+        padding: 10px 10px 12px;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0));
+        background: rgba(255, 255, 255, 0.92);
+        display: none;
+    }
+    .speed-quiz-container .keyboard-shell .quiz-keyboard,
+    .speed-quiz-container .keyboard-shell .custom-keyboard {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        overflow-x: hidden;
+        overflow-y: visible;
+    }
+    .speed-quiz-container .quiz-card.kb-open .keyboard-shell {
+        display: block;
     }
 
     .word-prompt {
@@ -659,7 +697,10 @@ if ('speechSynthesis' in window) {
             font-size: 0.7rem;
         }
         
-        .quiz-card {
+        .speed-quiz-container .quiz-card {
+            max-height: 100dvh;
+        }
+        .speed-quiz-container .quiz-card .speed-quiz-card-content {
             padding: 0.75rem;
         }
         
@@ -808,8 +849,9 @@ if ('speechSynthesis' in window) {
         <div class="timer-label">SECONDS</div>
     </div>
 
-    <!-- Quiz Card -->
-    <div class="quiz-card">
+    <!-- Quiz Card: scrollable content + keyboard shell (same layout as main quiz) -->
+    <div class="quiz-card" id="speedQuizCard">
+        <div class="speed-quiz-card-content">
                 <!-- Voice Visualizer (Upgraded dotted rainbow ribbon) -->
                 <div class="voice-visualizer egg-visualizer" id="voiceVisualizer">
                         <div class="voice-card speaking-mode">
@@ -853,6 +895,10 @@ if ('speechSynthesis' in window) {
                     <span>Submit Answer</span>
                 </button>
             </div>
+            <!-- Show keyboard button (visible when keyboard is hidden; same as main quiz) -->
+            <button type="button" id="speedShowKeyboardBtn" class="btn-speed" style="display: none; margin-top: 8px; width: 100%; max-width: 260px; background: linear-gradient(135deg, #BBDEFB, #90CAF9); color: #0D47A1; border: 3px solid #42A5F5;" aria-label="Show keyboard">
+                <span aria-hidden="true">&#9650;</span> Show keyboard
+            </button>
 
             <div class="action-buttons" style="margin-top: 0.75rem;">
                 <button class="btn-speed btn-pronounce" id="pronounceBtn">
@@ -881,14 +927,55 @@ if ('speechSynthesis' in window) {
                 
             </div>
         </div>
-        <!-- Custom on-screen keyboard (speed round); prevents system keyboard, spellcheck off -->
-        <div id="quizKeyboardContainer" role="region" aria-label="Speed round spelling keyboard"></div>
+        <!-- Keyboard shell: same as main quiz – keyboard inside card, hide/show via kb-open -->
+        <div class="keyboard-shell" id="speedKeyboardShell">
+            <div id="quizKeyboardContainer" role="region" aria-label="Speed round spelling keyboard"></div>
+        </div>
     </div>
 </div>
 
 <!-- Removed duplicate loading overlay: rely on unified global honey pot loading screen -->
 
 <script src="{{ url_for('static', filename='js/QuizKeyboard.js') }}"></script>
+<script>
+(function () {
+  function updateSpeedKeyboardReservedSpace() {
+    var card = document.getElementById('speedQuizCard');
+    var kb = document.getElementById('quizKeyboardContainer');
+    if (!card || !kb) return;
+    var el = kb.querySelector('.quiz-keyboard');
+    if (!el) return;
+    var h = el.offsetHeight || 0;
+    card.style.setProperty('--kb-h', h + 'px');
+  }
+  window.addEventListener('load', updateSpeedKeyboardReservedSpace);
+  window.addEventListener('resize', function () {
+    clearTimeout(window.__speedKbResizeT);
+    window.__speedKbResizeT = setTimeout(updateSpeedKeyboardReservedSpace, 120);
+  });
+  window.addEventListener('orientationchange', function () {
+    setTimeout(updateSpeedKeyboardReservedSpace, 250);
+  });
+  document.addEventListener('DOMContentLoaded', function () {
+    var kb = document.querySelector('.quiz-keyboard');
+    var dock = document.getElementById('speedKeyboardShell');
+    if (kb && dock && kb.parentElement !== dock) dock.appendChild(kb);
+    updateSpeedKeyboardReservedSpace();
+    var showBtn = document.getElementById('speedShowKeyboardBtn');
+    var card = document.getElementById('speedQuizCard');
+    if (showBtn && card) {
+      showBtn.addEventListener('click', function () {
+        card.classList.add('kb-open');
+        showBtn.style.display = 'none';
+        if (typeof window.updateSpeedKeyboardReservedSpace === 'function') window.updateSpeedKeyboardReservedSpace();
+      });
+    }
+  });
+  setTimeout(updateSpeedKeyboardReservedSpace, 200);
+  setTimeout(updateSpeedKeyboardReservedSpace, 600);
+  window.updateSpeedKeyboardReservedSpace = updateSpeedKeyboardReservedSpace;
+})();
+</script>
 <script src="{{ url_for('static', filename='js/voice-visualizer-config.js') }}"></script>
 <script>
 // Speed Round Quiz State
@@ -1779,15 +1866,35 @@ function pronounceWord() {
                 spellInput.disabled = false;
                 spellInput.placeholder = 'Type your answer...';
                 if (keyboardContainer && spellInput && typeof initQuizKeyboard === 'function' && !window.quizKeyboardInstance) {
+                    const speedQuizCardEl = document.getElementById('speedQuizCard');
                     window.quizKeyboardInstance = initQuizKeyboard({
                         targetEl: keyboardContainer,
                         inputEl: spellInput,
-                        spacerTargetEl: document.querySelector('.speed-quiz-container'),
+                        spacerTargetEl: null,
                         onSubmit: () => submitAnswer(),
                         allowSpaces: true,
                         autoCaps: true,
                         disableInputWhenRoundEnds: true,
-                        showSubmitKey: true
+                        showSubmitKey: true,
+                        onHide: function () {
+                            if (speedQuizCardEl) speedQuizCardEl.classList.remove('kb-open');
+                            const showBtn = document.getElementById('speedShowKeyboardBtn');
+                            if (showBtn) showBtn.style.display = 'block';
+                        },
+                        onMounted: function () {
+                            if (speedQuizCardEl) speedQuizCardEl.classList.add('kb-open');
+                            if (typeof window.updateSpeedKeyboardReservedSpace === 'function') window.updateSpeedKeyboardReservedSpace();
+                            setTimeout(function () {
+                                var shell = document.getElementById('speedKeyboardShell');
+                                if (shell) shell.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                            }, 100);
+                        },
+                        onUnmounted: function () {
+                            if (speedQuizCardEl) speedQuizCardEl.classList.remove('kb-open');
+                            const showBtn = document.getElementById('speedShowKeyboardBtn');
+                            if (showBtn) showBtn.style.display = 'none';
+                            try { if (speedQuizCardEl) speedQuizCardEl.style.removeProperty('--kb-h'); } catch (_) {}
+                        }
                     });
                     if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
                     if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
@@ -1835,15 +1942,35 @@ function pronounceWord() {
                     // ROUND_COUNTDOWN_STARTED: mount keyboard only when answer phase (timer) starts
                     if (keyboardContainer && spellInput && typeof initQuizKeyboard === 'function') {
                         if (!window.quizKeyboardInstance) {
+                            const speedQuizCardEl = document.getElementById('speedQuizCard');
                             window.quizKeyboardInstance = initQuizKeyboard({
                                 targetEl: keyboardContainer,
                                 inputEl: spellInput,
-                                spacerTargetEl: document.querySelector('.speed-quiz-container'),
+                                spacerTargetEl: null,
                                 onSubmit: () => submitAnswer(),
                                 allowSpaces: true,
                                 autoCaps: true,
                                 disableInputWhenRoundEnds: true,
-                                showSubmitKey: true
+                                showSubmitKey: true,
+                                onHide: function () {
+                                    if (speedQuizCardEl) speedQuizCardEl.classList.remove('kb-open');
+                                    const showBtn = document.getElementById('speedShowKeyboardBtn');
+                                    if (showBtn) showBtn.style.display = 'block';
+                                },
+                                onMounted: function () {
+                                    if (speedQuizCardEl) speedQuizCardEl.classList.add('kb-open');
+                                    if (typeof window.updateSpeedKeyboardReservedSpace === 'function') window.updateSpeedKeyboardReservedSpace();
+                                    setTimeout(function () {
+                                        var shell = document.getElementById('speedKeyboardShell');
+                                        if (shell) shell.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                                    }, 100);
+                                },
+                                onUnmounted: function () {
+                                    if (speedQuizCardEl) speedQuizCardEl.classList.remove('kb-open');
+                                    const showBtn = document.getElementById('speedShowKeyboardBtn');
+                                    if (showBtn) showBtn.style.display = 'none';
+                                    try { if (speedQuizCardEl) speedQuizCardEl.style.removeProperty('--kb-h'); } catch (_) {}
+                                }
                             });
                             console.log('✅ Speed round keyboard mounted (countdown started)');
                         }

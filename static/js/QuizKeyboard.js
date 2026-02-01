@@ -110,7 +110,8 @@
             useHexKeys = USE_HEX_KEYS_DEFAULT,
             spacerTargetEl = null,
             onMounted = null,
-            onUnmounted = null
+            onUnmounted = null,
+            onHide = null
         } = options || {};
 
         if (!targetEl || !inputEl) {
@@ -168,6 +169,21 @@
         container.className = 'quiz-keyboard custom-keyboard' + (useHexKeys ? ' quiz-keyboard--hex-keys' : '');
         container.setAttribute('role', 'group');
         container.setAttribute('aria-label', 'Quiz spelling keyboard');
+
+        if (typeof onHide === 'function') {
+            const hideRow = document.createElement('div');
+            hideRow.className = 'quiz-keyboard-hide-row';
+            const hideBtn = document.createElement('button');
+            hideBtn.type = 'button';
+            hideBtn.className = 'quiz-keyboard-hide-btn';
+            hideBtn.setAttribute('aria-label', 'Hide keyboard');
+            hideBtn.innerHTML = '&#9660; Hide keyboard';
+            hideBtn.addEventListener('click', function () {
+                try { onHide(); } catch (_) {}
+            }, { once: false });
+            hideRow.appendChild(hideBtn);
+            container.appendChild(hideRow);
+        }
 
         const keyOpts = { autoCaps, onLetter: handleLetter, useHexKeys };
 

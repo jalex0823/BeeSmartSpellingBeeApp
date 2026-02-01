@@ -58,6 +58,27 @@ def test_key_templates_render(app):
         render_template("privacy.html")
 
 
+def test_quiz_template_renders(app):
+    """Quiz template renders without Jinja/syntax errors."""
+    with app.test_request_context("/"):
+        from flask import render_template
+        html = render_template("quiz.html", user_name=None, timestamp=12345)
+    assert "quiz" in html.lower()
+    assert "QuizKeyboard.js" in html or "quiz_keyboard" in html.lower()
+    assert "initQuizKeyboard" in html or "quizKeyboard" in html.lower()
+
+
+def test_speed_round_quiz_template_renders(app):
+    """Speed round quiz template renders without Jinja/syntax errors."""
+    with app.test_request_context("/"):
+        from flask import render_template
+        html = render_template("speed_round_quiz.html", timestamp=12345, user_name=None)
+    assert "speed" in html.lower() or "Speed" in html
+    assert "QuizKeyboard.js" in html or "quiz_keyboard" in html.lower()
+    assert "initQuizKeyboard" in html or "quizKeyboard" in html.lower()
+    assert "speedQuizCard" in html or "speedKeyboardShell" in html
+
+
 def test_home_route_returns_ok(client):
     """GET / or /app returns 200 or expected redirect."""
     r = client.get("/")
@@ -86,6 +107,24 @@ def test_api_health_or_equivalent(client):
     r = client.get("/api/auth/status") if hasattr(client, "get") else None
     if r is not None:
         assert r.status_code in (200, 401, 302)
+
+
+def test_quiz_route_responds(client):
+    """GET /quiz returns 200 (with wordbank) or 302 (redirect when no wordbank)."""
+    r = client.get("/quiz")
+    assert r.status_code in (200, 302), f"Expected 200 or 302, got {r.status_code}"
+
+
+def test_speed_round_setup_route_responds(client):
+    """GET /speed-round/setup returns 200 or redirect."""
+    r = client.get("/speed-round/setup")
+    assert r.status_code in (200, 302), f"Expected 200 or 302, got {r.status_code}"
+
+
+def test_speed_round_quiz_route_responds(client):
+    """GET /speed-round/quiz returns 302 when not premium/active (redirect to subscription or setup)."""
+    r = client.get("/speed-round/quiz")
+    assert r.status_code in (200, 302), f"Expected 200 or 302, got {r.status_code}"
 
 
 # ─── Wireframe layout (unified_menu): structure and spacing ───────────────────

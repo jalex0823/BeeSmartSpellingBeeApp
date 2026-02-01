@@ -116,43 +116,50 @@ if ('speechSynthesis' in window) {
         padding: 10px 12px;
     }
 
-    /* Card = layout container; keyboard lives INSIDE card, never overlays (Option A) */
+    /* Card = layout container; scrollable so full keyboard is visible (no clipping) */
     .quiz-card {
         width: min(92vw, 520px);
         margin: 0 auto;
         border-radius: 24px;
-        overflow: hidden;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
         display: flex;
         flex-direction: column;
         min-height: 0;
-        max-height: calc(100dvh - 140px);
+        max-height: calc(100dvh - 100px);
         background: rgba(255, 255, 255, 0.85);
     }
     @media (max-width: 768px) {
-        .quiz-card { height: 100dvh; max-height: 100dvh; }
+        .quiz-card { max-height: 100dvh; }
     }
-    /* Content scrolls if needed; keyboard stays visible inside card */
+    /* Content area; keyboard follows below and is fully visible when user scrolls */
     .quiz-card .quiz-card-content {
         padding: 16px;
         min-height: 0;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: calc(var(--kb-h, 0px) + 12px);
-    }
-    /* Keyboard region fixed INSIDE the card (not the screen); no position:fixed */
-    .keyboard-shell {
         flex-shrink: 0;
+        padding-bottom: 12px;
+    }
+    /* Keyboard region: brought to front, never clipped; card scrolls to show it */
+    .keyboard-shell {
+        position: relative;
+        z-index: 20;
+        flex-shrink: 0;
+        min-width: 0;
+        overflow: visible;
         border-top: 1px solid rgba(0, 0, 0, 0.08);
         padding: 10px 10px 12px;
         padding-bottom: calc(10px + env(safe-area-inset-bottom, 0));
         background: rgba(255, 255, 255, 0.92);
-        z-index: 5;
     }
     .keyboard-shell .quiz-keyboard,
     .keyboard-shell .custom-keyboard {
         width: 100%;
         max-width: 100%;
+        min-width: 0;
         box-sizing: border-box;
+        overflow-x: hidden;
+        overflow-y: visible;
     }
     /* Show keyboard shell when keyboard is mounted */
     .keyboard-shell { display: none; }
@@ -4021,6 +4028,10 @@ document.addEventListener('DOMContentLoaded', () => {
                        inputmode="none"
                        style="font-size: 16px;">
             </div>
+            <!-- Show keyboard button (visible when keyboard is hidden so user can bring it back) -->
+            <button type="button" id="showKeyboardBtn" class="action-btn secondary quiz-show-keyboard-btn" style="display: none; margin-top: 8px; width: 100%; max-width: 260px;" aria-label="Show keyboard">
+                <span class="bee-icon" aria-hidden="true">&#9650;</span> Show keyboard
+            </button>
         </div>
 
         <script>
@@ -4285,6 +4296,15 @@ document.addEventListener('DOMContentLoaded', () => {
     var dock = document.getElementById('keyboardShell');
     if (kb && dock && kb.parentElement !== dock) dock.appendChild(kb);
     updateKeyboardReservedSpace();
+    var showBtn = document.getElementById('showKeyboardBtn');
+    var card = document.getElementById('quizCard');
+    if (showBtn && card) {
+      showBtn.addEventListener('click', function () {
+        card.classList.add('kb-open');
+        showBtn.style.display = 'none';
+        if (typeof window.updateKeyboardReservedSpace === 'function') window.updateKeyboardReservedSpace();
+      });
+    }
   });
   setTimeout(updateKeyboardReservedSpace, 200);
   setTimeout(updateKeyboardReservedSpace, 600);
@@ -6677,12 +6697,23 @@ class QuizManager {
                         disableInputWhenRoundEnds: true,
                         practiceMode: false,
                         showSubmitKey: false,
+                        onHide: function () {
+                            if (quizCardEl) quizCardEl.classList.remove('kb-open');
+                            const showBtn = document.getElementById('showKeyboardBtn');
+                            if (showBtn) showBtn.style.display = 'block';
+                        },
                         onMounted: function () {
                             if (quizCardEl) quizCardEl.classList.add('kb-open');
                             if (typeof window.updateKeyboardReservedSpace === 'function') window.updateKeyboardReservedSpace();
+                            setTimeout(function () {
+                                var shell = document.getElementById('keyboardShell');
+                                if (shell) shell.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                            }, 100);
                         },
                         onUnmounted: function () {
                             if (quizCardEl) quizCardEl.classList.remove('kb-open');
+                            const showBtn = document.getElementById('showKeyboardBtn');
+                            if (showBtn) showBtn.style.display = 'none';
                             try { if (quizCardEl) quizCardEl.style.removeProperty('--kb-h'); } catch (_) {}
                         }
                     });
