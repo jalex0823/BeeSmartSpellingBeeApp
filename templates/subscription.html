@@ -1769,7 +1769,14 @@ function showRestoreDialog(title, message, isSuccess) {
                 }
 
                 alert('Purchase complete! Premium is active.');
-                try { window.location.href = '/app'; } catch (e) {}
+                // Redirect to app with premium activation parameter
+                try { 
+                    const redirectUrl = new URL('/app', window.location.origin);
+                    redirectUrl.searchParams.set('premium', 'activated');
+                    window.location.href = redirectUrl.toString();
+                } catch (e) {
+                    window.location.href = '/app?premium=activated';
+                }
             } catch (e) {
                 const msg = (!window.IS_REAL_AUTH)
                     ? 'Purchase could not be completed. If you already subscribed on this Apple ID, try Restore Purchases. Registration is optional for cross-device access.'

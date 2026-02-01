@@ -9913,6 +9913,17 @@ function confirmBackToMenu(event) {
     // 🛑 FULL CLEANUP: Stop all quiz activities immediately
     console.log('🛑 Starting full quiz cleanup for back navigation...');
     
+    // 0. Unmount custom keyboard if it exists
+    try {
+        if (typeof destroyQuizKeyboard === 'function') {
+            destroyQuizKeyboard();
+            console.log('⌨️ Destroyed custom keyboard');
+        }
+        window.quizKeyboardInstance = null;
+    } catch (e) {
+        console.warn('Keyboard cleanup error:', e);
+    }
+    
     // 1. Stop any ongoing announcer speech immediately
     if ('speechSynthesis' in window) {
         speechSynthesis.cancel();

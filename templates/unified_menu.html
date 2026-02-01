@@ -11289,6 +11289,237 @@ function showRestoreDialog(title, message, isSuccess) {
             
             document.body.appendChild(modal);
         }
+
+        // Unlock premium tiles when premium is activated
+        function unlockPremiumTiles() {
+            console.log('🔓 Unlocking premium tiles...');
+            
+            // Find all premium-locked tiles
+            const premiumTiles = document.querySelectorAll('.menu-option[data-requires-premium="true"]');
+            
+            premiumTiles.forEach(tile => {
+                try {
+                    // Remove locked-tile class
+                    tile.classList.remove('locked-tile');
+                    tile.classList.remove('locked');
+                    
+                    // Remove lock overlay divs
+                    const lockOverlays = tile.querySelectorAll('.lock-overlay');
+                    lockOverlays.forEach(overlay => overlay.remove());
+                    
+                    // Remove data-locked attribute
+                    tile.removeAttribute('data-locked');
+                    
+                    // Update title to remove lock messages
+                    const title = tile.getAttribute('title') || '';
+                    if (title.includes('Subscribe to BeeSmart Premium') || title.includes('Sign in to unlock')) {
+                        // Update title based on feature
+                        const feature = tile.getAttribute('data-feature');
+                        const titles = {
+                            'image': 'Take a photo of a book page or worksheet and we\'ll find the words for you!',
+                            'saved': 'Access your previously saved spelling lists and continue practicing!',
+                            'speed': 'Race against time in a fast-paced spelling challenge!'
+                        };
+                        if (titles[feature]) {
+                            tile.setAttribute('title', titles[feature]);
+                        }
+                    }
+                    
+                    // Update kid-tip text
+                    const kidTip = tile.querySelector('.kid-tip');
+                    if (kidTip) {
+                        const feature = tile.getAttribute('data-feature');
+                        const tips = {
+                            'image': 'Magic word finder from pictures!',
+                            'saved': '⭐ Your favorite word collections!',
+                            'speed': 'How fast can you spell?'
+                        };
+                        if (tips[feature]) {
+                            kidTip.textContent = tips[feature];
+                        }
+                    }
+                    
+                    console.log('✅ Unlocked tile:', tile.id || tile.getAttribute('data-feature'));
+                } catch (e) {
+                    console.warn('Failed to unlock tile:', e);
+                }
+            });
+        }
+
+        // Listen for entitlements changes to unlock tiles dynamically
+        // This fires when beesmart:iap-reconciled detects premium status changed
+        window.addEventListener('beesmart:entitlements-changed', function(ev) {
+            try {
+                const detail = ev && ev.detail ? ev.detail : {};
+                const isPremium = !!detail.is_premium;
+                
+                console.log('📢 Entitlements changed event received:', { is_premium: isPremium, source: detail.source });
+                
+                // Update window.IS_PREMIUM to match the event
+                if (isPremium !== window.IS_PREMIUM) {
+                    window.IS_PREMIUM = isPremium;
+                    console.log('🔓 Updated window.IS_PREMIUM to:', isPremium);
+                }
+                
+                if (isPremium) {
+                    // Premium just activated - unlock tiles immediately
+                    console.log('🔓 Premium activated, unlocking tiles...');
+                    unlockPremiumTiles();
+                }
+            } catch (e) {
+                console.warn('Error handling entitlements-changed event:', e);
+            }
+        });
+
+        // Also listen directly to beesmart:iap-reconciled to catch premium changes
+        // This is the primary event that fires after purchase/reconcile
+        window.addEventListener('beesmart:iap-reconciled', function(ev) {
+            try {
+                const detail = ev && ev.detail ? ev.detail : null;
+                const data = detail && detail.data ? detail.data : null;
+                if (!data || typeof data !== 'object') return;
+                
+                // Extract entitlements from various response formats
+                const ent = (data && (data.entitlements || data.reconcile)) || data || null;
+                if (!ent || typeof ent !== 'object') return;
+                
+                // Check if premium is active
+                const isPremium = !!(ent && ent.premium_member === true) || 
+                                 !!(ent && Array.isArray(ent.owned_products) && ent.owned_products.some(p => String(p || '').toLowerCase().includes('premium')));
+                
+                console.log('📢 IAP reconciled event received:', { is_premium: isPremium, reason: detail.reason });
+                
+                // Update window.IS_PREMIUM if it changed
+                if (isPremium !== window.IS_PREMIUM) {
+                    window.IS_PREMIUM = isPremium;
+                    console.log('🔓 Updated window.IS_PREMIUM to:', isPremium);
+                    
+                    // If premium just activated, unlock tiles
+                    if (isPremium) {
+                        console.log('🔓 Premium activated via reconcile, unlocking tiles...');
+                        unlockPremiumTiles();
+                    }
+                } else if (isPremium && window.IS_PREMIUM) {
+                    // Premium is already true, but make sure tiles are unlocked
+                    const lockedTiles = document.querySelectorAll('.menu-option[data-requires-premium="true"].locked-tile');
+                    if (lockedTiles.length > 0) {
+                        console.log('🔓 Premium is active but tiles still locked, unlocking...');
+                        unlockPremiumTiles();
+                    }
+                }
+            } catch (e) {
+                console.warn('Error handling iap-reconciled event:', e);
+            }
+        });
+
+        // Also check on page load if premium status changed
+        document.addEventListener('DOMContentLoaded', function() {
+            // Small delay to ensure reconcile has run
+            setTimeout(function() {
+                if (window.IS_PREMIUM === true) {
+                    // Check if tiles are still locked but should be unlocked
+                    const lockedPremiumTiles = document.querySelectorAll('.menu-option[data-requires-premium="true"].locked-tile');
+                    if (lockedPremiumTiles.length > 0) {
+                        console.log('🔓 Found locked premium tiles but IS_PREMIUM is true, unlocking...');
+                        unlockPremiumTiles();
+                    }
+                }
+            }, 1000);
+        });
+
+        // Check for premium unlock when page becomes visible (user returns from subscription page)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && window.IS_PREMIUM === true) {
+                // Page became visible and user has premium - check if tiles need unlocking
+                setTimeout(function() {
+                    const lockedPremiumTiles = document.querySelectorAll('.menu-option[data-requires-premium="true"].locked-tile');
+                    if (lockedPremiumTiles.length > 0) {
+                        console.log('🔓 Page visible, unlocking premium tiles...');
+                        unlockPremiumTiles();
+                    }
+                }, 500);
+            }
+        });
+
+        // Check URL parameters for premium purchase success and trigger reconcile
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('premium') === 'activated' || urlParams.get('purchase') === 'success') {
+                console.log('🔓 Premium purchase detected in URL, triggering reconcile to refresh entitlements...');
+                
+                // Trigger reconcile to refresh entitlements (this will fire beesmart:iap-reconciled)
+                setTimeout(function() {
+                    // First try native IAP bridge reconcile
+                    if (window.BeeSmartIAP && typeof window.BeeSmartIAP.reconcile === 'function') {
+                        console.log('🔓 Using native IAP bridge reconcile...');
+                        Promise.resolve(window.BeeSmartIAP.reconcile('url_param_trigger')).then(function() {
+                            console.log('🔓 Reconcile completed, tiles should unlock via event');
+                        }).catch(function(e) {
+                            console.warn('Reconcile failed, falling back to restore:', e);
+                            // Fallback to restore endpoint
+                            fetch('/api/iap/restore', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'same-origin',
+                                body: JSON.stringify({ platform: 'web', product_ids: [] })
+                            }).then(function(resp) {
+                                return resp.json();
+                            }).then(function(data) {
+                                const ent = (data && (data.entitlements || data)) || {};
+                                const isPremium = !!(ent && ent.premium_member === true) || 
+                                                 !!(ent && Array.isArray(ent.owned_products) && ent.owned_products.some(p => String(p || '').toLowerCase().includes('premium')));
+                                if (isPremium) {
+                                    window.IS_PREMIUM = true;
+                                    unlockPremiumTiles();
+                                }
+                                // Remove URL parameter
+                                const newUrl = new URL(window.location.href);
+                                newUrl.searchParams.delete('premium');
+                                newUrl.searchParams.delete('purchase');
+                                window.history.replaceState({}, '', newUrl.toString());
+                            });
+                        });
+                    } else {
+                        // Fallback: use restore endpoint directly
+                        console.log('🔓 Using restore endpoint fallback...');
+                        fetch('/api/iap/restore', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({ platform: 'web', product_ids: [] })
+                        }).then(function(resp) {
+                            return resp.json();
+                        }).then(function(data) {
+                            const ent = (data && (data.entitlements || data)) || {};
+                            const isPremium = !!(ent && ent.premium_member === true) || 
+                                             !!(ent && Array.isArray(ent.owned_products) && ent.owned_products.some(p => String(p || '').toLowerCase().includes('premium')));
+                            if (isPremium) {
+                                window.IS_PREMIUM = true;
+                                unlockPremiumTiles();
+                            }
+                            // Remove URL parameter
+                            const newUrl = new URL(window.location.href);
+                            newUrl.searchParams.delete('premium');
+                            newUrl.searchParams.delete('purchase');
+                            window.history.replaceState({}, '', newUrl.toString());
+                        }).catch(function(e) {
+                            console.warn('Failed to refresh premium status:', e);
+                        });
+                    }
+                }, 500);
+            } else {
+                // Even without URL param, check if tiles need unlocking
+                setTimeout(function() {
+                    if (window.IS_PREMIUM === true) {
+                        const lockedPremiumTiles = document.querySelectorAll('.menu-option[data-requires-premium="true"].locked-tile');
+                        if (lockedPremiumTiles.length > 0) {
+                            console.log('🔓 IS_PREMIUM is true but tiles are locked, unlocking...');
+                            unlockPremiumTiles();
+                        }
+                    }
+                }, 1500);
+            }
+        });
         
         function startQuiz() {
             console.log('startQuiz called');
