@@ -97,9 +97,8 @@ if ('speechSynthesis' in window) {
         position: relative;
     }
 
-    /* === CRITICAL: Reserve space so quiz content is not hidden behind keyboard === */
+    /* Outer quiz container scrolls; keyboard reserve is handled by .quiz-card / .quiz-scroll (--kb-h) */
     .quiz-content {
-        padding-bottom: calc(var(--quiz-kb-height, 260px) + env(safe-area-inset-bottom, 0px));
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
     }
@@ -116,6 +115,45 @@ if ('speechSynthesis' in window) {
         background: linear-gradient(180deg, #FFFDE7 0%, #FFF8E1 100%);
         padding: 10px 12px;
     }
+
+    /* Card = layout container: scrollable content + keyboard dock (no overlay) */
+    .quiz-card {
+        display: grid;
+        grid-template-rows: 1fr auto;
+        min-height: 0;
+        max-height: 100dvh;
+        overflow: hidden;
+    }
+    @media (max-width: 768px) {
+        .quiz-card { height: 100dvh; max-height: 100dvh; }
+    }
+    .quiz-scroll {
+        min-height: 0;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: calc(var(--kb-h, 0px) + 12px);
+    }
+    .kb-dock {
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        background: transparent;
+        padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    .kb-dock .quiz-keyboard {
+        width: 100%;
+        max-width: 520px;
+        margin: 0 auto;
+        padding: 10px 12px;
+        border-radius: 16px;
+        box-sizing: border-box;
+    }
+    @media (max-width: 768px) {
+        .kb-dock .quiz-keyboard { max-width: 100%; }
+    }
+    /* Optional: show keyboard dock only when input focused (collapse when not typing) */
+    .kb-dock { display: none; }
+    .quiz-card.kb-open .kb-dock { display: block; }
     
     /* Progress tracker fixed at bottom of viewport */
     .progress-tracker {
@@ -3501,8 +3539,9 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
     </div>
 
-    <!-- Quiz Card -->
+    <!-- Quiz Card: grid layout = quiz-scroll (content) + kb-dock (keyboard) -->
     <div class="quiz-card" id="quizCard">
+        <div class="quiz-scroll" id="quizScroll">
         <!-- Logo at top center -->
         <div class="quiz-logo">
             <!-- Brand logo (transparent background) - MOVED TO TOP -->
@@ -3979,8 +4018,6 @@ document.addEventListener('DOMContentLoaded', () => {
                        style="font-size: 16px;">
             </div>
         </div>
-        <!-- Custom on-screen keyboard (quiz only); prevents system keyboard on mobile -->
-        <div id="quizKeyboardContainer" role="region" aria-label="Quiz spelling keyboard"></div>
 
         <script>
         // Ensure desktop intro voice plays reliably by triggering on first user interaction
@@ -4107,6 +4144,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 Exit Quiz
             </button>
         </div>
+        </div>
+        <!-- Keyboard dock: keyboard lives INSIDE card (not fixed to viewport) -->
+        <div class="kb-dock" id="kbDock">
+            <div id="quizKeyboardContainer" role="region" aria-label="Quiz spelling keyboard"></div>
+        </div>
     </div>
 
     <!-- Quiz Complete Screen -->
@@ -4215,18 +4257,33 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="{{ url_for('static', filename='js/QuizKeyboard.js') }}?v={{ timestamp }}"></script>
 <script>
 (function () {
-  function updateKeyboardHeight() {
-    var el = document.querySelector('.quiz-keyboard');
+  function updateKeyboardReservedSpace() {
+    var card = document.getElementById('quizCard');
+    var kb = document.getElementById('quizKeyboardContainer');
+    if (!card || !kb) return;
+    var el = kb.querySelector('.quiz-keyboard');
     if (!el) return;
-    var h = el.getBoundingClientRect().height;
-    document.documentElement.style.setProperty('--quiz-kb-height', Math.ceil(h) + 'px');
+    var h = el.offsetHeight || 0;
+    card.style.setProperty('--kb-h', h + 'px');
   }
 
-  window.addEventListener('resize', updateKeyboardHeight, { passive: true });
-  window.addEventListener('orientationchange', updateKeyboardHeight, { passive: true });
-  document.addEventListener('DOMContentLoaded', updateKeyboardHeight);
-  setTimeout(updateKeyboardHeight, 200);
-  setTimeout(updateKeyboardHeight, 600);
+  window.addEventListener('load', updateKeyboardReservedSpace);
+  window.addEventListener('resize', function () {
+    clearTimeout(window.__kbResizeT);
+    window.__kbResizeT = setTimeout(updateKeyboardReservedSpace, 120);
+  });
+  window.addEventListener('orientationchange', function () {
+    setTimeout(updateKeyboardReservedSpace, 250);
+  });
+  document.addEventListener('DOMContentLoaded', function () {
+    var kb = document.querySelector('.quiz-keyboard');
+    var dock = document.getElementById('kbDock');
+    if (kb && dock && kb.parentElement !== dock) dock.appendChild(kb);
+    updateKeyboardReservedSpace();
+  });
+  setTimeout(updateKeyboardReservedSpace, 200);
+  setTimeout(updateKeyboardReservedSpace, 600);
+  window.updateKeyboardReservedSpace = updateKeyboardReservedSpace;
 })();
 </script>
 <script>
@@ -6621,17 +6678,26 @@ class QuizManager {
             const keyboardContainer = document.getElementById('quizKeyboardContainer');
             if (keyboardContainer && spellingInput && typeof initQuizKeyboard === 'function') {
                 if (!window.quizKeyboardInstance) {
+                    const quizCardEl = document.getElementById('quizCard');
                     window.quizKeyboardInstance = initQuizKeyboard({
                         targetEl: keyboardContainer,
                         inputEl: spellingInput,
-                        spacerTargetEl: document.querySelector('.quiz-container'),
+                        spacerTargetEl: null,
                         onSubmit: () => { if (this.submitAnswer) this.submitAnswer(); },
                         allowSpaces: true,
                         autoCaps: true,
                         maxLength: null,
                         disableInputWhenRoundEnds: true,
                         practiceMode: false,
-                        showSubmitKey: false
+                        showSubmitKey: false,
+                        onMounted: function () {
+                            if (quizCardEl) quizCardEl.classList.add('kb-open');
+                            if (typeof window.updateKeyboardReservedSpace === 'function') window.updateKeyboardReservedSpace();
+                        },
+                        onUnmounted: function () {
+                            if (quizCardEl) quizCardEl.classList.remove('kb-open');
+                            try { if (quizCardEl) quizCardEl.style.removeProperty('--kb-h'); } catch (_) {}
+                        }
                     });
                     console.log('✅ Quiz keyboard mounted (countdown started)');
                 }
