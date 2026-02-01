@@ -116,44 +116,47 @@ if ('speechSynthesis' in window) {
         padding: 10px 12px;
     }
 
-    /* Card = layout container: scrollable content + keyboard dock (no overlay) */
+    /* Card = layout container; keyboard lives INSIDE card, never overlays (Option A) */
     .quiz-card {
-        display: grid;
-        grid-template-rows: 1fr auto;
-        min-height: 0;
-        max-height: 100dvh;
+        width: min(92vw, 520px);
+        margin: 0 auto;
+        border-radius: 24px;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        max-height: calc(100dvh - 140px);
+        background: rgba(255, 255, 255, 0.85);
     }
     @media (max-width: 768px) {
         .quiz-card { height: 100dvh; max-height: 100dvh; }
     }
-    .quiz-scroll {
+    /* Content scrolls if needed; keyboard stays visible inside card */
+    .quiz-card .quiz-card-content {
+        padding: 16px;
         min-height: 0;
-        overflow: auto;
+        overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         padding-bottom: calc(var(--kb-h, 0px) + 12px);
     }
-    .kb-dock {
-        position: sticky;
-        bottom: 0;
+    /* Keyboard region fixed INSIDE the card (not the screen); no position:fixed */
+    .keyboard-shell {
+        flex-shrink: 0;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+        padding: 10px 10px 12px;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0));
+        background: rgba(255, 255, 255, 0.92);
         z-index: 5;
-        background: transparent;
-        padding-bottom: env(safe-area-inset-bottom, 0);
     }
-    .kb-dock .quiz-keyboard {
+    .keyboard-shell .quiz-keyboard,
+    .keyboard-shell .custom-keyboard {
         width: 100%;
-        max-width: 520px;
-        margin: 0 auto;
-        padding: 10px 12px;
-        border-radius: 16px;
+        max-width: 100%;
         box-sizing: border-box;
     }
-    @media (max-width: 768px) {
-        .kb-dock .quiz-keyboard { max-width: 100%; }
-    }
-    /* Optional: show keyboard dock only when input focused (collapse when not typing) */
-    .kb-dock { display: none; }
-    .quiz-card.kb-open .kb-dock { display: block; }
+    /* Show keyboard shell when keyboard is mounted */
+    .keyboard-shell { display: none; }
+    .quiz-card.kb-open .keyboard-shell { display: block; }
     
     /* Progress tracker fixed at bottom of viewport */
     .progress-tracker {
@@ -3539,9 +3542,9 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
     </div>
 
-    <!-- Quiz Card: grid layout = quiz-scroll (content) + kb-dock (keyboard) -->
+    <!-- Quiz Card: quiz-content (question + input + buttons) + keyboard-shell (keyboard inside card) -->
     <div class="quiz-card" id="quizCard">
-        <div class="quiz-scroll" id="quizScroll">
+        <div class="quiz-content quiz-card-content" id="quizScroll">
         <!-- Logo at top center -->
         <div class="quiz-logo">
             <!-- Brand logo (transparent background) - MOVED TO TOP -->
@@ -3616,6 +3619,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
         </div>
 
+        <!-- Question area: timer / sentence -->
+        <div class="question-area">
         <!-- 🎭 Morphing Container - Smooth transition between voice and timer -->
         <div class="morph-container mode-voice" id="morphContainer">
             <div class="morph-content">
@@ -3995,11 +4000,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 </script>
             </div> <!-- End morph-content -->
         </div> <!-- End morph-container -->
+        </div> <!-- End question-area -->
 
-
-
-        <!-- Answer area: letter hint + spelling input (sticky so user always sees where to type) -->
-        <div class="quiz-answer-area">
+        <!-- Answer area: letter hint + spelling input -->
+        <div class="answer-area quiz-answer-area">
             <div class="letter-hint hidden" id="letterHint" aria-live="polite">
                 <span class="hint-label">💡 Hint:</span>
                 <span class="hint-letters" id="hintLetters"></span>
@@ -4066,7 +4070,8 @@ document.addEventListener('DOMContentLoaded', () => {
             Ready to show definition or sentence...
         </div>
 
-        <div class="quiz-buttons">
+        <!-- Actions: pronounce, show sentence, submit, skip, honey hint -->
+        <div class="actions-area quiz-buttons">
             <!-- Voice Control Buttons -->
             <button type="button" class="action-btn secondary" id="speakButton">
                 <span class="bee-icon" aria-hidden="true">🔊</span>
@@ -4145,8 +4150,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
         </div>
         </div>
-        <!-- Keyboard dock: keyboard lives INSIDE card (not fixed to viewport) -->
-        <div class="kb-dock" id="kbDock">
+        <!-- Keyboard is PART of the card; never overlays (Option A) -->
+        <div class="keyboard-shell" id="keyboardShell">
             <div id="quizKeyboardContainer" role="region" aria-label="Quiz spelling keyboard"></div>
         </div>
     </div>
@@ -4277,7 +4282,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.addEventListener('DOMContentLoaded', function () {
     var kb = document.querySelector('.quiz-keyboard');
-    var dock = document.getElementById('kbDock');
+    var dock = document.getElementById('keyboardShell');
     if (kb && dock && kb.parentElement !== dock) dock.appendChild(kb);
     updateKeyboardReservedSpace();
   });

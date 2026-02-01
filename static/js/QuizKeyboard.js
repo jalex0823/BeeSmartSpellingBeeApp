@@ -165,7 +165,7 @@
         }
 
         const container = document.createElement('div');
-        container.className = 'quiz-keyboard' + (useHexKeys ? ' quiz-keyboard--hex-keys' : '');
+        container.className = 'quiz-keyboard custom-keyboard' + (useHexKeys ? ' quiz-keyboard--hex-keys' : '');
         container.setAttribute('role', 'group');
         container.setAttribute('aria-label', 'Quiz spelling keyboard');
 

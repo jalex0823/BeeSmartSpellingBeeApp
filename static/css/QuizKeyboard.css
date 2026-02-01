@@ -4,7 +4,7 @@
  * Mobile-first: 44px min key height, safe-area, key click feedback.
  */
 
-/* In-flow keyboard (lives inside .kb-dock in quiz card); no position:fixed on mobile */
+/* In-flow keyboard (lives inside .keyboard-shell in quiz card); no position:fixed */
 .quiz-keyboard {
     width: 100%;
     max-width: 100%;
