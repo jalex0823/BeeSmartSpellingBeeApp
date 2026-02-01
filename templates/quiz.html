@@ -5565,21 +5565,13 @@ class QuizManager {
             this.setupiOSKeyboardHandling();
         }
         
-        // Show iOS voice intro modal if needed, otherwise show regular intro
-        // Resume mode skips the long intro (especially the 7s desktop delay) when possible.
+        // Single "Ready to spell?" screen: one tap = voice choice + start (replaces voice modal + Play step)
+        this.updateVoiceToggleUI();
+        this.updateMusicToggleUI();
+
         if (this.startMode === 'resume') {
-            console.log('🔁 Resume mode: skipping intro when possible');
-
-            // Initialize UI to match state
-            this.updateVoiceToggleUI();
-            this.updateMusicToggleUI();
-
-            // iOS/Safari may still require a gesture; keep existing modal behavior if not shown yet.
-            if ((this.isIOS || this.isSafari) && !sessionStorage.getItem('voiceIntroShown')) {
-                console.log('📱 Resume mode on iOS/Safari: showing voice intro modal for gesture unlock');
-                this.showVoiceIntroModal();
-            } else {
-                // Non-iOS (or already handled iOS/Safari modal): start immediately
+            // Resume: skip combined screen if we already have voice unlock (desktop or returning user)
+            if (!(this.isIOS || this.isSafari) || sessionStorage.getItem('voiceIntroShown')) {
                 this.voiceUnlocked = true;
                 const feedbackArea = document.getElementById('feedbackArea');
                 if (feedbackArea) feedbackArea.style.display = 'none';
@@ -5590,21 +5582,11 @@ class QuizManager {
                         console.error('❌ Resume auto-start failed:', err);
                         try { BeeSmart.showError('Could not resume the quiz. Please refresh.'); } catch (_e) {}
                     });
-            }
-        } else {
-            if ((this.isIOS || this.isSafari) && !sessionStorage.getItem('voiceIntroShown')) {
-                console.log('📱 Showing iOS/Safari voice intro modal');
-                this.updateVoiceToggleUI(); // Initialize UI to match state
-                this.updateMusicToggleUI(); // Initialize music UI to match state
-                this.showVoiceIntroModal();
-            } else {
-                console.log('💻 Desktop/Non-iOS browser detected - voice unlocked immediately');
-                this.voiceUnlocked = true; // Non-iOS can use voice immediately
-                this.updateVoiceToggleUI(); // Initialize UI to match state
-                this.updateMusicToggleUI(); // Initialize music UI to match state
-                this.showIntroAnnouncer();
+                return;
             }
         }
+        // New quiz (or resume on iOS first time): one screen, one tap
+        this.showCombinedStartScreen();
         
         // Start background music only after a user gesture (prevents unwanted looping on load).
         if (this.musicEnabled) {
@@ -7410,7 +7392,75 @@ class QuizManager {
         if (spellingInput) spellingInput.focus();
     }
 
-    // Show voice intro modal for iOS/Safari
+    // Single "Ready to spell?" screen: one tap = choose voice + start quiz (replaces voice modal + Play step)
+    showCombinedStartScreen() {
+        if (this.quizStarted || this.introInProgress) return;
+        this.introInProgress = true;
+
+        const feedbackArea = document.getElementById('feedbackArea');
+        if (!feedbackArea) return;
+        feedbackArea.style.display = 'block';
+        feedbackArea.className = 'feedback-area feedback-success';
+
+        const greeting = this.studentName ? `Hello ${this.studentName}! ` : '';
+        feedbackArea.innerHTML = `
+            <div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem;">
+                🐝 Ready to spell?
+            </div>
+            <div style="margin-bottom: 1.25rem; color: #5A2C15; font-size: 1rem;">
+                ${greeting}Choose how you'd like to start. One tap and you're in!
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
+                <button type="button" id="combinedVoiceBtn" class="action-btn primary" style="min-width: 260px; min-height: 48px;">
+                    <span class="bee-icon" aria-hidden="true">🔊</span>
+                    Start with Buzzy's voice
+                </button>
+                <button type="button" id="combinedSilentBtn" class="action-btn secondary" style="min-width: 260px; min-height: 48px;">
+                    <span class="bee-icon" aria-hidden="true">🔇</span>
+                    Start silent
+                </button>
+            </div>
+        `;
+
+        const startWithVoice = () => {
+            if (this.quizStarted) return;
+            this.voiceUnlocked = true;
+            this.announcerEnabled = true;
+            localStorage.setItem('announcerEnabled', 'true');
+            sessionStorage.setItem('voiceIntroShown', 'true');
+            this.updateVoiceToggleUI();
+            this.quizStarted = true;
+            this.introInProgress = false;
+            // Short intro in same gesture (iOS audio unlock); hide and start quiz when done
+            const msg = (this.studentName ? `Hello ${this.studentName}! ` : '') +
+                "I'm Buzzy! Listen to each word, then spell it. Let's go!";
+            speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(msg);
+            u.rate = 0.95;
+            u.volume = 0.9;
+            u.onend = () => { feedbackArea.style.display = 'none'; this.loadNextWordWithIntro(); };
+            u.onerror = () => { feedbackArea.style.display = 'none'; this.loadNextWordWithIntro(); };
+            speechSynthesis.speak(u);
+        };
+
+        const startSilent = () => {
+            if (this.quizStarted) return;
+            this.voiceUnlocked = false;
+            this.announcerEnabled = false;
+            localStorage.setItem('announcerEnabled', 'false');
+            sessionStorage.setItem('voiceIntroShown', 'true');
+            this.updateVoiceToggleUI();
+            feedbackArea.style.display = 'none';
+            this.quizStarted = true;
+            this.introInProgress = false;
+            this.loadNextWordWithIntro();
+        };
+
+        document.getElementById('combinedVoiceBtn').addEventListener('click', startWithVoice, { once: true });
+        document.getElementById('combinedSilentBtn').addEventListener('click', startSilent, { once: true });
+    }
+
+    // Show voice intro modal for iOS/Safari (legacy; prefer showCombinedStartScreen for fewer taps)
     showVoiceIntroModal() {
         const modal = document.getElementById('voiceIntroModal');
         const enableVoiceBtn = document.getElementById('enableVoiceBtn');
