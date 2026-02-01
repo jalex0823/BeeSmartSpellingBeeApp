@@ -3613,6 +3613,27 @@ def _require_premium_json(feature: str = "premium"):
     return None
 
 
+def _require_auth_json(feature: str = "feature"):
+    """Server-side authentication enforcement for features that require login but not premium.
+    
+    Contract:
+    - For unauthenticated users: return a 401 JSON response with auth_required.
+    - For authenticated users: return None (allow access).
+    """
+    try:
+        if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
+            return jsonify({
+                "ok": False,
+                "error": "auth_required",
+                "auth_required": True,
+                "feature": feature,
+            }), 401
+    except Exception:
+        # Fail-safe: never break the API on guard errors.
+        return None
+    return None
+
+
 def _deny_guest_avatar_picker_access():
     """DEPRECATED: guest gating for pickers is no longer enforced here.
 
@@ -5254,9 +5275,9 @@ def _normalize_words(words_raw):
 def list_saved_wordlists():
     """GET all saved lists for current user."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5280,9 +5301,9 @@ def list_saved_wordlists():
 def create_saved_list():
     """POST create a new saved list."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5356,9 +5377,9 @@ def create_saved_list():
 def get_saved_wordlist(list_id):
     """GET one list by id."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5380,9 +5401,9 @@ def get_saved_wordlist(list_id):
 def update_saved_wordlist(list_id):
     """PUT update list metadata and/or replace words."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5461,9 +5482,9 @@ def update_saved_wordlist(list_id):
 def delete_saved_wordlist(list_id=None):
     """DELETE list."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5505,9 +5526,9 @@ def delete_saved_wordlist(list_id=None):
 def toggle_saved_list_favorite(list_id=None):
     """POST toggle favorite/pin."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5548,9 +5569,9 @@ def toggle_saved_list_favorite(list_id=None):
 def clone_saved_list(list_id):
     """POST clone list."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5607,9 +5628,9 @@ def clone_saved_list(list_id):
 def save_current_wordlist():
     """Legacy: Save current session wordbank as a new list."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5669,9 +5690,9 @@ def save_current_wordlist():
 def load_saved_wordlist():
     """Load a saved list into the current session and initialize quiz state."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         # CRITICAL DEBUG: Track session across request
         incoming_session_id = session.get("session_id", "NEW")
@@ -5810,9 +5831,9 @@ def load_saved_wordlist():
 def rename_saved_wordlist():
     """Rename a saved word list (legacy, use PUT instead)."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         user = get_or_create_guest_user()
         if not user:
@@ -5852,9 +5873,9 @@ def rename_saved_wordlist():
 def upload_to_saved_list():
     """Upload a file to update an existing saved word list."""
     try:
-        premium_block = _require_premium_json("saved_lists")
-        if premium_block is not None:
-            return premium_block
+        auth_block = _require_auth_json("saved_lists")
+        if auth_block is not None:
+            return auth_block
 
         # Get the saved list ID from form data
         saved_list_id = request.form.get('savedListId')

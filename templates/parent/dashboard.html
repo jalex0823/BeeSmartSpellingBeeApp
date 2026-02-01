@@ -1,897 +1,469 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parent Dashboard - BeeSmart Spelling</title>
-    <script defer src="{{ url_for('static', filename='js/button-press-sfx.js') }}"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+{% extends "base.html" %}
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 2rem;
-        }
+{% block title %}Parent Dashboard - BeeSmart Spelling{% endblock %}
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+{% block content %}
+<style>
+    /* Hide mascot/orb on parent dashboard */
+    #mascotBee3D,
+    #mascotBee3D canvas,
+    .bee-mascot,
+    .decorative-orb,
+    .honey-orb,
+    .floating-orb,
+    .particle-container,
+    .morph-container {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+</style>
 
-        .header {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-
-        .header h1 {
-            color: #333;
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .header .subtitle {
-            color: #666;
-            font-size: 1.2rem;
-        }
-
-        .parent-key-section {
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-top: 1.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .parent-key-label {
-            color: #5A2C15;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .parent-key-value {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .key-display {
-            background: white;
-            padding: 0.8rem 1.5rem;
-            border-radius: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: #5A2C15;
-            letter-spacing: 1px;
-        }
-
-        .copy-btn {
-            padding: 0.8rem 1.5rem;
-            background: #5A2C15;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .copy-btn:hover {
-            background: #3d1e0f;
-            transform: scale(1.05);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            text-align: center;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .stat-icon {
-            font-size: 3rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 0.3rem;
-        }
-
-        .stat-label {
-            font-size: 1rem;
-            color: #666;
-            font-weight: 600;
-        }
-
-        .content-section {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .section-title {
-            color: #333;
-            font-size: 1.8rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .search-bar {
-            padding: 0.8rem 1.2rem;
-            border: 2px solid #E0E0E0;
-            border-radius: 10px;
-            font-size: 1rem;
-            width: 300px;
-            max-width: 100%;
-        }
-
-        .search-bar:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .students-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            overflow: hidden;
-        }
-
-        .students-table thead th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1rem;
-            text-align: left;
-            font-weight: 600;
-            cursor: pointer;
-            user-select: none;
-            position: relative;
-        }
-
-        .students-table thead th:hover {
-            background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
-        }
-
-        .students-table thead th:first-child {
-            border-radius: 10px 0 0 0;
-        }
-
-        .students-table thead th:last-child {
-            border-radius: 0 10px 0 0;
-        }
-
-        .students-table tbody tr {
-            background: #f9f9f9;
-            transition: background 0.2s ease;
-        }
-
-        .students-table tbody tr:hover {
-            background: #f0f0f0;
-        }
-
-        .students-table tbody tr:nth-child(even) {
-            background: #ffffff;
-        }
-
-        .students-table tbody tr:nth-child(even):hover {
-            background: #f0f0f0;
-        }
-
-        .students-table tbody td {
-            padding: 1rem;
-            color: #333;
-            border-bottom: 1px solid #E0E0E0;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .status-active {
-            background: #4CAF50;
-            color: white;
-        }
-
-        .status-inactive {
-            background: #9E9E9E;
-            color: white;
-        }
-
-        .accuracy-bar {
-            width: 100px;
-            height: 8px;
-            background: #E0E0E0;
-            border-radius: 4px;
-            overflow: hidden;
-            display: inline-block;
-            vertical-align: middle;
-            margin-right: 0.5rem;
-        }
-
-        .accuracy-fill {
-            height: 100%;
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
-
-        .accuracy-excellent { background: #4CAF50; }
-        .accuracy-good { background: #8BC34A; }
-        .accuracy-fair { background: #FFC107; }
-        .accuracy-poor { background: #FF9800; }
-        .accuracy-fail { background: #F44336; }
-
-        .view-btn {
-            padding: 0.5rem 1.2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .view-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin-top: 2rem;
-        }
-
-        .btn {
-            padding: 1rem 2rem;
-            border: none;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-            color: #5A2C15;
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #F44336 0%, #d32f2f 100%);
-            color: white;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: #666;
-        }
-
-        .empty-state .icon {
-            font-size: 5rem;
-            margin-bottom: 1rem;
-            opacity: 0.3;
-        }
-
-        .empty-state h3 {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-            color: #333;
-        }
-
-        .empty-state p {
-            font-size: 1.1rem;
-        }
-
-        .sort-arrow {
-            font-size: 0.8em;
-            margin-left: 0.3rem;
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 1rem;
-            }
-
-            .header h1 {
-                font-size: 2rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .students-table {
-                font-size: 0.85rem;
-            }
-
-            .students-table thead th,
-            .students-table tbody td {
-                padding: 0.8rem 0.5rem;
-            }
-
-            .search-bar {
-                width: 100%;
-            }
-
-            .action-buttons {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-            }
-
-            .parent-key-section {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .parent-key-value {
-                flex-direction: column;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                <div>
-                    <h1>👨‍👩‍👧‍👦 Parent Dashboard</h1>
-                    <p class="subtitle">Welcome, {{ current_user.display_name }}!</p>
-                    
-
-            <div class="parent-key-section">
-                <div class="parent-key-label">
-                    🔑 Your Parent Key (share with your children):
-                </div>
-                <div class="parent-key-value">
-                    <div class="key-display" id="parentKey">{{ current_user.teacher_key }}</div>
-                    <button class="copy-btn" onclick="copyParentKey()">📋 Copy</button>
-                    <button class="copy-btn" style="background:#8B5CF6" onclick="generateParentKey()">🔁 Generate / Rotate</button>
+<div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem; display: flex; flex-direction: column; align-items: center;">
+    <!-- Centered Parent Title Bar -->
+    <div style="text-align: center; margin-bottom: 1rem; width: 100%;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3); display: inline-block; min-width: 400px;">
+            <h1 style="margin: 0 0 0.5rem 0; font-size: 2rem;">👨‍👩‍👧‍👦 Parent Dashboard</h1>
+            <p style="margin: 0 0 1rem 0; opacity: 0.9;">Welcome back, {{ current_user.display_name }}!</p>
+            
+            <!-- Parent Key Section -->
+            <div style="margin-top: 1.5rem; background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 12px; backdrop-filter: blur(10px);">
+                <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.75rem; font-weight: 600;">Your Parent Key (share with your children)</div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
+                    <div id="parentKey" style="background: white; color: #333; padding: 0.75rem 1.25rem; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 1rem; font-weight: 700; letter-spacing: 1px; flex: 1; min-width: 200px; max-width: 100%;">{{ current_user.teacher_key }}</div>
+                    <button onclick="copyParentKey()" style="padding: 0.75rem 1.25rem; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; backdrop-filter: blur(10px);">Copy</button>
+                    <button onclick="generateParentKey()" style="padding: 0.75rem 1.25rem; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; backdrop-filter: blur(10px);">Generate / Rotate</button>
                 </div>
             </div>
         </div>
+    </div>
+    
+    <!-- Refresh Button Beneath Title -->
+    <div style="text-align: center; margin-bottom: 2rem; width: 100%;">
+        <button onclick="refreshDashboard()" style="background: #4CAF50; color: white; padding: 0.75rem 1.5rem; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease;" title="Refresh to see latest stats" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(76, 175, 80, 0.3)';" onmouseout="this.style.transform=''; this.style.boxShadow='none';">
+            🔄 Refresh Data
+        </button>
 
-        <!-- Stats Grid -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon">👶</div>
-                <div class="stat-value">{{ students|length }}</div>
-                <div class="stat-label">My Children</div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">📝</div>
-                <div class="stat-value" id="family-total-quizzes">{{ family_stats.total_quizzes|format_number }}</div>
-                <div class="stat-label">Total Quizzes</div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">📊</div>
-                <div class="stat-value" id="family-avg-accuracy">{{ "%.0f"|format(family_stats.avg_accuracy) }}%</div>
-                <div class="stat-label">Family Accuracy</div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">🏆</div>
-                <div class="stat-value" id="family-total-points">{{ family_stats.total_points|format_number }}</div>
-                <div class="stat-label">Total Points</div>
-            </div>
-
-            <div class="stat-card" style="background: linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 50%, #FFD700 100%);">
-                <div class="stat-icon">✨</div>
-                <div class="stat-value" id="family-total-buzz-dust" style="color: #8B4513;">0</div>
-                <div class="stat-label" style="color: #5A2C15; font-weight: 700;">🐝 Total Buzz Dust</div>
-            </div>
+        <div id="last-updated" style="margin-top: 0.5rem; font-size: 0.875rem; color: #666;">
+            Last updated: <span id="update-time"></span>
         </div>
-        
-        <!-- Explanation for Apple Reviewers (shown when family stats are zero) -->
-        {% if (family_stats.total_quizzes or 0) == 0 %}
-        <div style="
-            background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%);
-            border: 3px solid rgba(255, 165, 0, 0.4);
-            border-radius: 20px;
-            padding: 1.25rem 1.5rem;
-            margin: 1.5rem auto 0 auto;
-            max-width: 900px;
-            box-shadow: 0 6px 20px rgba(255, 165, 0, 0.15);
-            text-align: center;
-        ">
-            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🐝👨‍👩‍👧‍👦</div>
-            <h3 style="
-                color: #8B4513;
-                font-size: 1.3rem;
-                font-weight: 700;
-                margin: 0 0 0.75rem 0;
-                text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
-            ">Family Stats Will Appear Here!</h3>
-            <p style="
-                color: #5A2C15;
-                font-size: 1rem;
-                line-height: 1.6;
-                margin: 0;
-                font-weight: 500;
-            ">
-                🎯 <strong>How it works:</strong> When your children complete their first spelling quizzes or challenges, all family statistics (total quizzes, family accuracy, total points, and buzz dust) will automatically calculate and appear here!
-                <br><br>
-                👨‍👩‍👧‍👦 <strong>For parents:</strong> Your children can start taking quizzes from the main menu. Their progress will be tracked and displayed in real-time! 🚀
-            </p>
+    </div>
+
+    <!-- Refresh Modal -->
+    <div id="refreshModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(8px); z-index: 9998; justify-content: center; align-items: center; padding: 1rem;">
+        <div style="background: white; padding: 2rem; border-radius: 24px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); max-width: 500px; width: 100%; text-align: center;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+            <h2 style="margin: 0 0 1rem 0; font-size: 2rem; color: #333;">Data Refreshed!</h2>
+            <p style="margin: 0 0 0.5rem 0; color: #555;">Dashboard updated as of:</p>
+            <p id="modal-timestamp" style="font-size: 1.25rem; font-weight: 700; color: #333; background: #fffbe1; padding: 0.5rem 1rem; border-radius: 12px; display: inline-block; border: 2px dashed #ffd700; margin-bottom: 1.5rem;"></p>
+            <button onclick="closeRefreshModal()" style="background: linear-gradient(180deg, #86efac, #22c55e); color: white; padding: 0.875rem 2rem; border: none; border-radius: 50px; font-size: 1.125rem; font-weight: 700; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);" onmouseover="this.style.transform='translateY(-3px)';" onmouseout="this.style.transform='translateY(0)';">
+                Awesome!
+            </button>
         </div>
-        {% endif %}
+    </div>
 
+    <!-- Family Statistics Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; width: 100%; justify-content: center;">
+        <div onclick="scrollToStudents()" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-align: center;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">My Children</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #667eea;" class="formatted-number">{{ students|length }}</div>
+            <div style="font-size: 0.75rem; color: #999; margin-top: 0.5rem;">👇 Click to view</div>
+        </div>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Total Quizzes</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #9f7aea;" class="formatted-number" id="family-total-quizzes">{{ family_stats.total_quizzes|format_number }}</div>
+        </div>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Family Accuracy</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #48bb78;" id="family-avg-accuracy">{{ "%.0f"|format(family_stats.avg_accuracy) }}%</div>
+        </div>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Total Points</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #f56565;" class="formatted-number" id="family-total-points">{{ family_stats.total_points|format_number }}</div>
+        </div>
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Total Buzz Dust</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #ed8936;" class="formatted-number" id="family-total-buzz-dust">0</div>
+        </div>
+    </div>
 
+    <!-- Info Box for Empty Stats -->
+    {% if (family_stats.total_quizzes or 0) == 0 %}
+    <div style="background: #f0f4ff; border-left: 4px solid #667eea; border-radius: 8px; padding: 1.5rem; margin: 0 0 2rem 0; width: 100%; max-width: 900px;">
+        <h3 style="color: #333; font-size: 1.1rem; margin: 0 0 0.75rem 0; font-weight: 700;">Family Stats Will Appear Here</h3>
+        <p style="color: #666; font-size: 0.9rem; line-height: 1.6; margin: 0.5rem 0;"><strong>How it works:</strong> When your children complete their first spelling quizzes, all family statistics will automatically calculate and appear here.</p>
+        <p style="color: #666; font-size: 0.9rem; line-height: 1.6; margin: 0.5rem 0;"><strong>For parents:</strong> Your children can start taking quizzes from the main menu. Their progress will be tracked and displayed in real-time.</p>
+    </div>
+    {% endif %}
 
-        <!-- My Avatar Section -->
-        <div class="content-section" style="max-width: 800px; margin: 0 auto 2rem auto;">
-            <h2 class="section-title" style="text-align: center; margin-bottom: 1rem;">✨ My Avatar</h2>
-            
-            <!-- 3D Avatar Display with unified spacing -->
-            <div class="unified-avatar-stage large" aria-label="Parent avatar" role="img">
-                <div id="parentAvatar3D" class="avatar-fallback">🐝</div>
-            </div>
-            
-            <!-- Change Avatar Button -->
-            <a href="/honeycomb-picker" class="btn btn-secondary" style="display: block; text-align: center; width: 100%; max-width: 300px; margin: 1.5rem auto 0 auto;">
-                🎨 Change Avatar
-            </a>
+    <!-- My Children Section -->
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem; width: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; padding-bottom: 1rem; border-bottom: 2px solid #f0f0f0;">
+            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700; color: #333;">My Children</h2>
+            <input 
+                type="text" 
+                placeholder="Search children..." 
+                id="searchInput"
+                onkeyup="filterStudents()"
+                style="padding: 0.75rem 1rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 0.9rem; width: 300px; max-width: 100%; transition: border-color 0.2s ease;"
+                onfocus="this.style.borderColor='#667eea'; this.style.outline='none';"
+                onblur="this.style.borderColor='#e0e0e0';"
+            />
         </div>
 
-        <!-- Students Section -->
-        <div class="content-section">
-            <div class="section-header">
-                <h2 class="section-title">👧👦 My Children</h2>
-                <input 
-                    type="text" 
-                    class="search-bar" 
-                    placeholder="🔍 Search children..." 
-                    id="searchInput"
-                    onkeyup="filterStudents()"
-                />
-            </div>
-
-            {% if students %}
-                <table class="students-table" id="studentsTable">
+        {% if students %}
+            <div style="overflow-x: auto;">
+                <table id="studentsTable" style="width: 100%; border-collapse: collapse;">
                     <thead>
-                        <tr>
-                            <th>Avatar</th>
-                            <th onclick="sortTable(1)">Name <span class="sort-arrow">⬍</span></th>
-                            <th onclick="sortTable(2)">Grade <span class="sort-arrow">⬍</span></th>
-                            <th onclick="sortTable(3)">Quizzes <span class="sort-arrow">⬍</span></th>
-                            <th onclick="sortTable(4)">Accuracy <span class="sort-arrow">⬍</span></th>
-                            <th onclick="sortTable(5)">Points <span class="sort-arrow">⬍</span></th>
-                            <th onclick="sortTable(6)">✨ Buzz Dust <span class="sort-arrow">⬍</span></th>
-                            <th onclick="sortTable(7)">Last Active <span class="sort-arrow">⬍</span></th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                        <tr style="background: #667eea; color: white;">
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; user-select: none;">Avatar</th>
+                            <th onclick="sortTable(1)" style="padding: 1rem; text-align: left; font-weight: 600; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; user-select: none;">Name <span style="font-size: 0.7em; margin-left: 0.3rem; opacity: 0.7;">⬍</span></th>
+                            <th onclick="sortTable(2)" style="padding: 1rem; text-align: left; font-weight: 600; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; user-select: none;">Grade <span style="font-size: 0.7em; margin-left: 0.3rem; opacity: 0.7;">⬍</span></th>
+                            <th onclick="sortTable(3)" style="padding: 1rem; text-align: center; font-weight: 600; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; user-select: none;">Quizzes <span style="font-size: 0.7em; margin-left: 0.3rem; opacity: 0.7;">⬍</span></th>
+                            <th onclick="sortTable(4)" style="padding: 1rem; text-align: center; font-weight: 600; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; user-select: none;">Accuracy <span style="font-size: 0.7em; margin-left: 0.3rem; opacity: 0.7;">⬍</span></th>
+                            <th onclick="sortTable(5)" style="padding: 1rem; text-align: center; font-weight: 600; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; user-select: none;">Points <span style="font-size: 0.7em; margin-left: 0.3rem; opacity: 0.7;">⬍</span></th>
+                            <th onclick="sortTable(6)" style="padding: 1rem; text-align: center; font-weight: 600; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; user-select: none;">Buzz Dust <span style="font-size: 0.7em; margin-left: 0.3rem; opacity: 0.7;">⬍</span></th>
+                            <th onclick="sortTable(7)" style="padding: 1rem; text-align: center; font-weight: 600; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; user-select: none;">Last Active <span style="font-size: 0.7em; margin-left: 0.3rem; opacity: 0.7;">⬍</span></th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px;">Status</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for student in students %}
-                        <tr data-student-id="{{ student.id }}">
-                            <td>
+                        <tr data-student-id="{{ student.id }}" style="border-bottom: 1px solid #f0f0f0; transition: background 0.2s ease;" onmouseover="this.style.background='#f8f9fa';" onmouseout="this.style.background='';">
+                            <td style="padding: 1rem;">
                                 {% if student.avatar_thumb_url %}
                                     <img src="{{ student.avatar_thumb_url }}" alt="avatar" style="width:36px;height:36px;border-radius:8px;border:1px solid #eee;object-fit:cover;">
                                 {% else %}
                                     <div style="width:36px;height:36px;border-radius:8px;background:#f2f2f2;border:1px solid #eee;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:.8rem;">🐝</div>
                                 {% endif %}
                             </td>
-                            <td><strong>{{ student.display_name }}</strong></td>
-                            <td>{{ student.grade_level or 'N/A' }}</td>
-                            <td><span id="student-{{ student.id }}-quizzes">{{ student.total_quizzes_completed|format_number or 0 }}</span></td>
-                            <td>
+                            <td style="padding: 1rem; color: #333; font-size: 0.9rem;"><strong>{{ student.display_name }}</strong></td>
+                            <td style="padding: 1rem; color: #333; font-size: 0.9rem;">{{ student.grade_level or 'N/A' }}</td>
+                            <td style="padding: 1rem; text-align: center; color: #333; font-size: 0.9rem;"><span id="student-{{ student.id }}-quizzes">{{ student.total_quizzes_completed|format_number or 0 }}</span></td>
+                            <td style="padding: 1rem; text-align: center;">
                                 {% set accuracy = student.avg_accuracy or 0 %}
-                                <div class="accuracy-bar">
-                                    <div id="student-{{ student.id }}-acc-bar" class="accuracy-fill 
-                                        {% if accuracy >= 90 %}accuracy-excellent
-                                        {% elif accuracy >= 80 %}accuracy-good
-                                        {% elif accuracy >= 70 %}accuracy-fair
-                                        {% elif accuracy >= 60 %}accuracy-poor
-                                        {% else %}accuracy-fail{% endif %}"
-                                        style="width: {{ accuracy }}%;">
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                    <div style="width: 80px; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden;">
+                                        <div id="student-{{ student.id }}-acc-bar" style="height: 100%; border-radius: 3px; transition: width 0.3s ease; width: {{ accuracy }}%;
+                                            {% if accuracy >= 90 %}background: #4CAF50;
+                                            {% elif accuracy >= 80 %}background: #8BC34A;
+                                            {% elif accuracy >= 70 %}background: #FFC107;
+                                            {% elif accuracy >= 60 %}background: #FF9800;
+                                            {% else %}background: #F44336;{% endif %}">
+                                        </div>
                                     </div>
+                                    <span id="student-{{ student.id }}-acc-text" style="color: #333; font-size: 0.9rem; min-width: 40px;">{{ "%.0f"|format(accuracy) }}%</span>
                                 </div>
-                                <span id="student-{{ student.id }}-acc-text">{{ "%.0f"|format(accuracy) }}%</span>
                             </td>
-                            <td><strong id="student-{{ student.id }}-points">{{ student.total_lifetime_points|format_number or 0 }}</strong></td>
-                            <td style="color: #8B4513; font-weight: 600;">
+                            <td style="padding: 1rem; text-align: center; color: #333; font-size: 0.9rem;"><strong id="student-{{ student.id }}-points">{{ student.total_lifetime_points|format_number or 0 }}</strong></td>
+                            <td style="padding: 1rem; text-align: center; color: #333; font-size: 0.9rem;">
                                 <span id="student-{{ student.id }}-buzz-dust">{{ student.total_buzz_dust or 0 }}</span>
                                 <div style="font-size: 0.75rem; color: #666; margin-top: 0.2rem;" id="student-{{ student.id }}-bee-class">🐝 {{ student.bee_class or 'Novice Bee' }}</div>
                             </td>
-                            <td>
+                            <td style="padding: 1rem; text-align: center; color: #333; font-size: 0.9rem;">
                                 {% if student.last_login %}
                                     {{ student.last_login.strftime('%b %d') }}
                                 {% else %}
                                     Never
                                 {% endif %}
                             </td>
-                            <td>
+                            <td style="padding: 1rem; text-align: center;">
                                 {% if student.last_login and (now - student.last_login).days < 7 %}
-                                    <span class="status-badge status-active">Active</span>
+                                    <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; background: #4CAF50; color: white;">Active</span>
                                 {% else %}
-                                    <span class="status-badge status-inactive">Inactive</span>
+                                    <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; background: #9E9E9E; color: white;">Inactive</span>
                                 {% endif %}
                             </td>
-                            <td>
-                                <a href="/teacher/student/{{ student.id }}" class="view-btn">View Details</a>
+                            <td style="padding: 1rem; text-align: center;">
+                                <a href="/teacher/student/{{ student.id }}" style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.875rem; transition: all 0.2s ease; text-decoration: none; display: inline-block;" onmouseover="this.style.background='#5568d3'; this.style.transform='translateY(-1px)';" onmouseout="this.style.background='#667eea'; this.style.transform='translateY(0)';">View</a>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
-            {% else %}
-                <div class="empty-state">
-                    <div class="icon">👶</div>
-                    <h3>No Children Linked Yet</h3>
-                    <p>Share your Parent Key with your children so they can link their accounts!</p>
-                    <p style="font-size: 0.9rem; color: #999; margin-top: 1rem;">
-                        Your children enter your key during registration to automatically join your family.
-                    </p>
-                </div>
-            {% endif %}
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="action-buttons">
-            <a href="/" class="btn btn-primary">🏠 Back to Home</a>
-            <a class="btn btn-secondary" href="/teacher/export/class.csv">📊 Export Family CSV</a>
-            <a class="btn btn-secondary" href="/teacher/export/class.pdf" style="background:#ffb300;color:#4a2b00">🧾 Export Family PDF</a>
-            <a href="/auth/logout" class="btn btn-danger">🚪 Sign Out</a>
-        </div>
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 3rem 2rem; color: #666;">
+                <div style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.3;">👶</div>
+                <h3 style="font-size: 1.25rem; margin-bottom: 0.5rem; color: #333; font-weight: 600;">No Children Linked Yet</h3>
+                <p style="font-size: 0.9rem; line-height: 1.6;">Share your Parent Key with your children so they can link their accounts!</p>
+                <p style="font-size: 0.85rem; color: #999; margin-top: 0.5rem;">Your children enter your key during registration to automatically join your family.</p>
+            </div>
+        {% endif %}
     </div>
 
-    <script>
-        // Copy parent key to clipboard
-        function copyParentKey() {
-            const keyText = document.getElementById('parentKey').textContent;
-            navigator.clipboard.writeText(keyText).then(() => {
-                const btn = event.target;
-                const originalText = btn.textContent;
-                btn.textContent = '✅ Copied!';
-                btn.style.background = '#4CAF50';
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.style.background = '#5A2C15';
-                }, 2000);
-            }).catch(err => {
-                alert('Failed to copy: ' + err);
-            });
-        }
+    <!-- Action Buttons -->
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 2rem; width: 100%; justify-content: center;">
+        <a href="/" style="padding: 0.875rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; text-decoration: none; display: inline-block;" onmouseover="this.style.background='#5568d3'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.3)';" onmouseout="this.style.background='#667eea'; this.style.transform=''; this.style.boxShadow='none';">Back to Home</a>
+        <a href="/teacher/export/class.csv" style="padding: 0.875rem 1.5rem; background: #e0e0e0; color: #333; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; text-decoration: none; display: inline-block;" onmouseover="this.style.background='#d0d0d0'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#e0e0e0'; this.style.transform='';">Export CSV</a>
+        <a href="/teacher/export/class.pdf" style="padding: 0.875rem 1.5rem; background: #e0e0e0; color: #333; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; text-decoration: none; display: inline-block;" onmouseover="this.style.background='#d0d0d0'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#e0e0e0'; this.style.transform='';">Export PDF</a>
+        <a href="/auth/logout" style="padding: 0.875rem 1.5rem; background: #F44336; color: white; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; text-decoration: none; display: inline-block;" onmouseover="this.style.background='#d32f2f'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#F44336'; this.style.transform='';">Sign Out</a>
+    </div>
+</div>
 
-        // Generate/Rotate parent key via API
-        async function generateParentKey(){
-            try{
-                const resp = await fetch('/api/teacher/key', { method:'POST', headers:{'Content-Type':'application/json'} });
-                const data = await resp.json();
-                if(data && data.success){
-                    const keyEl = document.getElementById('parentKey');
-                    keyEl.textContent = data.teacher_key || '';
-                    // flash animation
-                    keyEl.style.outline = '3px solid #8B5CF6';
-                    setTimeout(()=> keyEl.style.outline = 'none', 800);
-                } else {
-                    alert(data.error || 'Could not generate key');
-                }
-            }catch(e){
-                alert('Network error while generating key');
-            }
-        }
+<script>
+    // Set initial timestamp on page load
+    function updateTimestamp() {
+        const now = new Date();
+        const options = { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric',
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+        };
+        const timestamp = now.toLocaleString('en-US', options);
+        document.getElementById('update-time').textContent = timestamp;
+        return timestamp;
+    }
 
-        // Search/filter students
-        function filterStudents() {
-            const input = document.getElementById('searchInput');
-            const filter = input.value.toLowerCase();
-            const table = document.getElementById('studentsTable');
-            const rows = table.getElementsByTagName('tr');
+    // Initialize timestamp on load
+    window.addEventListener('load', function() {
+        updateTimestamp();
+    });
 
-            for (let i = 1; i < rows.length; i++) {
-                // Column 0 is avatar; column 1 is Name
-                const nameCell = rows[i].getElementsByTagName('td')[1];
-                if (nameCell) {
-                    const name = nameCell.textContent || nameCell.innerText;
-                    if (name.toLowerCase().indexOf(filter) > -1) {
-                        rows[i].style.display = '';
-                    } else {
-                        rows[i].style.display = 'none';
-                    }
-                }
-            }
-        }
-
-        // Sort table columns
-        let sortDirection = {};
-        function sortTable(columnIndex) {
-            const table = document.getElementById('studentsTable');
-            const tbody = table.getElementsByTagName('tbody')[0];
-            const rows = Array.from(tbody.getElementsByTagName('tr'));
+    // Refresh dashboard with modal
+    function refreshDashboard() {
+        const scrollPos = window.scrollY;
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '⏳ Refreshing...';
+        btn.disabled = true;
+        
+        window.location.reload();
+        
+        window.addEventListener('load', function() {
+            const timestamp = updateTimestamp();
+            document.getElementById('modal-timestamp').textContent = timestamp;
+            document.getElementById('refreshModal').style.display = 'flex';
             
-            // Initialize sort direction for this column
-            if (sortDirection[columnIndex] === undefined) {
-                sortDirection[columnIndex] = true; // ascending
+            setTimeout(() => {
+                window.scrollTo(0, scrollPos);
+            }, 100);
+        }, { once: true });
+    }
+
+    function closeRefreshModal() {
+        document.getElementById('refreshModal').style.display = 'none';
+    }
+
+    // Close modal on outside click
+    document.getElementById('refreshModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeRefreshModal();
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeRefreshModal();
+        }
+    });
+
+    // Copy parent key to clipboard
+    function copyParentKey() {
+        const keyText = document.getElementById('parentKey').textContent;
+        navigator.clipboard.writeText(keyText).then(() => {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => {
+                btn.textContent = originalText;
+            }, 2000);
+        }).catch(err => {
+            alert('Failed to copy: ' + err);
+        });
+    }
+
+    // Generate/Rotate parent key via API
+    async function generateParentKey(){
+        try{
+            const resp = await fetch('/api/teacher/key', { method:'POST', headers:{'Content-Type':'application/json'} });
+            const data = await resp.json();
+            if(data && data.success){
+                const keyEl = document.getElementById('parentKey');
+                keyEl.textContent = data.teacher_key || '';
+                keyEl.style.outline = '3px solid #667eea';
+                setTimeout(()=> keyEl.style.outline = 'none', 800);
             } else {
-                sortDirection[columnIndex] = !sortDirection[columnIndex];
+                alert(data.error || 'Could not generate key');
             }
-            
-            const ascending = sortDirection[columnIndex];
-            
-            rows.sort((a, b) => {
-                let aValue = a.getElementsByTagName('td')[columnIndex].textContent.trim();
-                let bValue = b.getElementsByTagName('td')[columnIndex].textContent.trim();
-                
-                // Handle numeric values
-                const aNum = parseFloat(aValue.replace(/[^0-9.-]/g, ''));
-                const bNum = parseFloat(bValue.replace(/[^0-9.-]/g, ''));
-                
-                if (!isNaN(aNum) && !isNaN(bNum)) {
-                    return ascending ? aNum - bNum : bNum - aNum;
-                }
-                
-                // Handle text values
-                return ascending ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-            });
-            
-            // Re-append rows in sorted order
-            rows.forEach(row => tbody.appendChild(row));
-            
-            // Update sort arrows
-            const headers = table.getElementsByTagName('th');
-            for (let i = 0; i < headers.length; i++) {
-                const arrow = headers[i].querySelector('.sort-arrow');
-                if (arrow) {
-                    if (i === columnIndex) {
-                        arrow.textContent = ascending ? '▲' : '▼';
-                    } else {
-                        arrow.textContent = '⬍';
-                    }
+        }catch(e){
+            alert('Network error while generating key');
+        }
+    }
+
+    // Scroll to students section
+    function scrollToStudents() {
+        const studentsSection = document.querySelector('[data-student-id]')?.closest('div[style*="background: white"]');
+        if (studentsSection) {
+            studentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    // Search/filter students
+    function filterStudents() {
+        const input = document.getElementById('searchInput');
+        const filter = input.value.toLowerCase();
+        const table = document.getElementById('studentsTable');
+        const rows = table.getElementsByTagName('tr');
+
+        for (let i = 1; i < rows.length; i++) {
+            const nameCell = rows[i].getElementsByTagName('td')[1];
+            if (nameCell) {
+                const name = nameCell.textContent || nameCell.innerText;
+                if (name.toLowerCase().indexOf(filter) > -1) {
+                    rows[i].style.display = '';
+                } else {
+                    rows[i].style.display = 'none';
                 }
             }
         }
+    }
 
-        // Add smooth animations on page load
+    // Sort table columns
+    let sortDirection = {};
+    function sortTable(columnIndex) {
+        const table = document.getElementById('studentsTable');
+        const tbody = table.getElementsByTagName('tbody')[0];
+        const rows = Array.from(tbody.getElementsByTagName('tr'));
+        
+        if (sortDirection[columnIndex] === undefined) {
+            sortDirection[columnIndex] = true;
+        } else {
+            sortDirection[columnIndex] = !sortDirection[columnIndex];
+        }
+        
+        const ascending = sortDirection[columnIndex];
+        
+        rows.sort((a, b) => {
+            let aValue = a.getElementsByTagName('td')[columnIndex].textContent.trim();
+            let bValue = b.getElementsByTagName('td')[columnIndex].textContent.trim();
+            
+            const aNum = parseFloat(aValue.replace(/[^0-9.-]/g, ''));
+            const bNum = parseFloat(bValue.replace(/[^0-9.-]/g, ''));
+            
+            if (!isNaN(aNum) && !isNaN(bNum)) {
+                return ascending ? aNum - bNum : bNum - aNum;
+            }
+            
+            return ascending ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+        });
+        
+        rows.forEach(row => tbody.appendChild(row));
+        
+        const headers = table.getElementsByTagName('th');
+        for (let i = 0; i < headers.length; i++) {
+            const arrow = headers[i].querySelector('span');
+            if (arrow && headers[i].onclick) {
+                if (i === columnIndex) {
+                    arrow.textContent = ascending ? '▲' : '▼';
+                } else {
+                    arrow.textContent = '⬍';
+                }
+            }
+        }
+    }
+
+    // Dynamic polling for family stats
+    (function(){
+        function numberWithCommas(x){
+            try { return Number(x||0).toLocaleString(); } catch { return x; }
+        }
+        function updateRow(id, data){
+            const q = document.getElementById(`student-${id}-quizzes`);
+            if(q) q.textContent = numberWithCommas(data.total_quizzes_completed||0);
+            const p = document.getElementById(`student-${id}-points`);
+            if(p) p.textContent = numberWithCommas(data.total_lifetime_points||0);
+            const acc = Math.round((data.average_accuracy||0));
+            const accText = document.getElementById(`student-${id}-acc-text`);
+            if(accText) accText.textContent = `${acc}%`;
+            const bar = document.getElementById(`student-${id}-acc-bar`);
+            if(bar){
+                bar.style.width = `${acc}%`;
+                bar.style.background = acc>=90 ? '#4CAF50' : acc>=80 ? '#8BC34A' : acc>=70 ? '#FFC107' : acc>=60 ? '#FF9800' : '#F44336';
+            }
+        }
+        async function pollFamily(){
+            const rows = Array.from(document.querySelectorAll('tr[data-student-id]'));
+            if(rows.length===0) return;
+            const ids = rows.map(r=>r.getAttribute('data-student-id')).join(',');
+            try{
+                const resp = await fetch(`/api/users/stats/batch?ids=${ids}`, { headers:{'Accept':'application/json'} });
+                const body = await resp.json();
+                if(!resp.ok || body.status!=='success') return;
+                const results = body.results||{};
+                let totalQuizzes = 0, totalPoints=0, totalBuzzDust=0, accSum=0, count=0;
+                for(const [id, stats] of Object.entries(results)){
+                    updateRow(id, stats);
+                    totalQuizzes += Number(stats.total_quizzes_completed||0);
+                    totalPoints += Number(stats.total_lifetime_points||0);
+                    totalBuzzDust += Number(stats.total_buzz_dust||0);
+                    accSum += Number(stats.average_accuracy||0);
+                    count += 1;
+                    
+                    const buzzEl = document.getElementById(`student-${id}-buzz-dust`);
+                    if(buzzEl) buzzEl.textContent = numberWithCommas(stats.total_buzz_dust||0);
+                    const beeClassEl = document.getElementById(`student-${id}-bee-class`);
+                    if(beeClassEl && stats.bee_class) beeClassEl.textContent = '🐝 ' + stats.bee_class;
+                }
+                const avgAcc = count? Math.round(accSum/count) : 0;
+                const elQ = document.getElementById('family-total-quizzes');
+                if(elQ) elQ.textContent = numberWithCommas(totalQuizzes);
+                const elP = document.getElementById('family-total-points');
+                if(elP) elP.textContent = numberWithCommas(totalPoints);
+                const elBuzz = document.getElementById('family-total-buzz-dust');
+                if(elBuzz) elBuzz.textContent = numberWithCommas(totalBuzzDust);
+                const elA = document.getElementById('family-avg-accuracy');
+                if(elA) elA.textContent = `${avgAcc}%`;
+            }catch(e){ /* silent */ }
+        }
+        
+        document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) pollFamily(); });
+        setInterval(pollFamily, 12000);
         window.addEventListener('load', () => {
-            const cards = document.querySelectorAll('.stat-card, .content-section');
-            cards.forEach((card, index) => {
-                card.style.opacity = '0';
-                card.style.transform = 'translateY(20px)';
-                setTimeout(() => {
-                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                    card.style.opacity = '1';
-                    card.style.transform = 'translateY(0)';
-                }, index * 100);
+            pollFamily();
+        });
+    })();
+
+    // Hide mascot/orb elements
+    document.addEventListener('DOMContentLoaded', function() {
+        const toRemove = ['#mascotBee3D', '.bee-mascot', '.decorative-orb', '.honey-orb', '.floating-orb', '.particle-container', '.morph-container'];
+        toRemove.forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => {
+                el.style.display = 'none';
+                el.style.visibility = 'hidden';
+                el.remove();
             });
         });
+    });
 
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.addedNodes.length) {
+                mutation.addedNodes.forEach(node => {
+                    if (node.id === 'mascotBee3D' || node.classList?.contains('bee-mascot') || 
+                        node.classList?.contains('morph-container') || node.classList?.contains('decorative-orb')) {
+                        node.remove();
+                    }
+                });
+            }
+        });
+    });
 
-
-        
-        // Load parent's 3D avatar from their account
-        (async function() {
-            const avatarContainer = document.getElementById('parentAvatar3D');
-            
-            try {
-                // Initialize avatar loader
-                if (typeof window.userAvatarLoader !== 'undefined') {
-                    await window.userAvatarLoader.init();
-                    
-                    // Get user's avatar from their account
-                    const avatarOptions = window.userAvatarLoader.getAvatarOptions({
-                        width: 250,
-                        height: 250,
-                        autoRotate: true,
-                        enableInteraction: true
-                    });
-                    
-                    // Clear loading indicator
-                    avatarContainer.innerHTML = '';
-                    
-                    // Load 3D avatar
-                    if (typeof SmartyBee3D !== 'undefined') {
-                        const avatar3D = new SmartyBee3D('parentAvatar3D', avatarOptions);
-                        console.log('✅ Parent avatar loaded from account');
-                    } else {
-                        // Fallback to 2D bee
-                        avatarContainer.innerHTML = '<div style="font-size: 5rem; text-align: center;">🐝</div>';
-                    }
-                } else {
-                    // Fallback if avatar loader not available
-                    avatarContainer.innerHTML = '<div style="font-size: 5rem; text-align: center;">🐝</div>';
-                }
-            } catch (error) {
-                console.warn('Error loading parent avatar:', error);
-                avatarContainer.innerHTML = '<div style="font-size: 5rem; text-align: center;">🐝</div>';
-            }
-        })();
-    </script>
-    <script>
-        // Dynamic polling for family stats (children linked to parent)
-        (function(){
-            function numberWithCommas(x){
-                try { return Number(x||0).toLocaleString(); } catch { return x; }
-            }
-            function updateRow(id, data){
-                const q = document.getElementById(`student-${id}-quizzes`);
-                if(q) q.textContent = numberWithCommas(data.total_quizzes_completed||0);
-                const p = document.getElementById(`student-${id}-points`);
-                if(p) p.textContent = numberWithCommas(data.total_lifetime_points||0);
-                const acc = Math.round((data.average_accuracy||0));
-                const accText = document.getElementById(`student-${id}-acc-text`);
-                if(accText) accText.textContent = `${acc}%`;
-                const bar = document.getElementById(`student-${id}-acc-bar`);
-                if(bar){
-                    bar.style.width = `${acc}%`;
-                    bar.classList.remove('accuracy-excellent','accuracy-good','accuracy-fair','accuracy-poor','accuracy-fail');
-                    if(acc>=90) bar.classList.add('accuracy-excellent');
-                    else if(acc>=80) bar.classList.add('accuracy-good');
-                    else if(acc>=70) bar.classList.add('accuracy-fair');
-                    else if(acc>=60) bar.classList.add('accuracy-poor');
-                    else bar.classList.add('accuracy-fail');
-                }
-            }
-            async function pollFamily(){
-                const rows = Array.from(document.querySelectorAll('tr[data-student-id]'));
-                if(rows.length===0) return;
-                const ids = rows.map(r=>r.getAttribute('data-student-id')).join(',');
-                try{
-                    const resp = await fetch(`/api/users/stats/batch?ids=${ids}`, { headers:{'Accept':'application/json'} });
-                    const body = await resp.json();
-                    if(!resp.ok || body.status!=='success') return;
-                    const results = body.results||{};
-                    let totalQuizzes = 0, totalPoints=0, totalBuzzDust=0, accSum=0, count=0;
-                    for(const [id, stats] of Object.entries(results)){
-                        updateRow(id, stats);
-                        totalQuizzes += Number(stats.total_quizzes_completed||0);
-                        totalPoints += Number(stats.total_lifetime_points||0);
-                        totalBuzzDust += Number(stats.total_buzz_dust||0);
-                        accSum += Number(stats.average_accuracy||0);
-                        count += 1;
-                        
-                        // 🐝 Update individual Buzz Dust display
-                        const buzzEl = document.getElementById(`student-${id}-buzz-dust`);
-                        if(buzzEl) buzzEl.textContent = numberWithCommas(stats.total_buzz_dust||0);
-                        const beeClassEl = document.getElementById(`student-${id}-bee-class`);
-                        if(beeClassEl && stats.bee_class) beeClassEl.textContent = '🐝 ' + stats.bee_class;
-                    }
-                    const avgAcc = count? Math.round(accSum/count) : 0;
-                    const elQ = document.getElementById('family-total-quizzes');
-                    if(elQ) elQ.textContent = numberWithCommas(totalQuizzes);
-                    const elP = document.getElementById('family-total-points');
-                    if(elP) elP.textContent = numberWithCommas(totalPoints);
-                    const elBuzz = document.getElementById('family-total-buzz-dust');
-                    if(elBuzz) elBuzz.textContent = numberWithCommas(totalBuzzDust);
-                    const elA = document.getElementById('family-avg-accuracy');
-                    if(elA) elA.textContent = `${avgAcc}%`;
-                }catch(e){ /* silent */ }
-            }
-            
-            // 🐝 Fetch and display parent's own Buzz Dust rank
-            async function loadParentBuzzDust() {
-                try {
-                    console.log('🐝 Loading parent Buzz Dust info...');
-                    const res = await fetch('/api/buzz-dust/info', {
-                        credentials: 'same-origin',
-                        cache: 'no-store'
-                    });
-                    
-                    if (!res.ok) {
-                        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-                    }
-                    
-                    const data = await res.json();
-                    console.log('✅ Parent Buzz Dust data received:', data);
-                    
-                    if (data.success && data.current_class) {
-                        const rankEl = document.getElementById('parent-rank-name');
-                        const badgeEl = document.getElementById('parent-rank-badge');
-                        const amountEl = document.getElementById('parent-buzz-dust-amount');
-                        
-                        if (rankEl) {
-                            rankEl.textContent = data.current_class.label || 'Novice Bee';
-                            console.log('✅ Parent rank name updated:', data.current_class.label);
-                        }
-                        if (amountEl) {
-                            amountEl.textContent = numberWithCommas(data.total_buzz_dust || 0) + ' ✨';
-                            console.log('✅ Parent Buzz Dust amount updated:', data.total_buzz_dust);
-                        }
-                        
-                        if (badgeEl && data.current_class.badge_image) {
-                            // Construct the badge URL from badge_image filename
-                            const badgeUrl = `/static/assets/badges/${data.current_class.badge_image}`;
-                            badgeEl.src = badgeUrl;
-                            badgeEl.alt = data.current_class.label + ' Badge';
-                            badgeEl.style.display = 'block';
-                            console.log('✅ Parent badge image updated:', badgeUrl);
-                        }
-                    } else {
-                        console.error('❌ API returned success=false:', data);
-                        const rankEl = document.getElementById('parent-rank-name');
-                        if (rankEl) rankEl.textContent = 'Novice Bee';
-                    }
-                } catch (error) {
-                    console.error('❌ Error loading parent Buzz Dust:', error);
-                    const rankEl = document.getElementById('parent-rank-name');
-                    const amountEl = document.getElementById('parent-buzz-dust-amount');
-                    if (rankEl) rankEl.textContent = 'Novice Bee';
-                    if (amountEl) amountEl.textContent = '0 ✨';
-                }
-            }
-            
-            // Load Buzz Dust immediately when DOM is ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', loadParentBuzzDust);
-            } else {
-                loadParentBuzzDust();
-            }
-            
-            document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) pollFamily(); });
-            setInterval(pollFamily, 12000);
-            window.addEventListener('load', () => {
-                pollFamily();
-            });
-        })();
-    </script>
-</body>
-</html>
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            observer.observe(document.body, { childList: true, subtree: true });
+        });
+    } else {
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+</script>
+{% endblock %}
