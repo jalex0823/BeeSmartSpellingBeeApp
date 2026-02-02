@@ -138,8 +138,7 @@ if ('speechSynthesis' in window) {
         display: flex;
         flex-direction: column;
         gap: 8px; /* Reduced from 14px */
-        overflow-x: hidden;
-        overflow-y: visible; /* Changed to visible to allow content to extend */
+        overflow: hidden; /* Prevents keyboard from bleeding past rounded corners */
         -webkit-overflow-scrolling: touch;
         min-height: 0;
         /* Removed max-height constraint to allow full scrolling */
@@ -165,13 +164,14 @@ if ('speechSynthesis' in window) {
     .keyboard-host,
     .keyboard-shell {
         width: 100%;
+        max-width: 100%;
         box-sizing: border-box;
-        padding: 0 4px; /* Reduced padding */
-        margin-bottom: 0.15rem; /* Minimal spacing below keyboard */
+        padding: 0; /* Match action buttons padding - card padding handles margins */
+        margin-bottom: -6px; /* Creates slight overlap look within card */
         margin-top: 0.15rem; /* Minimal spacing above keyboard */
         display: block; /* Always visible */
-        position: relative;
-        z-index: 15; /* Bring to front, above card */
+        position: relative; /* Normal flow, NOT fixed or absolute */
+        z-index: 2; /* Above buttons but below modals */
         opacity: 1;
     }
     
@@ -208,15 +208,19 @@ if ('speechSynthesis' in window) {
         display: flex;
         flex-direction: column;
         gap: 8px;
+        position: relative; /* Normal flow, NOT fixed */
     }
     .actions-area.quiz-buttons {
         position: relative;
-        z-index: 10; /* Above keyboard, below modals */
-        padding-top: 0.25rem; /* Minimal spacing above buttons for compact layout */
+        z-index: 1; /* Below keyboard, above card background */
+        padding-top: 6px; /* Accommodate keyboard overlap */
         margin-top: 0;
         clear: both;
         width: 100%;
         box-sizing: border-box;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.35rem; /* Match other quiz-buttons gap */
     }
     @media (max-width: 420px) {
         .quiz-card { padding: 12px; gap: 12px; }
@@ -2187,7 +2191,8 @@ if ('speechSynthesis' in window) {
         box-sizing: border-box;
     }
 
-    .quiz-buttons .action-btn {
+    .quiz-buttons .action-btn,
+    .actions-area.quiz-buttons .action-btn {
         width: 100%;
         min-height: 48px;
         margin: 0; /* Remove any default margins */
