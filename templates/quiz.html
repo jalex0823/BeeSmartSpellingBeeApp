@@ -5757,6 +5757,60 @@ class QuizManager {
         }
     }
 
+    /**
+     * Mount the custom keyboard as early as possible so layout doesn't jump.
+     * Safe to call multiple times.
+     */
+    mountQuizKeyboardEarly() {
+        // Guard: if feature disabled
+        if (this.options?.enableCustomKeyboard === false) return;
+
+        // Expected elements (adjust IDs to match your HTML)
+        const keyboardEl =
+            document.querySelector('.quiz-keyboard') ||
+            document.getElementById('quizKeyboardContainer') ||
+            document.querySelector('.custom-keyboard');
+
+        if (!keyboardEl) {
+            console.warn("⚠️ Custom keyboard element not found yet.");
+            return;
+        }
+
+        // If keyboard already mounted into shell, do nothing
+        const currentParent = keyboardEl.parentElement;
+        if (currentParent?.id === "keyboardShell" || currentParent?.classList?.contains("keyboard-shell") || currentParent?.classList?.contains("keyboard-host")) {
+            return;
+        }
+
+        // Preferred shell inside the quiz card
+        let shell = document.getElementById("keyboardShell");
+
+        // If shell doesn't exist yet, create it inside quiz card
+        if (!shell) {
+            const quizCard =
+                document.getElementById("quizCard") ||
+                document.querySelector(".quiz-card");
+
+            if (!quizCard) {
+                console.warn("⚠️ Quiz card not found; cannot mount keyboard.");
+                return;
+            }
+
+            shell = document.createElement("div");
+            shell.id = "keyboardShell";
+            shell.className = "keyboard-host keyboard-shell";
+
+            // Insert at bottom of card
+            quizCard.appendChild(shell);
+        }
+
+        // Move keyboard into shell
+        shell.appendChild(keyboardEl);
+
+        // Optional: mark mounted
+        keyboardEl.dataset.mounted = "true";
+    }
+
     // 🔁 Prevent accidental repeat announcements (within a short window)
     shouldSpeakWord(word, kind, windowMs = 1200) {
         const w = (word || '').trim().toLowerCase();
