@@ -146,15 +146,15 @@ if ('speechSynthesis' in window) {
         flex-direction: column;
         gap: inherit;
     }
-    /* Keyboard host: floats above card and buttons, below input (position: fixed, positioned by JS) */
+    /* Keyboard host: in-flow between input and action buttons (part of layout, no overlay) */
     .keyboard-host,
     .keyboard-shell {
-        position: fixed;
+        width: 100%;
         box-sizing: border-box;
         padding: 0 6px;
         display: none;
-        z-index: 100;
-        transform: translateY(10px);
+        position: relative;
+        transform: translateY(8px);
         opacity: 0;
         transition: transform 220ms ease, opacity 220ms ease;
     }
@@ -184,8 +184,6 @@ if ('speechSynthesis' in window) {
         position: relative;
         z-index: 1;
         padding-top: 6px;
-        padding-left: 6px;
-        padding-right: 6px;
     }
     @media (max-width: 420px) {
         .quiz-card { padding: 12px; gap: 12px; }
@@ -2127,18 +2125,17 @@ if ('speechSynthesis' in window) {
         transition: all 0.1s ease;
     }
 
-    /* Quiz Buttons Container - Updated for 2x3 grid + separate exit */
+    /* Quiz Buttons Container - 2 columns, rows as needed (Pronounce | Show Definition, etc.) */
     .quiz-buttons {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto auto auto;
         gap: 1rem;
-        margin-top: 1.5rem;
+        margin-top: 1.25rem;
     }
 
     .quiz-buttons .action-btn {
         width: 100%;
-        min-height: 50px;
+        min-height: 48px;
     }
     
     /* Exit Button Container - Centered below main grid */
@@ -4050,7 +4047,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="bee-input" id="beeInputWrapper">
                 <input type="text"
                        id="spellingInput"
-                       placeholder="Type your spelling here..."
+                       placeholder="Type your answer..."
                        autocomplete="off"
                        autocorrect="off"
                        autocapitalize="off"
@@ -4062,6 +4059,11 @@ document.addEventListener('DOMContentLoaded', () => {
             <button type="button" id="showKeyboardBtn" class="action-btn secondary quiz-show-keyboard-btn" style="display: none; margin-top: 8px; width: 100%; max-width: 260px;" aria-label="Show keyboard">
                 <span class="bee-icon" aria-hidden="true">&#9650;</span> Show keyboard
             </button>
+        </div>
+
+        <!-- Keyboard: in-flow between input and buttons (static part of layout) -->
+        <div class="keyboard-host" id="keyboardShell">
+            <div id="quizKeyboardContainer" role="region" aria-label="Quiz spelling keyboard"></div>
         </div>
 
         <script>
@@ -4111,8 +4113,8 @@ document.addEventListener('DOMContentLoaded', () => {
             Ready to show definition or sentence...
         </div>
 
-        <!-- Actions: pronounce, show sentence, submit, skip, honey hint -->
-        <div class="actions-area quiz-buttons">
+        <!-- Actions: pronounce, show sentence, submit, skip, honey hint (hidden on "Ready to spell?" start screen) -->
+        <div class="actions-area quiz-buttons" id="quizActionButtons">
             <!-- Voice Control Buttons -->
             <button type="button" class="action-btn secondary" id="speakButton">
                 <span class="bee-icon" aria-hidden="true">🔊</span>
@@ -4191,11 +4193,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
         </div>
         </div>
-    </div>
-
-    <!-- Keyboard: floats above card and buttons, below input (sibling of card, positioned by JS) -->
-    <div class="keyboard-host" id="keyboardShell">
-        <div id="quizKeyboardContainer" role="region" aria-label="Quiz spelling keyboard"></div>
     </div>
 
     <!-- Quiz Complete Screen -->
@@ -4315,29 +4312,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function positionKeyboardBelowInput() {
-    var container = document.getElementById('quizContainer');
-    var card = document.getElementById('quizCard');
-    var input = document.getElementById('spellingInput');
+    // Keyboard is in-flow; no positioning needed
     var host = document.getElementById('keyboardShell');
-    if (!container || !card || !input || !host || !container.classList.contains('kb-open')) return;
-    requestAnimationFrame(function () {
-      var cardRect = card.getBoundingClientRect();
-      var inputRect = input.getBoundingClientRect();
-      var topPx = inputRect.bottom;
-      if (topPx < 0) topPx = 0;
-      host.style.top = topPx + 'px';
-      host.style.left = cardRect.left + 'px';
-      host.style.width = cardRect.width + 'px';
-    });
+    if (host) { host.style.top = ''; host.style.left = ''; host.style.width = ''; }
   }
 
   function clearKeyboardPosition() {
     var host = document.getElementById('keyboardShell');
-    if (host) {
-      host.style.top = '';
-      host.style.left = '';
-      host.style.width = '';
-    }
+    if (host) { host.style.top = ''; host.style.left = ''; host.style.width = ''; }
   }
 
   window.addEventListener('load', updateKeyboardReservedSpace);
@@ -7505,6 +7487,14 @@ class QuizManager {
 
         const feedbackArea = document.getElementById('feedbackArea');
         if (!feedbackArea) return;
+        // Hide main quiz buttons so only "Ready to spell?" + Start voice/silent are visible
+        const actionBtns = document.getElementById('quizActionButtons');
+        const statToggles = document.querySelector('.stat-toggle-controls');
+        const exitContainer = document.querySelector('.exit-button-container');
+        if (actionBtns) actionBtns.style.display = 'none';
+        if (statToggles) statToggles.style.display = 'none';
+        if (exitContainer) exitContainer.style.display = 'none';
+
         feedbackArea.style.display = 'block';
         feedbackArea.className = 'feedback-area feedback-success';
 
@@ -7528,6 +7518,15 @@ class QuizManager {
             </div>
         `;
 
+        const showQuizButtons = () => {
+            const actionBtns = document.getElementById('quizActionButtons');
+            const statToggles = document.querySelector('.stat-toggle-controls');
+            const exitContainer = document.querySelector('.exit-button-container');
+            if (actionBtns) actionBtns.style.display = '';
+            if (statToggles) statToggles.style.display = '';
+            if (exitContainer) exitContainer.style.display = '';
+        };
+
         const startWithVoice = () => {
             if (this.quizStarted) return;
             this.voiceUnlocked = true;
@@ -7537,6 +7536,7 @@ class QuizManager {
             this.updateVoiceToggleUI();
             this.quizStarted = true;
             this.introInProgress = false;
+            showQuizButtons();
             // Short intro in same gesture (iOS audio unlock); hide and start quiz when done
             const msg = (this.studentName ? `Hello ${this.studentName}! ` : '') +
                 "I'm Buzzy! Listen to each word, then spell it. Let's go!";
@@ -7559,6 +7559,7 @@ class QuizManager {
             feedbackArea.style.display = 'none';
             this.quizStarted = true;
             this.introInProgress = false;
+            showQuizButtons();
             this.loadNextWordWithIntro();
         };
 

@@ -419,15 +419,15 @@ if ('speechSynthesis' in window) {
         flex-direction: column;
         gap: inherit;
     }
-    /* Keyboard host: floats above card and buttons, below input (position: fixed, positioned by JS) */
+    /* Keyboard host: in-flow between input and action buttons (part of layout, no overlay) */
     .speed-quiz-container .keyboard-host,
     .speed-quiz-container .keyboard-shell {
-        position: fixed;
+        width: 100%;
         box-sizing: border-box;
         padding: 0 6px;
         display: none;
-        z-index: 100;
-        transform: translateY(10px);
+        position: relative;
+        transform: translateY(8px);
         opacity: 0;
         transition: transform 220ms ease, opacity 220ms ease;
     }
@@ -446,19 +446,44 @@ if ('speechSynthesis' in window) {
         box-sizing: border-box;
         overflow: hidden;
         border-radius: 16px;
-        box-shadow: 0 10px 22px rgba(0,0,0,.12);
-        background: rgba(255,255,255,.85);
-        backdrop-filter: blur(6px);
+        box-shadow: 0 8px 24px rgba(33, 150, 243, 0.25);
+        background: linear-gradient(180deg, #E3F2FD 0%, #BBDEFB 40%, #90CAF9 100%);
+        border-top: 4px solid #2196F3;
         display: flex;
         flex-direction: column;
         gap: 8px;
+    }
+    .speed-quiz-container .keyboard-host .quiz-keyboard::before,
+    .speed-quiz-container .keyboard-shell .quiz-keyboard::before {
+        background: repeating-linear-gradient(90deg, transparent, transparent 12px, rgba(33, 150, 243, 0.2) 12px, rgba(33, 150, 243, 0.2) 14px);
+    }
+    .speed-quiz-container .keyboard-host .quiz-keyboard-key,
+    .speed-quiz-container .keyboard-shell .quiz-keyboard-key {
+        color: #0D47A1;
+        background: linear-gradient(180deg, #FFFFFF 0%, #E3F2FD 30%, #BBDEFB 70%, #90CAF9 100%);
+        border: 2px solid #1976D2;
+        box-shadow: 0 4px 0 #0D47A1, 0 5px 10px rgba(33, 150, 243, 0.3), inset 0 2px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(0,0,0,0.06);
+    }
+    .speed-quiz-container .keyboard-host .quiz-keyboard-key:hover:not(:disabled),
+    .speed-quiz-container .keyboard-shell .quiz-keyboard-key:hover:not(:disabled) {
+        background: linear-gradient(180deg, #E3F2FD 0%, #BBDEFB 50%, #64B5F6 100%);
+        box-shadow: 0 5px 0 #0D47A1, 0 6px 12px rgba(33, 150, 243, 0.35), inset 0 2px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(0,0,0,0.06);
+    }
+    .speed-quiz-container .keyboard-host .quiz-keyboard-key:active:not(:disabled),
+    .speed-quiz-container .keyboard-shell .quiz-keyboard-key:active:not(:disabled) {
+        box-shadow: 0 2px 0 #0D47A1, 0 3px 6px rgba(33, 150, 243, 0.25), inset 0 2px 4px rgba(0,0,0,0.08);
+    }
+    .speed-quiz-container .keyboard-host .quiz-keyboard-key-submit,
+    .speed-quiz-container .keyboard-shell .quiz-keyboard-key-submit {
+        color: #fff;
+        background: linear-gradient(180deg, #42A5F5 0%, #2196F3 35%, #1976D2 70%, #1565C0 100%);
+        border: 2px solid #0D47A1;
+        box-shadow: 0 4px 0 #0D47A1, 0 5px 10px rgba(33, 150, 243, 0.4), inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.1);
     }
     .speed-quiz-container .action-buttons {
         position: relative;
         z-index: 1;
         padding-top: 6px;
-        padding-left: 6px;
-        padding-right: 6px;
     }
     @media (max-width: 420px) {
         .speed-quiz-container .quiz-card { padding: 12px; gap: 12px; }
@@ -507,7 +532,21 @@ if ('speechSynthesis' in window) {
         background: #FFFFFF;
     }
 
-    /* Action Buttons */
+    /* Action Buttons – 2-column grid to match main quiz format */
+    .speed-quiz-container .input-section .action-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 1.25rem;
+    }
+    .speed-quiz-container .input-section .action-buttons .btn-speed {
+        min-height: 48px;
+        margin: 0;
+    }
+    /* Submit row: single button spans both columns */
+    .speed-quiz-container .input-section .action-buttons:first-of-type .btn-submit {
+        grid-column: 1 / -1;
+    }
     .action-buttons {
         display: flex;
         gap: 0.75rem;
@@ -927,6 +966,11 @@ if ('speechSynthesis' in window) {
                 <span aria-hidden="true">&#9650;</span> Show keyboard
             </button>
 
+            <!-- Keyboard: in-flow between input and buttons (static part of layout) -->
+            <div class="keyboard-host" id="speedKeyboardShell">
+                <div id="quizKeyboardContainer" role="region" aria-label="Speed round spelling keyboard"></div>
+            </div>
+
             <div class="action-buttons" style="margin-top: 0.75rem;">
                 <button class="btn-speed btn-pronounce" id="pronounceBtn">
                     <span>🔊</span>
@@ -955,11 +999,6 @@ if ('speechSynthesis' in window) {
             </div>
         </div>
     </div>
-
-    <!-- Keyboard: floats above card and buttons, below input (sibling of card, positioned by JS) -->
-    <div class="keyboard-host" id="speedKeyboardShell">
-        <div id="quizKeyboardContainer" role="region" aria-label="Speed round spelling keyboard"></div>
-    </div>
 </div>
 
 <!-- Removed duplicate loading overlay: rely on unified global honey pot loading screen -->
@@ -977,28 +1016,13 @@ if ('speechSynthesis' in window) {
     card.style.setProperty('--kb-h', h + 'px');
   }
   function positionSpeedKeyboardBelowInput() {
-    var container = document.getElementById('speedQuizContainer');
-    var card = document.getElementById('speedQuizCard');
-    var input = document.getElementById('spellInput');
+    // Keyboard is in-flow; no positioning needed
     var host = document.getElementById('speedKeyboardShell');
-    if (!container || !card || !input || !host || !container.classList.contains('kb-open')) return;
-    requestAnimationFrame(function () {
-      var cardRect = card.getBoundingClientRect();
-      var inputRect = input.getBoundingClientRect();
-      var topPx = inputRect.bottom;
-      if (topPx < 0) topPx = 0;
-      host.style.top = topPx + 'px';
-      host.style.left = cardRect.left + 'px';
-      host.style.width = cardRect.width + 'px';
-    });
+    if (host) { host.style.top = ''; host.style.left = ''; host.style.width = ''; }
   }
   function clearSpeedKeyboardPosition() {
     var host = document.getElementById('speedKeyboardShell');
-    if (host) {
-      host.style.top = '';
-      host.style.left = '';
-      host.style.width = '';
-    }
+    if (host) { host.style.top = ''; host.style.left = ''; host.style.width = ''; }
   }
   window.addEventListener('load', updateSpeedKeyboardReservedSpace);
   window.addEventListener('resize', function () {
