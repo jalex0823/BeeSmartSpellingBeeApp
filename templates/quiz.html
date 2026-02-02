@@ -2671,9 +2671,10 @@ if ('speechSynthesis' in window) {
     /* Input Field - Match Voice Visualizer Width */
     .bee-input {
         width: 100%;
-        margin: 1.5rem 0;
+        margin: 0.4rem 0; /* Further reduced for ultra-compact layout */
         display: flex;
         justify-content: center;
+        position: relative; /* Required for absolute positioning of ::after pseudo-element */
     }
 
     .bee-input input[type="text"] {
