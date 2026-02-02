@@ -16,6 +16,9 @@ j{% extends "base.html" %}
 // Set flag early to prevent service worker from reloading the page
 window.__disableSwReload = true;
 
+// 6) Hard disable "Can't hear Buzzy?" orange modal
+window.DISABLE_BUZZY_HELP_MODAL = true;
+
 // Build stamp (helps confirm production has the latest HTML)
 console.log('🐝 QUIZ BUILD:', '{{ timestamp }}');
 
@@ -89,89 +92,119 @@ if ('speechSynthesis' in window) {
 </script>
 
 <style>
+    /* 1) Scrolling: page non-scroll, card has internal scroll */
+    html, body {
+        height: 100%;
+    }
+    body {
+        margin: 0;
+        overflow: hidden; /* OK – card has internal scroll */
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .quiz-page,
     .quiz-container {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
         max-width: 700px;
         margin: 0 auto;
         text-align: center;
-        /* Ensure container allows scrolling */
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        height: 100vh;
-        max-height: 100vh;
-        padding: 0.25rem 0.75rem 1rem; /* Reduced padding: top 0.35->0.25, sides 1->0.75, bottom 3->1 */
+        padding: 10px; /* 10px total for near edge-to-edge card */
         position: relative;
+        box-sizing: border-box;
     }
 
-    /* Outer quiz container scrolls; keyboard reserve is handled by .quiz-card / .quiz-scroll (--kb-h) */
-    .quiz-content {
-        overflow-y: visible; /* Changed to visible - let parent handle scrolling */
-        -webkit-overflow-scrolling: touch;
-        scroll-behavior: smooth;
-        /* Content should flow naturally */
+    .quiz-container {
+        overflow: hidden;
+        flex: 1;
         min-height: 0;
     }
 
-    body {
-        overflow-x: hidden;
-        overflow-y: auto; /* Allow body scrolling */
-        -webkit-overflow-scrolling: touch;
-        scroll-behavior: smooth;
+    /* Card internal scroll region */
+    .quiz-content {
+        min-height: 0;
     }
 
     /* Answer area - no longer sticky to allow scrolling to voice button */
     .quiz-answer-area {
-        position: relative; /* Changed from sticky to allow scrolling */
+        position: relative;
         z-index: 5;
         background: linear-gradient(180deg, #FFFDE7 0%, #FFF8E1 100%);
-        padding: 4px 8px; /* Further reduced padding for ultra-compact layout */
-        margin-bottom: 0.25rem; /* Minimal spacing below answer area */
+        padding: 4px 8px;
+        margin-bottom: 0.25rem;
     }
+    /* 7) Start with Buzzy Voice pill (replaces Ready to Spell block) */
+    .buzzy-pill {
+        width: 100%;
+        border-radius: 999px;
+        padding: 10px 12px;
+        border: 2px solid rgba(255, 180, 0, 0.45);
+        background: rgba(255, 255, 255, 0.75);
+        font-weight: 700;
+        cursor: pointer;
+        margin-top: 8px;
+        margin-bottom: 8px;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .buzzy-pill:hover { background: rgba(255, 248, 225, 0.9); }
+    .buzzy-pill:active { transform: scale(0.98); }
 
-    /* Card: vertical layout; keyboard in-flow between input and action buttons */
+    /* 2) Widen card near edge-to-edge; 3) card scroll = card-fixed + card-scroll */
     .quiz-card {
         position: relative;
-        width: 100%;
+        width: calc(100vw - 20px);
         max-width: 520px;
         margin: 0 auto;
-        padding: 12px; /* Reduced from 16px */
         border-radius: 18px;
+        overflow: hidden;
+        box-sizing: border-box;
         display: flex;
         flex-direction: column;
-        gap: 8px; /* Reduced from 14px */
-        overflow: hidden; /* Prevents keyboard from bleeding past rounded corners */
-        -webkit-overflow-scrolling: touch;
         min-height: 0;
-        /* Removed max-height constraint to allow full scrolling */
+        max-height: calc(100vh - 140px);
         background: rgba(255, 255, 255, 0.85);
-        box-sizing: border-box;
-        scroll-behavior: smooth;
-    }
-    @media (max-width: 768px) {
-        .quiz-card { 
-            padding: 10px; /* Reduced from 12px */
-            gap: 6px; /* Reduced from 10px */
-        }
+        -webkit-overflow-scrolling: touch;
     }
     .quiz-card .quiz-card-content {
         padding: 0;
         min-height: 0;
-        overflow: visible;
         display: flex;
         flex-direction: column;
-        gap: inherit;
+        flex: 1;
+        overflow: hidden;
     }
-    /* Keyboard host: in-flow between input and action buttons (part of layout, no overlay) */
+    .card-fixed {
+        padding: 14px 14px 8px 14px;
+        flex: 0 0 auto;
+    }
+    .card-scroll {
+        padding: 10px 14px 14px 14px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+    @media (max-width: 768px) {
+        .quiz-card { max-height: calc(100vh - 120px); }
+    }
+    /* 5) Hide keyboard: toggle class only */
+    .keyboard-host.is-hidden,
+    .keyboard-shell.is-hidden {
+        display: none !important;
+    }
+    /* Keyboard host: in-flow inside card-scroll */
     .keyboard-host,
     .keyboard-shell {
         width: 100%;
         max-width: 100%;
         box-sizing: border-box;
-        padding: 0; /* Match action buttons padding - card padding handles margins */
-        margin-bottom: -6px; /* Creates slight overlap look within card */
-        margin-top: 0.15rem; /* Minimal spacing above keyboard */
-        display: block; /* Always visible */
-        position: relative; /* Normal flow, NOT fixed or absolute */
-        z-index: 2; /* Above buttons but below modals */
+        padding: 0;
+        margin-bottom: 12px;
+        margin-top: 0;
+        display: block;
+        position: relative;
+        z-index: 2;
         opacity: 1;
     }
     
@@ -210,17 +243,30 @@ if ('speechSynthesis' in window) {
         gap: 8px;
         position: relative; /* Normal flow, NOT fixed */
     }
-    .actions-area.quiz-buttons {
-        position: relative;
-        z-index: 1; /* Below keyboard, above card background */
-        padding-top: 6px; /* Accommodate keyboard overlap */
-        margin-top: 0;
-        clear: both;
-        width: 100%;
-        box-sizing: border-box;
+    /* 8) Action + secondary buttons: 2 columns */
+    .action-buttons,
+    .actions-area.quiz-buttons,
+    .secondary-buttons {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 0.35rem; /* Match other quiz-buttons gap */
+        gap: 12px;
+        position: relative;
+        z-index: 1;
+        margin-top: 0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .action-buttons button,
+    .actions-area.quiz-buttons button,
+    .secondary-buttons button {
+        width: 100%;
+        min-height: 54px;
+        border-radius: 16px;
+    }
+    .action-buttons .button-wide,
+    .actions-area.quiz-buttons .button-wide,
+    .secondary-buttons .button-wide {
+        grid-column: span 2;
     }
     @media (max-width: 420px) {
         .quiz-card { padding: 12px; gap: 12px; }
@@ -3607,7 +3653,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </button>
 </div>
 
-<div class="quiz-container quiz-shell quiz-content" id="quizContainer">
+<div class="quiz-container quiz-shell quiz-content quiz-page" id="quizContainer">
     <!-- Quiz Header -->
     <div class="quiz-header">
         <!-- Modern header layout: progress left, exit right -->
@@ -3650,9 +3696,10 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
     </div>
 
-    <!-- Quiz Card: quiz-content (question + input + buttons) + keyboard-shell (keyboard inside card) -->
+    <!-- Quiz Card: card-fixed (question + input + Buzzy pill) + card-scroll (keyboard + buttons) -->
     <div class="quiz-card" id="quizCard">
         <div class="quiz-content quiz-card-content" id="quizScroll">
+        <div class="card-fixed">
         <!-- UPLOAD MY LIST button moved here for proper positioning -->
         <!-- Logo at top center - HIDDEN for compact layout matching reference image -->
         <div class="quiz-logo" style="display: none;">
@@ -4134,10 +4181,21 @@ document.addEventListener('DOMContentLoaded', () => {
             <button type="button" id="showKeyboardBtn" class="action-btn secondary quiz-show-keyboard-btn" style="display: none; margin-top: 8px; width: 100%; max-width: 260px;" aria-label="Show keyboard">
                 <span class="bee-icon" aria-hidden="true">&#9650;</span> Show keyboard
             </button>
-        </div>
 
-        <!-- Keyboard: in-flow between input and buttons (static part of layout) -->
-        <div class="keyboard-host" id="keyboardShell">
+            <!-- 7) Start with Buzzy Voice pill (replaces Ready to Spell block) -->
+            <button type="button" id="buzzyPill" class="buzzy-pill" aria-label="Start with Buzzy voice">
+                &#128266; Start with Buzzy Voice
+            </button>
+            <button type="button" id="startSilentBtn" class="action-btn secondary" style="margin-top: 4px; display: block;" aria-label="Start silent">
+                &#128263; Start silent
+            </button>
+        </div>
+        </div>
+        <!-- end card-fixed -->
+
+        <div class="card-scroll">
+        <!-- Keyboard: inside card-scroll so user can scroll to all keys + buttons -->
+        <div class="keyboard-host keyboard-shell" id="keyboardHost">
             <div id="quizKeyboardContainer" role="region" aria-label="Quiz spelling keyboard"></div>
         </div>
 
@@ -4188,8 +4246,8 @@ document.addEventListener('DOMContentLoaded', () => {
             Ready to show definition or sentence...
         </div>
 
-        <!-- Actions: pronounce, show sentence, submit, skip, honey hint (hidden on "Ready to spell?" start screen) -->
-        <div class="actions-area quiz-buttons" id="quizActionButtons">
+        <!-- Actions: pronounce, show sentence, submit, skip, honey hint (2 columns) -->
+        <div class="actions-area quiz-buttons action-buttons" id="quizActionButtons">
             <!-- Voice Control Buttons -->
             <button type="button" class="action-btn secondary" id="speakButton">
                 <span class="bee-icon" aria-hidden="true">🔊</span>
@@ -4208,7 +4266,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
             
             <!-- Quiz Action Buttons -->
-            <button type="button" class="action-btn primary" id="submitButton">
+            <button type="button" class="action-btn primary button-wide" id="submitButton">
                 Submit Answer
             </button>
             <button type="button" class="action-btn secondary" id="getHintButton">
@@ -4256,8 +4314,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
         </div>
         
-        <!-- Exit Quiz Button - Now separate, centered at bottom -->
-        <div class="exit-button-container">
+        <!-- Exit Quiz Button - Now separate, centered at bottom (secondary buttons 2-col) [0-8] -->
+        <div class="exit-button-container secondary-buttons" id="secondaryButtons">
             <button type="button" class="action-btn next-word" id="nextWordButton" style="display: none;">
                 <span class="bee-icon" aria-hidden="true">➡️</span>
                 Next Word
@@ -4267,6 +4325,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 Exit Quiz
             </button>
         </div>
+        </div>
+        <!-- end card-scroll -->
         </div>
     </div>
 
@@ -4388,7 +4448,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function positionKeyboardBelowInput() {
     // Keyboard is in-flow; ensure no absolute/fixed positioning
-    var host = document.getElementById('keyboardShell');
+    var host = document.getElementById('keyboardHost');
     if (host) {
       host.style.position = 'relative';
       host.style.top = '';
@@ -4402,7 +4462,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function clearKeyboardPosition() {
     // Keyboard is in-flow; ensure no absolute/fixed positioning
-    var host = document.getElementById('keyboardShell');
+    var host = document.getElementById('keyboardHost');
     if (host) {
       host.style.position = 'relative';
       host.style.top = '';
@@ -4424,7 +4484,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.addEventListener('DOMContentLoaded', function () {
     var kb = document.querySelector('.quiz-keyboard');
-    var dock = document.getElementById('keyboardShell');
+    var dock = document.getElementById('keyboardHost');
     if (kb && dock && kb.parentElement !== dock) dock.appendChild(kb);
     updateKeyboardReservedSpace();
     var showBtn = document.getElementById('showKeyboardBtn');
@@ -5739,6 +5799,10 @@ class QuizManager {
                 this.voiceUnlocked = true;
                 const feedbackArea = document.getElementById('feedbackArea');
                 if (feedbackArea) feedbackArea.style.display = 'none';
+                var bp = document.getElementById('buzzyPill');
+                var ss = document.getElementById('startSilentBtn');
+                if (bp) bp.style.display = 'none';
+                if (ss) ss.style.display = 'none';
                 this.quizStarted = true;
                 Promise.resolve()
                     .then(() => this.loadNextWordWithIntro())
@@ -5783,12 +5847,12 @@ class QuizManager {
 
         // If keyboard already mounted into shell, do nothing
         const currentParent = keyboardEl.parentElement;
-        if (currentParent?.id === "keyboardShell" || currentParent?.classList?.contains("keyboard-shell") || currentParent?.classList?.contains("keyboard-host")) {
+        if (currentParent?.id === "keyboardHost" || currentParent?.classList?.contains("keyboard-shell") || currentParent?.classList?.contains("keyboard-host")) {
             return;
         }
 
         // Preferred shell inside the quiz card
-        let shell = document.getElementById("keyboardShell");
+        let shell = document.getElementById("keyboardHost");
 
         // If shell doesn't exist yet, create it inside quiz card
         if (!shell) {
@@ -5802,11 +5866,12 @@ class QuizManager {
             }
 
             shell = document.createElement("div");
-            shell.id = "keyboardShell";
+            shell.id = "keyboardHost";
             shell.className = "keyboard-host keyboard-shell";
 
-            // Insert at bottom of card
-            quizCard.appendChild(shell);
+            const cardScroll = quizCard.querySelector(".card-scroll");
+            if (cardScroll) cardScroll.insertBefore(shell, cardScroll.firstChild);
+            else quizCard.appendChild(shell);
         }
 
         // Move keyboard into shell
@@ -5896,20 +5961,7 @@ class QuizManager {
             });
         }
         
-        // Prevent unwanted scrolling during keyboard appearance
-        document.body.addEventListener('touchmove', (e) => {
-            // Only prevent if input is focused and at the edges of scroll
-            if (document.activeElement === spellingInput) {
-                const target = e.target;
-                const scrollable = this.findScrollableParent(target);
-                
-                if (!scrollable || scrollable === document.body) {
-                    // No scrollable parent, prevent default
-                    // e.preventDefault(); // Commented out to allow normal scrolling
-                }
-            }
-        }, { passive: true });
-        
+        // No touchmove lock – allow normal scrolling inside card-scroll
         console.log('✅ iOS keyboard handling configured');
     }
     
@@ -6700,10 +6752,15 @@ class QuizManager {
                         practiceMode: false,
                         showSubmitKey: false,
                         onHide: function () {
+                            var keyboardHost = document.getElementById('keyboardHost');
+                            var hideBtn = document.getElementById('hideKeyboardBtn');
+                            if (keyboardHost && hideBtn) {
+                                keyboardHost.classList.toggle('is-hidden');
+                                hideBtn.textContent = keyboardHost.classList.contains('is-hidden') ? 'Show keyboard' : '\u25BC Hide keyboard';
+                            }
+                            var showBtn = document.getElementById('showKeyboardBtn');
+                            if (showBtn) showBtn.style.display = (keyboardHost && keyboardHost.classList.contains('is-hidden')) ? 'block' : 'none';
                             if (quizContainerEl) quizContainerEl.classList.remove('kb-open');
-                            if (typeof window.clearKeyboardPosition === 'function') window.clearKeyboardPosition();
-                            const showBtn = document.getElementById('showKeyboardBtn');
-                            if (showBtn) showBtn.style.display = 'block';
                         },
                         onMounted: function () {
                             if (quizContainerEl) quizContainerEl.classList.add('kb-open');
@@ -6711,26 +6768,31 @@ class QuizManager {
                             if (typeof window.positionKeyboardBelowInput === 'function') {
                                 setTimeout(window.positionKeyboardBelowInput, 80);
                             }
-                            // Add pop-out animation
                             setTimeout(() => {
-                                const kbEl = keyboardContainer.querySelector('.quiz-keyboard');
+                                var kbEl = keyboardContainer.querySelector('.quiz-keyboard');
                                 if (kbEl) {
                                     kbEl.classList.add('quiz-keyboard-pop-out');
-                                    // Remove animation class after animation completes
-                                    setTimeout(() => {
-                                        kbEl.classList.remove('quiz-keyboard-pop-out');
-                                    }, 400);
+                                    setTimeout(function () { kbEl.classList.remove('quiz-keyboard-pop-out'); }, 400);
                                 }
                             }, 100);
                         },
                         onUnmounted: function () {
                             if (quizContainerEl) quizContainerEl.classList.remove('kb-open');
-                            if (typeof window.clearKeyboardPosition === 'function') window.clearKeyboardPosition();
-                            const showBtn = document.getElementById('showKeyboardBtn');
+                            var showBtn = document.getElementById('showKeyboardBtn');
                             if (showBtn) showBtn.style.display = 'none';
                             try { if (quizCardEl) quizCardEl.style.removeProperty('--kb-h'); } catch (_) {}
                         }
                     });
+                    (function () {
+                        var showBtn = document.getElementById('showKeyboardBtn');
+                        if (showBtn) showBtn.addEventListener('click', function () {
+                            var keyboardHost = document.getElementById('keyboardHost');
+                            var hideBtn = document.getElementById('hideKeyboardBtn');
+                            if (keyboardHost) keyboardHost.classList.remove('is-hidden');
+                            if (hideBtn) hideBtn.textContent = '\u25BC Hide keyboard';
+                            showBtn.style.display = 'none';
+                        });
+                    })();
                     console.log('✅ Quiz keyboard mounted early (always visible)');
                     if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
                 }
@@ -6947,10 +7009,15 @@ class QuizManager {
                         practiceMode: false,
                         showSubmitKey: false,
                         onHide: function () {
+                            var keyboardHost = document.getElementById('keyboardHost');
+                            var hideBtn = document.getElementById('hideKeyboardBtn');
+                            if (keyboardHost && hideBtn) {
+                                keyboardHost.classList.toggle('is-hidden');
+                                hideBtn.textContent = keyboardHost.classList.contains('is-hidden') ? 'Show keyboard' : '\u25BC Hide keyboard';
+                            }
+                            var showBtn = document.getElementById('showKeyboardBtn');
+                            if (showBtn) showBtn.style.display = (keyboardHost && keyboardHost.classList.contains('is-hidden')) ? 'block' : 'none';
                             if (quizContainerEl) quizContainerEl.classList.remove('kb-open');
-                            if (typeof window.clearKeyboardPosition === 'function') window.clearKeyboardPosition();
-                            const showBtn = document.getElementById('showKeyboardBtn');
-                            if (showBtn) showBtn.style.display = 'block';
                         },
                         onMounted: function () {
                             if (quizContainerEl) quizContainerEl.classList.add('kb-open');
@@ -6963,8 +7030,7 @@ class QuizManager {
                         },
                         onUnmounted: function () {
                             if (quizContainerEl) quizContainerEl.classList.remove('kb-open');
-                            if (typeof window.clearKeyboardPosition === 'function') window.clearKeyboardPosition();
-                            const showBtn = document.getElementById('showKeyboardBtn');
+                            var showBtn = document.getElementById('showKeyboardBtn');
                             if (showBtn) showBtn.style.display = 'none';
                             try { if (quizCardEl) quizCardEl.style.removeProperty('--kb-h'); } catch (_) {}
                         }
@@ -7682,14 +7748,14 @@ class QuizManager {
         if (spellingInput) spellingInput.focus();
     }
 
-    // Single "Ready to spell?" screen: one tap = choose voice + start quiz (replaces voice modal + Play step)
+    // 7) Start screen: "Start with Buzzy Voice" pill + "Start silent" (no green Ready-to-Spell block)
     showCombinedStartScreen() {
         if (this.quizStarted || this.introInProgress) return;
         this.introInProgress = true;
 
         const feedbackArea = document.getElementById('feedbackArea');
-        if (!feedbackArea) return;
-        // Hide main quiz buttons so only "Ready to spell?" + Start voice/silent are visible
+        if (feedbackArea) feedbackArea.style.display = 'none';
+
         const actionBtns = document.getElementById('quizActionButtons');
         const statToggles = document.querySelector('.stat-toggle-controls');
         const exitContainer = document.querySelector('.exit-button-container');
@@ -7697,36 +7763,20 @@ class QuizManager {
         if (statToggles) statToggles.style.display = 'none';
         if (exitContainer) exitContainer.style.display = 'none';
 
-        feedbackArea.style.display = 'block';
-        feedbackArea.className = 'feedback-area feedback-success';
-
-        const greeting = this.studentName ? `Hello ${this.studentName}! ` : '';
-        feedbackArea.innerHTML = `
-            <div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem;">
-                🐝 Ready to spell?
-            </div>
-            <div style="margin-bottom: 1.25rem; color: #5A2C15; font-size: 1rem;">
-                ${greeting}Choose how you'd like to start. One tap and you're in!
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
-                <button type="button" id="combinedVoiceBtn" class="action-btn primary" style="min-width: 260px; min-height: 48px;">
-                    <span class="bee-icon" aria-hidden="true">🔊</span>
-                    Start with Buzzy's voice
-                </button>
-                <button type="button" id="combinedSilentBtn" class="action-btn secondary" style="min-width: 260px; min-height: 48px;">
-                    <span class="bee-icon" aria-hidden="true">🔇</span>
-                    Start silent
-                </button>
-            </div>
-        `;
+        const buzzyPill = document.getElementById('buzzyPill');
+        const startSilentBtn = document.getElementById('startSilentBtn');
+        if (buzzyPill) buzzyPill.style.display = 'block';
+        if (startSilentBtn) startSilentBtn.style.display = 'block';
 
         const showQuizButtons = () => {
-            const actionBtns = document.getElementById('quizActionButtons');
-            const statToggles = document.querySelector('.stat-toggle-controls');
-            const exitContainer = document.querySelector('.exit-button-container');
-            if (actionBtns) actionBtns.style.display = '';
-            if (statToggles) statToggles.style.display = '';
-            if (exitContainer) exitContainer.style.display = '';
+            const ab = document.getElementById('quizActionButtons');
+            const st = document.querySelector('.stat-toggle-controls');
+            const ec = document.querySelector('.exit-button-container');
+            if (ab) ab.style.display = '';
+            if (st) st.style.display = '';
+            if (ec) ec.style.display = '';
+            if (buzzyPill) buzzyPill.style.display = 'none';
+            if (startSilentBtn) startSilentBtn.style.display = 'none';
         };
 
         const startWithVoice = () => {
@@ -7739,15 +7789,14 @@ class QuizManager {
             this.quizStarted = true;
             this.introInProgress = false;
             showQuizButtons();
-            // Short intro in same gesture (iOS audio unlock); hide and start quiz when done
             const msg = (this.studentName ? `Hello ${this.studentName}! ` : '') +
                 "I'm Buzzy! Listen to each word, then spell it. Let's go!";
             speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(msg);
             u.rate = 0.95;
             u.volume = 0.9;
-            u.onend = () => { feedbackArea.style.display = 'none'; this.loadNextWordWithIntro(); };
-            u.onerror = () => { feedbackArea.style.display = 'none'; this.loadNextWordWithIntro(); };
+            u.onend = () => { this.loadNextWordWithIntro(); };
+            u.onerror = () => { this.loadNextWordWithIntro(); };
             speechSynthesis.speak(u);
         };
 
@@ -7758,15 +7807,14 @@ class QuizManager {
             localStorage.setItem('announcerEnabled', 'false');
             sessionStorage.setItem('voiceIntroShown', 'true');
             this.updateVoiceToggleUI();
-            feedbackArea.style.display = 'none';
             this.quizStarted = true;
             this.introInProgress = false;
             showQuizButtons();
             this.loadNextWordWithIntro();
         };
 
-        document.getElementById('combinedVoiceBtn').addEventListener('click', startWithVoice, { once: true });
-        document.getElementById('combinedSilentBtn').addEventListener('click', startSilent, { once: true });
+        if (buzzyPill) buzzyPill.addEventListener('click', startWithVoice, { once: true });
+        if (startSilentBtn) startSilentBtn.addEventListener('click', startSilent, { once: true });
     }
 
     // Show voice intro modal for iOS/Safari (legacy; prefer showCombinedStartScreen for fewer taps)
@@ -7919,6 +7967,7 @@ class QuizManager {
 
     // Show helper notification if user can't hear announcer
     showVoiceHelperNotification() {
+        if (window.DISABLE_BUZZY_HELP_MODAL) return;
         // Don't show if already dismissed this session
         if (sessionStorage.getItem('voiceHelperDismissed')) {
             return;

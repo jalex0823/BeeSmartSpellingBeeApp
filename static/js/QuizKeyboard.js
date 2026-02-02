@@ -187,6 +187,7 @@
             hideRow.className = 'quiz-keyboard-hide-row';
             const hideBtn = document.createElement('button');
             hideBtn.type = 'button';
+            hideBtn.id = 'hideKeyboardBtn';
             hideBtn.className = 'quiz-keyboard-hide-btn';
             hideBtn.setAttribute('aria-label', 'Hide keyboard');
             hideBtn.innerHTML = '&#9660; Hide keyboard';

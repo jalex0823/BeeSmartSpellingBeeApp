@@ -4,6 +4,48 @@
  * Mobile-first: 44px min key height, safe-area, key click feedback.
  */
 
+/* 4) Keyboard host: full width, no overflow; 5) Hide keyboard toggle */
+.keyboard-host,
+.keyboard-shell {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 12px;
+}
+.keyboard-host.is-hidden,
+.keyboard-shell.is-hidden {
+    display: none !important;
+}
+
+/* 4) Spec: .custom-keyboard = same as .quiz-keyboard (container has both classes) */
+.custom-keyboard {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 10px;
+}
+.custom-keyboard .quiz-keyboard-row,
+.custom-keyboard .row {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.custom-keyboard .quiz-keyboard-key,
+.custom-keyboard .key {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 0;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+.custom-keyboard .quiz-keyboard-row-bottom.space-row,
+.custom-keyboard .row.space-row {
+    grid-template-columns: 1fr 3fr 1fr;
+}
+
 /* In-flow keyboard (lives inside .keyboard-shell in quiz card); never extend beyond card */
 .quiz-keyboard {
     width: 100%;
@@ -118,28 +160,35 @@
     transform: scale(0.98);
 }
 
+/* 4) Each row = equal-width keys, responsive, no overflow */
 .quiz-keyboard-row {
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: 1fr;
-    gap: 3px; /* Further reduced gap between keys */
+    gap: 8px;
+    margin-bottom: 8px;
     width: 100%;
     max-width: 100%;
     min-width: 0;
     box-sizing: border-box;
 }
 
+/* 4) Space row: make space wide, backspace fixed-ish (responsive, no overflow) */
 .quiz-keyboard-row-bottom {
-    gap: 10px;
+    gap: 8px;
     margin-top: 2px;
+    margin-bottom: 8px;
+    grid-template-columns: 1fr 3fr 1fr;
 }
 
-/* Letter keys – raised 3D style, clear dark border, BeeSmart honey/gold theme */
+/* Letter keys – raised 3D style; 4) responsive, no overflow */
 .quiz-keyboard-key {
-    min-height: 32px; /* Further reduced from 36px */
-    min-width: 0; /* Allow keys to shrink in grid */
-    width: 100%; /* Fill grid cell */
-    padding: 5px 6px; /* Further reduced padding */
+    min-height: 32px;
+    min-width: 0;
+    width: 100%;
+    padding: 10px 0;
+    font-size: 14px;
+    box-sizing: border-box;
     font-size: 0.85rem; /* Further reduced font size */
     font-weight: 700;
     color: #5A2C15;
