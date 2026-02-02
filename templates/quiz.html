@@ -152,6 +152,7 @@ if ('speechSynthesis' in window) {
         width: 100%;
         box-sizing: border-box;
         padding: 0 6px;
+        margin-bottom: 0.5rem; /* Spacing below keyboard before buttons */
         display: none;
         position: relative;
         transform: translateY(8px);
@@ -183,9 +184,11 @@ if ('speechSynthesis' in window) {
     .actions-area.quiz-buttons {
         position: relative;
         z-index: 10; /* Above keyboard, below modals */
-        padding-top: 6px;
+        padding-top: 1rem; /* Proper spacing above buttons */
         margin-top: 0;
         clear: both;
+        width: 100%;
+        box-sizing: border-box;
     }
     @media (max-width: 420px) {
         .quiz-card { padding: 12px; gap: 12px; }
@@ -2083,15 +2086,15 @@ if ('speechSynthesis' in window) {
         border: 1px solid rgba(255, 213, 79, 0.3);
     }
 
-    /* Action Buttons - Match Main Menu Style */
+    /* Action Buttons - Match Reference Image Style */
     .action-btn {
-        padding: 1rem 2rem;
+        padding: 0.9rem 1.2rem;
         border: none;
-        border-radius: 15px;
+        border-radius: 16px; /* Slightly more rounded to match reference */
         font-weight: 600;
-        font-size: 1rem;
+        font-size: 0.95rem;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -2100,6 +2103,7 @@ if ('speechSynthesis' in window) {
         min-width: 0;
         text-align: center;
         position: relative;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow matching reference */
     }
     
     /* Responsive button sizing */
@@ -2127,17 +2131,21 @@ if ('speechSynthesis' in window) {
         transition: all 0.1s ease;
     }
 
-    /* Quiz Buttons Container - 2 columns, rows as needed (Pronounce | Show Definition, etc.) */
+    /* Quiz Buttons Container - 2 columns, 3 rows grid matching reference image */
     .quiz-buttons {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-        margin-top: 1.25rem;
+        gap: 0.75rem; /* Tighter gap to match reference */
+        margin-top: 1rem;
+        padding: 0;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .quiz-buttons .action-btn {
         width: 100%;
         min-height: 48px;
+        margin: 0; /* Remove any default margins */
     }
     
     /* Exit Button Container - Centered below main grid */
@@ -2573,9 +2581,10 @@ if ('speechSynthesis' in window) {
     }
 
     .action-btn.secondary {
-        background: rgba(255, 215, 0, 0.1);
-        color: #B8860B;
-        border: 2px solid rgba(255, 213, 79, 0.6);
+        background: #FFFDE7; /* Cream/pale yellow background to match reference */
+        color: #5A2C15; /* Dark brown text */
+        border: 2px solid rgba(255, 193, 7, 0.3);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
         position: relative;
         overflow: hidden;
     }
@@ -2655,12 +2664,12 @@ if ('speechSynthesis' in window) {
         max-width: none;
         border: 3px solid #FFC107;
         border-radius: 20px;
-        box-shadow: 0 0 0 rgba(255, 193, 7, 0.0);
+        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
         transition: box-shadow 0.3s ease, transform 0.2s ease;
         padding: 1.2rem 2rem;
         font-size: 1.25rem;
         text-align: center;
-        background-color: rgba(255, 255, 255, 0.93);
+        background-color: #FFFDE7; /* Light yellow background to match reference */
         color: #332300;
         box-sizing: border-box;
     }
