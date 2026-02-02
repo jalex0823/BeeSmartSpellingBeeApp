@@ -11,13 +11,13 @@
     min-width: 0;
     box-sizing: border-box;
     overflow-x: hidden;
-    padding: 10px 8px calc(10px + env(safe-area-inset-bottom, 0));
-    padding-left: max(8px, env(safe-area-inset-left, 0));
-    padding-right: max(8px, env(safe-area-inset-right, 0));
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0)); /* Reduced padding */
+    padding-left: max(6px, env(safe-area-inset-left, 0));
+    padding-right: max(6px, env(safe-area-inset-right, 0));
     background: linear-gradient(180deg, #FFF8E1 0%, #FFECB3 40%, #FFE082 100%);
-    border-top: 4px solid #FFB300;
+    border-top: 3px solid #FFB300; /* Reduced border */
     box-shadow:
-        0 -6px 24px rgba(255, 179, 0, 0.35),
+        0 -4px 16px rgba(255, 179, 0, 0.3),
         0 -2px 0 0 rgba(90, 44, 21, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.5);
     position: relative;
@@ -25,7 +25,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 4px; /* Reduced gap between rows */
     -webkit-user-select: none;
     user-select: none;
     touch-action: manipulation;
@@ -121,7 +121,7 @@
 .quiz-keyboard-row {
     display: flex;
     justify-content: center;
-    gap: 6px;
+    gap: 4px; /* Reduced gap between keys */
     width: 100%;
     max-width: 100%;
     min-width: 0;
@@ -134,18 +134,18 @@
 
 /* Letter keys – raised 3D style, clear dark border, BeeSmart honey/gold theme */
 .quiz-keyboard-key {
-    min-height: 44px;
-    min-width: 28px;
-    padding: 8px 10px;
-    font-size: 1.1rem;
+    min-height: 36px; /* Reduced from 44px */
+    min-width: 24px; /* Reduced from 28px */
+    padding: 6px 8px; /* Reduced padding */
+    font-size: 0.95rem; /* Reduced font size */
     font-weight: 700;
     color: #5A2C15;
     background: linear-gradient(180deg, #FFFDE7 0%, #FFEE58 30%, #FFD54F 65%, #FFC107 100%);
     border: 2px solid #5A2C15;
-    border-radius: 14px;
+    border-radius: 12px; /* Slightly smaller radius */
     box-shadow:
-        0 4px 0 #3d1e0f,
-        0 5px 10px rgba(58, 44, 21, 0.35),
+        0 3px 0 #3d1e0f, /* Reduced shadow */
+        0 4px 8px rgba(58, 44, 21, 0.3),
         inset 0 2px 0 rgba(255, 255, 255, 0.7),
         inset 0 -1px 0 rgba(0, 0, 0, 0.08);
     cursor: pointer;
@@ -218,27 +218,35 @@
 @media (max-width: 420px) {
     .quiz-keyboard-key {
         min-width: 0;
-        padding: 10px 6px;
-        font-size: 14px;
+        padding: 5px 4px; /* Further reduced for mobile */
+        font-size: 0.85rem; /* Smaller font */
+        min-height: 32px; /* Smaller height */
+    }
+    .quiz-keyboard {
+        padding: 4px 4px calc(4px + env(safe-area-inset-bottom, 0));
+        gap: 3px; /* Tighter gap on mobile */
+    }
+    .quiz-keyboard-row {
+        gap: 3px; /* Tighter key spacing on mobile */
     }
 }
 
 /* Mobile: fit within viewport; keys shrink so all letters visible, no overflow */
 @media (max-width: 767px) {
     .quiz-keyboard {
-        gap: 6px;
-        padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
+        gap: 4px; /* Reduced gap */
+        padding: 5px 5px calc(5px + env(safe-area-inset-bottom, 0)); /* Reduced padding */
     }
     .quiz-keyboard-row {
-        gap: 4px;
+        gap: 3px; /* Reduced gap */
         max-width: 100%;
         min-width: 0;
     }
     .quiz-keyboard-key {
         min-width: 0;
-        min-height: 44px;
-        padding: 10px 4px;
-        font-size: clamp(0.75rem, 2.5vw, 1rem);
+        min-height: 36px; /* Reduced from 44px */
+        padding: 6px 3px; /* Reduced padding */
+        font-size: clamp(0.7rem, 2.2vw, 0.9rem); /* Smaller font */
     }
     .quiz-keyboard-key-letter {
         flex: 1 1 0;
@@ -249,13 +257,13 @@
     .quiz-keyboard-key-space {
         min-width: 0;
         flex: 1 1 0;
-        min-height: 44px;
+        min-height: 36px; /* Reduced */
     }
     .quiz-keyboard-key-backspace,
     .quiz-keyboard-key-submit {
-        min-width: 36px;
+        min-width: 32px; /* Reduced */
         flex: 0 1 auto;
-        min-height: 44px;
+        min-height: 36px; /* Reduced */
     }
 }
 

@@ -93,24 +93,34 @@ if ('speechSynthesis' in window) {
         max-width: 700px;
         margin: 0 auto;
         text-align: center;
+        /* Ensure container allows scrolling */
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        height: 100vh;
+        max-height: 100vh;
         padding: 0.35rem 1rem 3rem;
         position: relative;
     }
 
     /* Outer quiz container scrolls; keyboard reserve is handled by .quiz-card / .quiz-scroll (--kb-h) */
     .quiz-content {
-        overflow-y: auto;
+        overflow-y: visible; /* Changed to visible - let parent handle scrolling */
         -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+        /* Content should flow naturally */
+        min-height: 0;
     }
 
     body {
         overflow-x: hidden;
+        overflow-y: auto; /* Allow body scrolling */
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
     }
 
-    /* Pin answer area so spelling input / sentence stay visible when scrolling */
+    /* Answer area - no longer sticky to allow scrolling to voice button */
     .quiz-answer-area {
-        position: sticky;
-        top: 0;
+        position: relative; /* Changed from sticky to allow scrolling */
         z-index: 5;
         background: linear-gradient(180deg, #FFFDE7 0%, #FFF8E1 100%);
         padding: 10px 12px;
@@ -128,15 +138,19 @@ if ('speechSynthesis' in window) {
         flex-direction: column;
         gap: 14px;
         overflow-x: hidden;
-        overflow-y: auto;
+        overflow-y: visible; /* Changed to visible to allow content to extend */
         -webkit-overflow-scrolling: touch;
         min-height: 0;
-        max-height: calc(100dvh - 100px);
+        /* Removed max-height constraint to allow full scrolling */
         background: rgba(255, 255, 255, 0.85);
         box-sizing: border-box;
+        scroll-behavior: smooth;
     }
     @media (max-width: 768px) {
-        .quiz-card { max-height: 100dvh; padding: 12px; gap: 12px; }
+        .quiz-card { 
+            padding: 12px; 
+            gap: 10px; /* Slightly tighter gap */
+        }
     }
     .quiz-card .quiz-card-content {
         padding: 0;
