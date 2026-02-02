@@ -116,57 +116,83 @@ if ('speechSynthesis' in window) {
         padding: 10px 12px;
     }
 
-    /* Card = scrollable content; keyboard overlays bottom (see .keyboard-shell) */
+    /* Card: vertical layout; keyboard floats above action buttons (absolute at bottom of card) */
     .quiz-card {
-        width: min(92vw, 520px);
+        position: relative;
+        width: 100%;
+        max-width: 520px;
         margin: 0 auto;
-        border-radius: 24px;
+        padding: 16px;
+        border-radius: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
         overflow-x: hidden;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         min-height: 0;
         max-height: calc(100dvh - 100px);
         background: rgba(255, 255, 255, 0.85);
+        box-sizing: border-box;
     }
     @media (max-width: 768px) {
-        .quiz-card { max-height: 100dvh; }
+        .quiz-card { max-height: 100dvh; padding: 12px; gap: 12px; }
     }
-    /* Content area; when kb-open get padding so "Type your spelling here" can scroll above overlay */
     .quiz-card .quiz-card-content {
-        padding: 16px;
+        padding: 0;
         min-height: 0;
-        padding-bottom: 12px;
-    }
-    .quiz-card.kb-open .quiz-card-content {
-        padding-bottom: var(--kb-h, 280px);
-    }
-    /* Keyboard OVERLAYS bottom of viewport so input stays visible above it; Hide keyboard reveals buttons */
-    .keyboard-shell {
-        display: none;
-        position: fixed !important;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 100;
-        min-width: 0;
         overflow: visible;
-        border-top: 1px solid rgba(0, 0, 0, 0.08);
-        padding: 10px 10px 12px;
-        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0));
-        background: rgba(255, 255, 255, 0.92);
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        gap: inherit;
     }
-    .quiz-card.kb-open .keyboard-shell {
+    /* Keyboard host: floats above card and buttons, below input (position: fixed, positioned by JS) */
+    .keyboard-host,
+    .keyboard-shell {
+        position: fixed;
+        box-sizing: border-box;
+        padding: 0 6px;
+        display: none;
+        z-index: 100;
+        transform: translateY(10px);
+        opacity: 0;
+        transition: transform 220ms ease, opacity 220ms ease;
+    }
+    .quiz-container.kb-open .keyboard-host,
+    .quiz-container.kb-open .keyboard-shell {
         display: block;
+        transform: translateY(0);
+        opacity: 1;
     }
+    .keyboard-host .quiz-keyboard,
+    .keyboard-host .custom-keyboard,
     .keyboard-shell .quiz-keyboard,
     .keyboard-shell .custom-keyboard {
         width: 100%;
         max-width: 100%;
-        min-width: 0;
         box-sizing: border-box;
-        overflow-x: hidden;
-        overflow-y: visible;
+        overflow: hidden;
+        border-radius: 16px;
+        box-shadow: 0 10px 22px rgba(0,0,0,.12);
+        background: rgba(255,255,255,.85);
+        backdrop-filter: blur(6px);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .actions-area.quiz-buttons {
+        position: relative;
+        z-index: 1;
+        padding-top: 6px;
+        padding-left: 6px;
+        padding-right: 6px;
+    }
+    @media (max-width: 420px) {
+        .quiz-card { padding: 12px; gap: 12px; }
+        .keyboard-host .quiz-keyboard,
+        .keyboard-host .custom-keyboard,
+        .keyboard-shell .quiz-keyboard,
+        .keyboard-shell .custom-keyboard { border-radius: 14px; }
     }
     
     /* Progress tracker fixed at bottom of viewport */
@@ -3510,7 +3536,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </button>
 </div>
 
-<div class="quiz-container quiz-shell quiz-content">
+<div class="quiz-container quiz-shell quiz-content" id="quizContainer">
     <!-- Quiz Header -->
     <div class="quiz-header">
         <!-- Modern header layout: progress left, exit right -->
@@ -4165,10 +4191,11 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
         </div>
         </div>
-        <!-- Keyboard OVERLAYS bottom of viewport so "Type your spelling here" stays visible above; Hide keyboard reveals buttons -->
-        <div class="keyboard-shell" id="keyboardShell">
-            <div id="quizKeyboardContainer" role="region" aria-label="Quiz spelling keyboard"></div>
-        </div>
+    </div>
+
+    <!-- Keyboard: floats above card and buttons, below input (sibling of card, positioned by JS) -->
+    <div class="keyboard-host" id="keyboardShell">
+        <div id="quizKeyboardContainer" role="region" aria-label="Quiz spelling keyboard"></div>
     </div>
 
     <!-- Quiz Complete Screen -->
@@ -4287,13 +4314,39 @@ document.addEventListener('DOMContentLoaded', () => {
     card.style.setProperty('--kb-h', h + 'px');
   }
 
+  function positionKeyboardBelowInput() {
+    var container = document.getElementById('quizContainer');
+    var card = document.getElementById('quizCard');
+    var input = document.getElementById('spellingInput');
+    var host = document.getElementById('keyboardShell');
+    if (!container || !card || !input || !host || !container.classList.contains('kb-open')) return;
+    requestAnimationFrame(function () {
+      var cardRect = card.getBoundingClientRect();
+      var inputRect = input.getBoundingClientRect();
+      var topPx = inputRect.bottom;
+      if (topPx < 0) topPx = 0;
+      host.style.top = topPx + 'px';
+      host.style.left = cardRect.left + 'px';
+      host.style.width = cardRect.width + 'px';
+    });
+  }
+
+  function clearKeyboardPosition() {
+    var host = document.getElementById('keyboardShell');
+    if (host) {
+      host.style.top = '';
+      host.style.left = '';
+      host.style.width = '';
+    }
+  }
+
   window.addEventListener('load', updateKeyboardReservedSpace);
   window.addEventListener('resize', function () {
     clearTimeout(window.__kbResizeT);
-    window.__kbResizeT = setTimeout(updateKeyboardReservedSpace, 120);
-  });
-  window.addEventListener('orientationchange', function () {
-    setTimeout(updateKeyboardReservedSpace, 250);
+    window.__kbResizeT = setTimeout(function () {
+      updateKeyboardReservedSpace();
+      positionKeyboardBelowInput();
+    }, 120);
   });
   document.addEventListener('DOMContentLoaded', function () {
     var kb = document.querySelector('.quiz-keyboard');
@@ -4301,18 +4354,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (kb && dock && kb.parentElement !== dock) dock.appendChild(kb);
     updateKeyboardReservedSpace();
     var showBtn = document.getElementById('showKeyboardBtn');
+    var container = document.getElementById('quizContainer');
     var card = document.getElementById('quizCard');
-    if (showBtn && card) {
+    if (showBtn && container) {
       showBtn.addEventListener('click', function () {
-        card.classList.add('kb-open');
+        container.classList.add('kb-open');
         showBtn.style.display = 'none';
-        if (typeof window.updateKeyboardReservedSpace === 'function') window.updateKeyboardReservedSpace();
+        setTimeout(positionKeyboardBelowInput, 50);
+      });
+    }
+    if (card) {
+      card.addEventListener('scroll', function () {
+        if (container && container.classList.contains('kb-open')) positionKeyboardBelowInput();
       });
     }
   });
   setTimeout(updateKeyboardReservedSpace, 200);
-  setTimeout(updateKeyboardReservedSpace, 600);
   window.updateKeyboardReservedSpace = updateKeyboardReservedSpace;
+  window.positionKeyboardBelowInput = positionKeyboardBelowInput;
+  window.clearKeyboardPosition = clearKeyboardPosition;
 })();
 </script>
 <script>
@@ -6689,6 +6749,7 @@ class QuizManager {
             const keyboardContainer = document.getElementById('quizKeyboardContainer');
             if (keyboardContainer && spellingInput && typeof initQuizKeyboard === 'function') {
                 if (!window.quizKeyboardInstance) {
+                    const quizContainerEl = document.getElementById('quizContainer');
                     const quizCardEl = document.getElementById('quizCard');
                     window.quizKeyboardInstance = initQuizKeyboard({
                         targetEl: keyboardContainer,
@@ -6702,20 +6763,23 @@ class QuizManager {
                         practiceMode: false,
                         showSubmitKey: false,
                         onHide: function () {
-                            if (quizCardEl) quizCardEl.classList.remove('kb-open');
+                            if (quizContainerEl) quizContainerEl.classList.remove('kb-open');
+                            if (typeof window.clearKeyboardPosition === 'function') window.clearKeyboardPosition();
                             const showBtn = document.getElementById('showKeyboardBtn');
                             if (showBtn) showBtn.style.display = 'block';
                         },
                         onMounted: function () {
-                            if (quizCardEl) quizCardEl.classList.add('kb-open');
+                            if (quizContainerEl) quizContainerEl.classList.add('kb-open');
                             if (typeof window.updateKeyboardReservedSpace === 'function') window.updateKeyboardReservedSpace();
-                            setTimeout(function () {
-                                var inp = document.getElementById('spellingInput');
-                                if (inp) inp.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-                            }, 100);
+                            if (typeof window.positionKeyboardBelowInput === 'function') {
+                                setTimeout(window.positionKeyboardBelowInput, 80);
+                            }
+                            var inp = document.getElementById('spellingInput');
+                            if (inp) inp.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
                         },
                         onUnmounted: function () {
-                            if (quizCardEl) quizCardEl.classList.remove('kb-open');
+                            if (quizContainerEl) quizContainerEl.classList.remove('kb-open');
+                            if (typeof window.clearKeyboardPosition === 'function') window.clearKeyboardPosition();
                             const showBtn = document.getElementById('showKeyboardBtn');
                             if (showBtn) showBtn.style.display = 'none';
                             try { if (quizCardEl) quizCardEl.style.removeProperty('--kb-h'); } catch (_) {}
@@ -7312,7 +7376,9 @@ class QuizManager {
 
         if (getHintButton) getHintButton.addEventListener('click', () => {
             try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('hint'); } catch (e) {}
-            this.getHint();
+            this.hintUsedThisWord = true;
+            try { if (typeof playThemedSound === 'function') playThemedSound('hint-reveal'); } catch (_) {}
+            this.showLetterHint();
         });
         if (skipButton) skipButton.addEventListener('click', () => {
             try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('skip'); } catch (e) {}

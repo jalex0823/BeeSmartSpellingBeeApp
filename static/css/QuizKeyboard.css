@@ -171,6 +171,11 @@
         inset 0 2px 4px rgba(0, 0, 0, 0.12);
 }
 
+/* Optional keypress “popup” (per key, 80ms) */
+.quiz-keyboard-key.is-pressed {
+    transform: scale(1.08);
+}
+
 /* Key press pop/bounce (80–140ms, no layout shift) */
 .quiz-keyboard-key-pop {
     animation: quiz-keyboard-key-pop 0.11s ease-out;
@@ -207,6 +212,15 @@
     flex: 0 0 auto;
     width: calc((100% - 9 * 6px) / 10);
     max-width: 36px;
+}
+
+/* Mobile (≤420px): smaller keys so keyboard stays inside card/button margins */
+@media (max-width: 420px) {
+    .quiz-keyboard-key {
+        min-width: 0;
+        padding: 10px 6px;
+        font-size: 14px;
+    }
 }
 
 /* Mobile: fit within viewport; keys shrink so all letters visible, no overflow */

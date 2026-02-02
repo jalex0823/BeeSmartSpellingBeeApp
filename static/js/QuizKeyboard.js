@@ -34,6 +34,14 @@
         }, duration);
     }
 
+    function pressKey(el) {
+        if (!el || !el.classList) return;
+        el.classList.add('is-pressed');
+        setTimeout(() => {
+            try { el.classList.remove('is-pressed'); } catch (_) {}
+        }, 80);
+    }
+
     function playSubmitSound() {
         try {
             if (window.quizManager && window.quizManager.soundboard && typeof window.quizManager.soundboard.play === 'function') {
@@ -54,6 +62,7 @@
         button.textContent = opts.autoCaps !== false ? letter : letter.toLowerCase();
         button.dataset.letter = letter;
         const onLetter = () => {
+            pressKey(button);
             keyPopAnimation(button);
             playKeyClick(0.3);
             opts.onLetter(letter);
@@ -75,7 +84,10 @@
         button.setAttribute('data-no-button-sfx', '1');
         button.innerHTML = label;
         const wrapped = () => {
-            if (!isSubmit) keyPopAnimation(button);
+            if (!isSubmit) {
+                pressKey(button);
+                keyPopAnimation(button);
+            }
             if (isSubmit) {
                 playSubmitSound();
                 button.classList.add('quiz-keyboard-submit-pressed');

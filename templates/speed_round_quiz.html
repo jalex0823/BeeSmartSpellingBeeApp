@@ -393,54 +393,79 @@ if ('speechSynthesis' in window) {
         letter-spacing: 1px;
     }
 
-    /* Quiz Content – scrollable card; keyboard OVERLAYS bottom (see .keyboard-shell) */
+    /* Quiz card: vertical layout; keyboard floats above action buttons (absolute at bottom of card) */
     .speed-quiz-container .quiz-card {
+        position: relative;
         background: #FFFFFF;
-        border-radius: 24px;
+        border-radius: 18px;
         box-shadow: 0 15px 40px rgba(66, 165, 245, 0.3);
         border: 3px solid #42A5F5;
         margin-bottom: 1.5rem;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
         min-height: 0;
         max-height: calc(100dvh - 180px);
-        padding: 0;
         overflow-x: hidden;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+        box-sizing: border-box;
     }
     .speed-quiz-container .quiz-card .speed-quiz-card-content {
-        padding: 1.5rem 1.5rem 12px;
+        padding: 0;
         min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: inherit;
     }
-    .speed-quiz-container .quiz-card.kb-open .speed-quiz-card-content {
-        padding-bottom: var(--kb-h, 280px);
-    }
-    /* Keyboard OVERLAYS bottom of viewport so spell input stays visible above; Hide keyboard reveals buttons */
+    /* Keyboard host: floats above card and buttons, below input (position: fixed, positioned by JS) */
+    .speed-quiz-container .keyboard-host,
     .speed-quiz-container .keyboard-shell {
+        position: fixed;
+        box-sizing: border-box;
+        padding: 0 6px;
         display: none;
-        position: fixed !important;
-        bottom: 0;
-        left: 0;
-        right: 0;
         z-index: 100;
-        min-width: 0;
-        overflow: visible;
-        border-top: 1px solid rgba(0, 0, 0, 0.08);
-        padding: 10px 10px 12px;
-        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0));
-        background: rgba(255, 255, 255, 0.92);
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+        transform: translateY(10px);
+        opacity: 0;
+        transition: transform 220ms ease, opacity 220ms ease;
     }
-    .speed-quiz-container .quiz-card.kb-open .keyboard-shell {
+    .speed-quiz-container.kb-open .keyboard-host,
+    .speed-quiz-container.kb-open .keyboard-shell {
         display: block;
+        transform: translateY(0);
+        opacity: 1;
     }
+    .speed-quiz-container .keyboard-host .quiz-keyboard,
+    .speed-quiz-container .keyboard-host .custom-keyboard,
     .speed-quiz-container .keyboard-shell .quiz-keyboard,
     .speed-quiz-container .keyboard-shell .custom-keyboard {
         width: 100%;
         max-width: 100%;
-        min-width: 0;
         box-sizing: border-box;
-        overflow-x: hidden;
-        overflow-y: visible;
+        overflow: hidden;
+        border-radius: 16px;
+        box-shadow: 0 10px 22px rgba(0,0,0,.12);
+        background: rgba(255,255,255,.85);
+        backdrop-filter: blur(6px);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .speed-quiz-container .action-buttons {
+        position: relative;
+        z-index: 1;
+        padding-top: 6px;
+        padding-left: 6px;
+        padding-right: 6px;
+    }
+    @media (max-width: 420px) {
+        .speed-quiz-container .quiz-card { padding: 12px; gap: 12px; }
+        .speed-quiz-container .keyboard-host .quiz-keyboard,
+        .speed-quiz-container .keyboard-host .custom-keyboard,
+        .speed-quiz-container .keyboard-shell .quiz-keyboard,
+        .speed-quiz-container .keyboard-shell .custom-keyboard { border-radius: 14px; }
     }
 
     .word-prompt {
@@ -806,7 +831,7 @@ if ('speechSynthesis' in window) {
     </div>
 </div>
 
-<div class="speed-quiz-container">
+<div class="speed-quiz-container" id="speedQuizContainer">
     <!-- Header with Stats -->
     <div class="speed-header">
         <div class="speed-title">
@@ -929,10 +954,11 @@ if ('speechSynthesis' in window) {
                 
             </div>
         </div>
-        <!-- Keyboard OVERLAYS bottom of viewport so spell input stays visible above; Hide keyboard reveals buttons -->
-        <div class="keyboard-shell" id="speedKeyboardShell">
-            <div id="quizKeyboardContainer" role="region" aria-label="Speed round spelling keyboard"></div>
-        </div>
+    </div>
+
+    <!-- Keyboard: floats above card and buttons, below input (sibling of card, positioned by JS) -->
+    <div class="keyboard-host" id="speedKeyboardShell">
+        <div id="quizKeyboardContainer" role="region" aria-label="Speed round spelling keyboard"></div>
     </div>
 </div>
 
@@ -950,13 +976,37 @@ if ('speechSynthesis' in window) {
     var h = el.offsetHeight || 0;
     card.style.setProperty('--kb-h', h + 'px');
   }
+  function positionSpeedKeyboardBelowInput() {
+    var container = document.getElementById('speedQuizContainer');
+    var card = document.getElementById('speedQuizCard');
+    var input = document.getElementById('spellInput');
+    var host = document.getElementById('speedKeyboardShell');
+    if (!container || !card || !input || !host || !container.classList.contains('kb-open')) return;
+    requestAnimationFrame(function () {
+      var cardRect = card.getBoundingClientRect();
+      var inputRect = input.getBoundingClientRect();
+      var topPx = inputRect.bottom;
+      if (topPx < 0) topPx = 0;
+      host.style.top = topPx + 'px';
+      host.style.left = cardRect.left + 'px';
+      host.style.width = cardRect.width + 'px';
+    });
+  }
+  function clearSpeedKeyboardPosition() {
+    var host = document.getElementById('speedKeyboardShell');
+    if (host) {
+      host.style.top = '';
+      host.style.left = '';
+      host.style.width = '';
+    }
+  }
   window.addEventListener('load', updateSpeedKeyboardReservedSpace);
   window.addEventListener('resize', function () {
     clearTimeout(window.__speedKbResizeT);
-    window.__speedKbResizeT = setTimeout(updateSpeedKeyboardReservedSpace, 120);
-  });
-  window.addEventListener('orientationchange', function () {
-    setTimeout(updateSpeedKeyboardReservedSpace, 250);
+    window.__speedKbResizeT = setTimeout(function () {
+      updateSpeedKeyboardReservedSpace();
+      positionSpeedKeyboardBelowInput();
+    }, 120);
   });
   document.addEventListener('DOMContentLoaded', function () {
     var kb = document.querySelector('.quiz-keyboard');
@@ -964,18 +1014,25 @@ if ('speechSynthesis' in window) {
     if (kb && dock && kb.parentElement !== dock) dock.appendChild(kb);
     updateSpeedKeyboardReservedSpace();
     var showBtn = document.getElementById('speedShowKeyboardBtn');
+    var container = document.getElementById('speedQuizContainer');
     var card = document.getElementById('speedQuizCard');
-    if (showBtn && card) {
+    if (showBtn && container) {
       showBtn.addEventListener('click', function () {
-        card.classList.add('kb-open');
+        container.classList.add('kb-open');
         showBtn.style.display = 'none';
-        if (typeof window.updateSpeedKeyboardReservedSpace === 'function') window.updateSpeedKeyboardReservedSpace();
+        setTimeout(positionSpeedKeyboardBelowInput, 50);
+      });
+    }
+    if (card) {
+      card.addEventListener('scroll', function () {
+        if (container && container.classList.contains('kb-open')) positionSpeedKeyboardBelowInput();
       });
     }
   });
   setTimeout(updateSpeedKeyboardReservedSpace, 200);
-  setTimeout(updateSpeedKeyboardReservedSpace, 600);
   window.updateSpeedKeyboardReservedSpace = updateSpeedKeyboardReservedSpace;
+  window.positionSpeedKeyboardBelowInput = positionSpeedKeyboardBelowInput;
+  window.clearSpeedKeyboardPosition = clearSpeedKeyboardPosition;
 })();
 </script>
 <script src="{{ url_for('static', filename='js/voice-visualizer-config.js') }}"></script>
@@ -1868,6 +1925,7 @@ function pronounceWord() {
                 spellInput.disabled = false;
                 spellInput.placeholder = 'Type your answer...';
                 if (keyboardContainer && spellInput && typeof initQuizKeyboard === 'function' && !window.quizKeyboardInstance) {
+                    const speedQuizContainerEl = document.getElementById('speedQuizContainer');
                     const speedQuizCardEl = document.getElementById('speedQuizCard');
                     window.quizKeyboardInstance = initQuizKeyboard({
                         targetEl: keyboardContainer,
@@ -1879,20 +1937,21 @@ function pronounceWord() {
                         disableInputWhenRoundEnds: true,
                         showSubmitKey: true,
                         onHide: function () {
-                            if (speedQuizCardEl) speedQuizCardEl.classList.remove('kb-open');
+                            if (speedQuizContainerEl) speedQuizContainerEl.classList.remove('kb-open');
+                            if (typeof window.clearSpeedKeyboardPosition === 'function') window.clearSpeedKeyboardPosition();
                             const showBtn = document.getElementById('speedShowKeyboardBtn');
                             if (showBtn) showBtn.style.display = 'block';
                         },
                         onMounted: function () {
-                            if (speedQuizCardEl) speedQuizCardEl.classList.add('kb-open');
+                            if (speedQuizContainerEl) speedQuizContainerEl.classList.add('kb-open');
                             if (typeof window.updateSpeedKeyboardReservedSpace === 'function') window.updateSpeedKeyboardReservedSpace();
-                            setTimeout(function () {
-                                var inp = document.getElementById('spellInput');
-                                if (inp) inp.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-                            }, 100);
+                            if (typeof window.positionSpeedKeyboardBelowInput === 'function') setTimeout(window.positionSpeedKeyboardBelowInput, 80);
+                            var inp = document.getElementById('spellInput');
+                            if (inp) inp.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
                         },
                         onUnmounted: function () {
-                            if (speedQuizCardEl) speedQuizCardEl.classList.remove('kb-open');
+                            if (speedQuizContainerEl) speedQuizContainerEl.classList.remove('kb-open');
+                            if (typeof window.clearSpeedKeyboardPosition === 'function') window.clearSpeedKeyboardPosition();
                             const showBtn = document.getElementById('speedShowKeyboardBtn');
                             if (showBtn) showBtn.style.display = 'none';
                             try { if (speedQuizCardEl) speedQuizCardEl.style.removeProperty('--kb-h'); } catch (_) {}
@@ -1944,6 +2003,7 @@ function pronounceWord() {
                     // ROUND_COUNTDOWN_STARTED: mount keyboard only when answer phase (timer) starts
                     if (keyboardContainer && spellInput && typeof initQuizKeyboard === 'function') {
                         if (!window.quizKeyboardInstance) {
+                            const speedQuizContainerEl = document.getElementById('speedQuizContainer');
                             const speedQuizCardEl = document.getElementById('speedQuizCard');
                             window.quizKeyboardInstance = initQuizKeyboard({
                                 targetEl: keyboardContainer,
@@ -1955,20 +2015,21 @@ function pronounceWord() {
                                 disableInputWhenRoundEnds: true,
                                 showSubmitKey: true,
                                 onHide: function () {
-                                    if (speedQuizCardEl) speedQuizCardEl.classList.remove('kb-open');
+                                    if (speedQuizContainerEl) speedQuizContainerEl.classList.remove('kb-open');
+                                    if (typeof window.clearSpeedKeyboardPosition === 'function') window.clearSpeedKeyboardPosition();
                                     const showBtn = document.getElementById('speedShowKeyboardBtn');
                                     if (showBtn) showBtn.style.display = 'block';
                                 },
                                 onMounted: function () {
-                                    if (speedQuizCardEl) speedQuizCardEl.classList.add('kb-open');
+                                    if (speedQuizContainerEl) speedQuizContainerEl.classList.add('kb-open');
                                     if (typeof window.updateSpeedKeyboardReservedSpace === 'function') window.updateSpeedKeyboardReservedSpace();
-                                    setTimeout(function () {
-                                        var inp = document.getElementById('spellInput');
-                                        if (inp) inp.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-                                    }, 100);
+                                    if (typeof window.positionSpeedKeyboardBelowInput === 'function') setTimeout(window.positionSpeedKeyboardBelowInput, 80);
+                                    var inp = document.getElementById('spellInput');
+                                    if (inp) inp.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
                                 },
                                 onUnmounted: function () {
-                                    if (speedQuizCardEl) speedQuizCardEl.classList.remove('kb-open');
+                                    if (speedQuizContainerEl) speedQuizContainerEl.classList.remove('kb-open');
+                                    if (typeof window.clearSpeedKeyboardPosition === 'function') window.clearSpeedKeyboardPosition();
                                     const showBtn = document.getElementById('speedShowKeyboardBtn');
                                     if (showBtn) showBtn.style.display = 'none';
                                     try { if (speedQuizCardEl) speedQuizCardEl.style.removeProperty('--kb-h'); } catch (_) {}
