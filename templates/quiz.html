@@ -169,17 +169,29 @@ if ('speechSynthesis' in window) {
         padding: 0 4px; /* Reduced padding */
         margin-bottom: 0.15rem; /* Minimal spacing below keyboard */
         margin-top: 0.15rem; /* Minimal spacing above keyboard */
-        display: none;
+        display: block; /* Always visible */
         position: relative;
-        transform: translateY(8px);
-        opacity: 0;
-        transition: transform 220ms ease, opacity 220ms ease;
-    }
-    .quiz-container.kb-open .keyboard-host,
-    .quiz-container.kb-open .keyboard-shell {
-        display: block;
-        transform: translateY(0);
+        z-index: 15; /* Bring to front, above card */
         opacity: 1;
+    }
+    
+    /* Pop-out animation for keyboard */
+    .quiz-keyboard-pop-out {
+        animation: keyboard-pop-out 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    @keyframes keyboard-pop-out {
+        0% {
+            transform: scale(0.9);
+            opacity: 0;
+        }
+        50% {
+            transform: scale(1.02);
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
     }
     .keyboard-host .quiz-keyboard,
     .keyboard-host .custom-keyboard,
@@ -493,25 +505,36 @@ if ('speechSynthesis' in window) {
     }
 
     .score-display {
-        display: flex;
-        justify-content: center;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+        justify-items: center;
         align-items: center;
-        gap: 1rem;
-        flex-wrap: wrap;
-        margin-bottom: 1rem;
+        margin: 0 auto 1rem auto;
+        max-width: 280px;
+        width: 100%;
     }
 
     .score-item {
-        flex: 0 1 auto;
-        min-width: 85px;
-        max-width: 110px;
-        background: rgba(255, 255, 255, 0.9);
+        width: 100%;
+        max-width: 130px;
+        background: rgba(255, 255, 255, 0.95);
         border-radius: 12px;
-        padding: 0.6rem 0.8rem;
-        border: 2px solid rgba(255, 193, 7, 0.4);
-        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.15);
+        padding: 0.65rem 0.75rem;
+        border: 2px solid rgba(255, 193, 7, 0.35);
+        box-shadow: 0 2px 6px rgba(255, 193, 7, 0.12);
         text-align: center;
         position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .score-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(255, 193, 7, 0.2);
     }
 
     /* Remove old honey jar overlay styles */
@@ -1789,9 +1812,14 @@ if ('speechSynthesis' in window) {
     }
     
     @media (max-width: 768px) {
-        /* Hide the scoreboard and kid-safe badge on mobile for cleaner UI */
         .score-display {
-            display: none !important;
+            max-width: 260px;
+            gap: 0.6rem;
+        }
+        
+        .score-item {
+            max-width: 120px;
+            padding: 0.55rem 0.65rem;
         }
         
         .kid-safe-badge-quiz {
@@ -3584,7 +3612,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>
 
-        <div class="score-display">
+        <div class="score-display" style="display: none;">
             <div class="score-item">
                 <span class="score-number correct" id="correctCount">0</span>
                 <span class="score-label">Correct</span>
@@ -3610,8 +3638,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="score-label">Points</span>
             </div>
             
-            <!-- Buzz Dust Badge Image -->
-            <div class="score-item" style="padding: 0.3rem; background: transparent; border: none; box-shadow: none;">
+            <!-- Buzz Dust Badge Image - Full width in grid -->
+            <div class="score-item score-item-badge" style="grid-column: 1 / -1; padding: 0.3rem; background: transparent; border: none; box-shadow: none; max-width: 100%;">
                 <img id="quizHeaderBadge" src="/static/assets/badges/Novice.png" alt="Rank Badge" style="width: 80px; height: 80px; object-fit: contain;" title="Loading rank...">
             </div>
         </div>
@@ -5687,8 +5715,9 @@ class QuizManager {
             console.error('❌ Error in initializeEventListeners:', e);
         }
 
-        // 🎹 Custom quiz keyboard: mount only when countdown starts (see startCountdownTimer), not on page load
-        // ROUND_COUNTDOWN_STARTED → mount + setEnabled(true); ROUND_ENDED / GAME_OVER_SHOWN → setEnabled(false) / unmount
+        // 🎹 Custom quiz keyboard: mount early on quiz page load (always visible, not dependent on timer)
+        // Mount keyboard immediately when quiz initializes
+        this.mountQuizKeyboardEarly();
         
         // 🍎 iOS-specific optimizations
         if (this.isIOS || this.isSafari) {
@@ -6589,6 +6618,61 @@ class QuizManager {
                     spellingInput.value = '';
                     spellingInput.placeholder = 'Type your answer...';
                     if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+                    if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
+                }
+            }
+
+            // 🎹 Mount keyboard early (always visible, not dependent on timer)
+            {
+                const keyboardContainer = document.getElementById('quizKeyboardContainer');
+                const spellingInput = document.getElementById('spellingInput');
+                if (keyboardContainer && spellingInput && typeof initQuizKeyboard === 'function' && !window.quizKeyboardInstance) {
+                    const quizContainerEl = document.getElementById('quizContainer');
+                    const quizCardEl = document.getElementById('quizCard');
+                    window.quizKeyboardInstance = initQuizKeyboard({
+                        targetEl: keyboardContainer,
+                        inputEl: spellingInput,
+                        spacerTargetEl: null,
+                        onSubmit: () => { if (this.submitAnswer) this.submitAnswer(); },
+                        allowSpaces: true,
+                        autoCaps: true,
+                        maxLength: null,
+                        disableInputWhenRoundEnds: true,
+                        practiceMode: false,
+                        showSubmitKey: false,
+                        onHide: function () {
+                            if (quizContainerEl) quizContainerEl.classList.remove('kb-open');
+                            if (typeof window.clearKeyboardPosition === 'function') window.clearKeyboardPosition();
+                            const showBtn = document.getElementById('showKeyboardBtn');
+                            if (showBtn) showBtn.style.display = 'block';
+                        },
+                        onMounted: function () {
+                            if (quizContainerEl) quizContainerEl.classList.add('kb-open');
+                            if (typeof window.updateKeyboardReservedSpace === 'function') window.updateKeyboardReservedSpace();
+                            if (typeof window.positionKeyboardBelowInput === 'function') {
+                                setTimeout(window.positionKeyboardBelowInput, 80);
+                            }
+                            // Add pop-out animation
+                            setTimeout(() => {
+                                const kbEl = keyboardContainer.querySelector('.quiz-keyboard');
+                                if (kbEl) {
+                                    kbEl.classList.add('quiz-keyboard-pop-out');
+                                    // Remove animation class after animation completes
+                                    setTimeout(() => {
+                                        kbEl.classList.remove('quiz-keyboard-pop-out');
+                                    }, 400);
+                                }
+                            }, 100);
+                        },
+                        onUnmounted: function () {
+                            if (quizContainerEl) quizContainerEl.classList.remove('kb-open');
+                            if (typeof window.clearKeyboardPosition === 'function') window.clearKeyboardPosition();
+                            const showBtn = document.getElementById('showKeyboardBtn');
+                            if (showBtn) showBtn.style.display = 'none';
+                            try { if (quizCardEl) quizCardEl.style.removeProperty('--kb-h'); } catch (_) {}
+                        }
+                    });
+                    console.log('✅ Quiz keyboard mounted early (always visible)');
                     if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
                 }
             }
@@ -12128,12 +12212,7 @@ function showWordOfTheDay(wordData) {
     font-size: 24px;
     cursor: pointer;
     justify-content: center;
-                cache: 'no-store',
-                headers: {
-                    'Accept': 'application/json'
-                },
-                signal: controller.signal
-            });
+}
 .definition-close:hover {
     background: rgba(255, 255, 255, 0.3);
 }
