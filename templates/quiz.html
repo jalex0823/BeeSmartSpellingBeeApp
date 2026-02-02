@@ -116,7 +116,7 @@ if ('speechSynthesis' in window) {
         padding: 10px 12px;
     }
 
-    /* Card = layout container; scrollable so full keyboard is visible (no clipping) */
+    /* Card = scrollable content; keyboard overlays bottom (see .keyboard-shell) */
     .quiz-card {
         width: min(92vw, 520px);
         margin: 0 auto;
@@ -124,8 +124,6 @@ if ('speechSynthesis' in window) {
         overflow-x: hidden;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
-        display: flex;
-        flex-direction: column;
         min-height: 0;
         max-height: calc(100dvh - 100px);
         background: rgba(255, 255, 255, 0.85);
@@ -133,24 +131,33 @@ if ('speechSynthesis' in window) {
     @media (max-width: 768px) {
         .quiz-card { max-height: 100dvh; }
     }
-    /* Content area; keyboard follows below and is fully visible when user scrolls */
+    /* Content area; when kb-open get padding so "Type your spelling here" can scroll above overlay */
     .quiz-card .quiz-card-content {
         padding: 16px;
         min-height: 0;
-        flex-shrink: 0;
         padding-bottom: 12px;
     }
-    /* Keyboard region: brought to front, never clipped; card scrolls to show it */
+    .quiz-card.kb-open .quiz-card-content {
+        padding-bottom: var(--kb-h, 280px);
+    }
+    /* Keyboard OVERLAYS bottom of viewport so input stays visible above it; Hide keyboard reveals buttons */
     .keyboard-shell {
-        position: relative;
-        z-index: 20;
-        flex-shrink: 0;
+        display: none;
+        position: fixed !important;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
         min-width: 0;
         overflow: visible;
         border-top: 1px solid rgba(0, 0, 0, 0.08);
         padding: 10px 10px 12px;
         padding-bottom: calc(10px + env(safe-area-inset-bottom, 0));
         background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    }
+    .quiz-card.kb-open .keyboard-shell {
+        display: block;
     }
     .keyboard-shell .quiz-keyboard,
     .keyboard-shell .custom-keyboard {
@@ -161,9 +168,6 @@ if ('speechSynthesis' in window) {
         overflow-x: hidden;
         overflow-y: visible;
     }
-    /* Show keyboard shell when keyboard is mounted */
-    .keyboard-shell { display: none; }
-    .quiz-card.kb-open .keyboard-shell { display: block; }
     
     /* Progress tracker fixed at bottom of viewport */
     .progress-tracker {
@@ -4161,7 +4165,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
         </div>
         </div>
-        <!-- Keyboard is PART of the card; never overlays (Option A) -->
+        <!-- Keyboard OVERLAYS bottom of viewport so "Type your spelling here" stays visible above; Hide keyboard reveals buttons -->
         <div class="keyboard-shell" id="keyboardShell">
             <div id="quizKeyboardContainer" role="region" aria-label="Quiz spelling keyboard"></div>
         </div>
@@ -6706,8 +6710,8 @@ class QuizManager {
                             if (quizCardEl) quizCardEl.classList.add('kb-open');
                             if (typeof window.updateKeyboardReservedSpace === 'function') window.updateKeyboardReservedSpace();
                             setTimeout(function () {
-                                var shell = document.getElementById('keyboardShell');
-                                if (shell) shell.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                                var inp = document.getElementById('spellingInput');
+                                if (inp) inp.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
                             }, 100);
                         },
                         onUnmounted: function () {

@@ -393,17 +393,15 @@ if ('speechSynthesis' in window) {
         letter-spacing: 1px;
     }
 
-    /* Quiz Content – card layout with keyboard shell (same as main quiz) */
+    /* Quiz Content – scrollable card; keyboard OVERLAYS bottom (see .keyboard-shell) */
     .speed-quiz-container .quiz-card {
         background: #FFFFFF;
         border-radius: 24px;
         box-shadow: 0 15px 40px rgba(66, 165, 245, 0.3);
         border: 3px solid #42A5F5;
         margin-bottom: 1.5rem;
-        display: flex;
-        flex-direction: column;
         min-height: 0;
-        max-height: calc(100dvh - 220px);
+        max-height: calc(100dvh - 180px);
         padding: 0;
         overflow-x: hidden;
         overflow-y: auto;
@@ -412,21 +410,28 @@ if ('speechSynthesis' in window) {
     .speed-quiz-container .quiz-card .speed-quiz-card-content {
         padding: 1.5rem 1.5rem 12px;
         min-height: 0;
-        overflow-y: auto;
-        flex-shrink: 0;
     }
-    /* Keyboard shell: same behavior as main quiz – hide by default, show when kb-open */
+    .speed-quiz-container .quiz-card.kb-open .speed-quiz-card-content {
+        padding-bottom: var(--kb-h, 280px);
+    }
+    /* Keyboard OVERLAYS bottom of viewport so spell input stays visible above; Hide keyboard reveals buttons */
     .speed-quiz-container .keyboard-shell {
-        position: relative;
-        z-index: 20;
-        flex-shrink: 0;
+        display: none;
+        position: fixed !important;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
         min-width: 0;
         overflow: visible;
         border-top: 1px solid rgba(0, 0, 0, 0.08);
         padding: 10px 10px 12px;
         padding-bottom: calc(10px + env(safe-area-inset-bottom, 0));
         background: rgba(255, 255, 255, 0.92);
-        display: none;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    }
+    .speed-quiz-container .quiz-card.kb-open .keyboard-shell {
+        display: block;
     }
     .speed-quiz-container .keyboard-shell .quiz-keyboard,
     .speed-quiz-container .keyboard-shell .custom-keyboard {
@@ -436,9 +441,6 @@ if ('speechSynthesis' in window) {
         box-sizing: border-box;
         overflow-x: hidden;
         overflow-y: visible;
-    }
-    .speed-quiz-container .quiz-card.kb-open .keyboard-shell {
-        display: block;
     }
 
     .word-prompt {
@@ -927,7 +929,7 @@ if ('speechSynthesis' in window) {
                 
             </div>
         </div>
-        <!-- Keyboard shell: same as main quiz – keyboard inside card, hide/show via kb-open -->
+        <!-- Keyboard OVERLAYS bottom of viewport so spell input stays visible above; Hide keyboard reveals buttons -->
         <div class="keyboard-shell" id="speedKeyboardShell">
             <div id="quizKeyboardContainer" role="region" aria-label="Speed round spelling keyboard"></div>
         </div>
@@ -1885,8 +1887,8 @@ function pronounceWord() {
                             if (speedQuizCardEl) speedQuizCardEl.classList.add('kb-open');
                             if (typeof window.updateSpeedKeyboardReservedSpace === 'function') window.updateSpeedKeyboardReservedSpace();
                             setTimeout(function () {
-                                var shell = document.getElementById('speedKeyboardShell');
-                                if (shell) shell.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                                var inp = document.getElementById('spellInput');
+                                if (inp) inp.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
                             }, 100);
                         },
                         onUnmounted: function () {
@@ -1961,8 +1963,8 @@ function pronounceWord() {
                                     if (speedQuizCardEl) speedQuizCardEl.classList.add('kb-open');
                                     if (typeof window.updateSpeedKeyboardReservedSpace === 'function') window.updateSpeedKeyboardReservedSpace();
                                     setTimeout(function () {
-                                        var shell = document.getElementById('speedKeyboardShell');
-                                        if (shell) shell.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                                        var inp = document.getElementById('spellInput');
+                                        if (inp) inp.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
                                     }, 100);
                                 },
                                 onUnmounted: function () {
