@@ -27,10 +27,12 @@
 
     function keyPopAnimation(buttonEl) {
         if (!buttonEl || !buttonEl.classList) return;
-        buttonEl.classList.add('quiz-keyboard-key-pop');
-        const duration = 110;
+        buttonEl.classList.add('quiz-keyboard-key-pop', 'key-pop');
+        const duration = 120;
         setTimeout(() => {
-            try { buttonEl.classList.remove('quiz-keyboard-key-pop'); } catch (_) {}
+            try {
+                buttonEl.classList.remove('quiz-keyboard-key-pop', 'key-pop');
+            } catch (_) {}
         }, duration);
     }
 

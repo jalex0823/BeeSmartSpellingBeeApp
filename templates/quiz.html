@@ -1,6 +1,8 @@
-j{% extends "base.html" %}
-<!-- QUIZ VERSION: 2025-12-13-VOICE-VIZ-DEBUG -->
+{% extends "base.html" %}
+<!-- QUIZ VERSION: 2025-12-13-VOICE-VIZ-DEBUG - iPhone-first layout + scroll (Option 1) -->
 {% block title %}BeeSmart Quiz - Practice Your Spelling{% endblock %}
+
+{% block body_class %}route-quiz{% endblock %}
 
 {% block extra_css %}
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -18,6 +20,12 @@ window.__disableSwReload = true;
 
 // 6) Hard disable "Can't hear Buzzy?" orange modal
 window.DISABLE_BUZZY_HELP_MODAL = true;
+
+// Dev-only: ?debug=layout shows red (input), blue (keyboard), green (button grid) outlines for iPhone verification
+if (typeof location !== 'undefined' && location.search && location.search.indexOf('debug=layout') !== -1) {
+    document.documentElement.addEventListener('DOMContentLoaded', function () { document.body.classList.add('dev-visual-debug'); });
+    if (document.body) document.body.classList.add('dev-visual-debug');
+}
 
 // Build stamp (helps confirm production has the latest HTML)
 console.log('🐝 QUIZ BUILD:', '{{ timestamp }}');
@@ -92,41 +100,63 @@ if ('speechSynthesis' in window) {
 </script>
 
 <style>
-    /* 1) Scrolling: page non-scroll, card has internal scroll */
+    /* A) iPhone-first: safe-area gutters, no 100vw jitter */
+    :root {
+        --page-gutter: 10px;
+    }
+
+    /* B) Option 1: Page does NOT scroll; only .card-scroll scrolls */
     html, body {
         height: 100%;
+        margin: 0;
     }
     body {
-        margin: 0;
-        overflow: hidden; /* OK – card has internal scroll */
+        overflow-x: hidden;
+    }
+
+    /* D) Quiz-only: body locked, exactly ONE scroll owner (.card-scroll) */
+    body.route-quiz {
+        overflow: hidden !important;
+    }
+    body.route-quiz .card-scroll {
+        overflow-y: auto !important;
         -webkit-overflow-scrolling: touch;
     }
 
-    .quiz-page,
-    .quiz-container {
-        height: 100vh;
+    /* .quiz-page = flex column, height 100dvh; safe-area padding (no magic px) */
+    .quiz-page {
+        height: 100dvh;
         display: flex;
         flex-direction: column;
+        padding-left: max(var(--page-gutter), env(safe-area-inset-left));
+        padding-right: max(var(--page-gutter), env(safe-area-inset-right));
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+        box-sizing: border-box;
         max-width: 700px;
         margin: 0 auto;
         text-align: center;
-        padding: 10px; /* 10px total for near edge-to-edge card */
         position: relative;
-        box-sizing: border-box;
     }
 
+    /* Everything above the card: flex 0 so layout can compute height */
+    .quiz-header {
+        flex: 0 0 auto;
+    }
+
+    /* Card takes remaining height automatically (no 72px / 64px) */
     .quiz-container {
-        overflow: hidden;
         flex: 1;
         min-height: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
     }
 
-    /* Card internal scroll region */
     .quiz-content {
         min-height: 0;
     }
 
-    /* Answer area - no longer sticky to allow scrolling to voice button */
     .quiz-answer-area {
         position: relative;
         z-index: 5;
@@ -134,7 +164,6 @@ if ('speechSynthesis' in window) {
         padding: 4px 8px;
         margin-bottom: 0.25rem;
     }
-    /* 7) Start with Buzzy Voice pill (replaces Ready to Spell block) */
     .buzzy-pill {
         width: 100%;
         border-radius: 999px;
@@ -150,21 +179,19 @@ if ('speechSynthesis' in window) {
     .buzzy-pill:hover { background: rgba(255, 248, 225, 0.9); }
     .buzzy-pill:active { transform: scale(0.98); }
 
-    /* 2) Widen card near edge-to-edge; 3) card scroll = card-fixed + card-scroll */
+    /* A) Edge-to-edge card; height from flex (no magic 72px/64px) */
     .quiz-card {
-        position: relative;
-        width: calc(100vw - 20px);
-        max-width: 520px;
-        margin: 0 auto;
-        border-radius: 18px;
-        overflow: hidden;
-        box-sizing: border-box;
+        flex: 1 1 auto;
+        min-height: 0;
         display: flex;
         flex-direction: column;
-        min-height: 0;
-        max-height: calc(100vh - 140px);
+        width: 100%;
+        max-width: none;
+        margin: 0 auto;
+        overflow: hidden;
+        box-sizing: border-box;
+        border-radius: 18px;
         background: rgba(255, 255, 255, 0.85);
-        -webkit-overflow-scrolling: touch;
     }
     .quiz-card .quiz-card-content {
         padding: 0;
@@ -172,40 +199,84 @@ if ('speechSynthesis' in window) {
         display: flex;
         flex-direction: column;
         flex: 1;
-        overflow: hidden;
+        overflow: visible;
     }
     .card-fixed {
-        padding: 14px 14px 8px 14px;
         flex: 0 0 auto;
+        padding: 14px 12px 8px 12px;
     }
     .card-scroll {
-        padding: 10px 14px 14px 14px;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
         flex: 1 1 auto;
         min-height: 0;
+        overflow-y: auto !important;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+        padding: 10px 12px 14px 12px;
     }
-    @media (max-width: 768px) {
-        .quiz-card { max-height: calc(100vh - 120px); }
+    /* Answer + keyboard in same scroll flow; visible gap, no overlap */
+    .answer-and-keyboard {
+        display: block;
+        margin-bottom: 0;
     }
-    /* 5) Hide keyboard: toggle class only */
+    .answer-and-keyboard .quiz-answer-area {
+        margin-bottom: 10px;
+    }
+    /* F) Hide keyboard: toggle only; never position:fixed */
+    #keyboardHost.is-hidden,
     .keyboard-host.is-hidden,
     .keyboard-shell.is-hidden {
         display: none !important;
     }
-    /* Keyboard host: in-flow inside card-scroll */
+    /* Visual lock: keyboard NEVER fixed/sticky/absolute; always in-flow */
+    #keyboardHost,
     .keyboard-host,
     .keyboard-shell {
+        position: static !important;
+        top: auto !important;
+        bottom: auto !important;
+        left: auto !important;
+        right: auto !important;
+        z-index: auto !important;
         width: 100%;
         max-width: 100%;
         box-sizing: border-box;
-        padding: 0;
-        margin-bottom: 12px;
+        padding: 0 12px;
         margin-top: 0;
+        margin-bottom: 12px;
+        overflow: hidden;
         display: block;
-        position: relative;
-        z-index: 2;
+        border-radius: 16px;
+        box-shadow: 0 4px 16px rgba(0,0,0,.1);
+        transform: translateY(10px);
+        opacity: 0;
+    }
+    .keyboard-host * {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    #keyboardHost.is-visible,
+    .keyboard-host.is-visible {
+        transform: translateY(0);
         opacity: 1;
+        transition: transform .25s ease, opacity .25s ease;
+    }
+    .custom-keyboard {
+        width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+    /* Key press pop (transform only, no layout shift) */
+    .keyboard-host .key-pop,
+    .keyboard-host .quiz-keyboard-key-pop {
+        transform: scale(1.08);
+        transition: transform .12s ease;
+    }
+    /* H) Buttons: 2 columns, full-width span option */
+    .action-buttons .span-2,
+    .secondary-buttons .span-2 {
+        grid-column: span 2;
     }
     
     /* Pop-out animation for keyboard */
@@ -241,8 +312,12 @@ if ('speechSynthesis' in window) {
         display: flex;
         flex-direction: column;
         gap: 8px;
-        position: relative; /* Normal flow, NOT fixed */
+        position: relative;
     }
+    /* Dev-only: visual verification outlines – enable with ?debug=layout (remove after iPhone testing) */
+    body.dev-visual-debug .answer-area.quiz-answer-area { outline: 2px solid red; outline-offset: 2px; }
+    body.dev-visual-debug #keyboardHost { outline: 2px solid blue; outline-offset: 2px; }
+    body.dev-visual-debug .action-buttons { outline: 2px solid green; outline-offset: 2px; }
     /* 8) Action + secondary buttons: 2 columns */
     .action-buttons,
     .actions-area.quiz-buttons,
@@ -260,7 +335,7 @@ if ('speechSynthesis' in window) {
     .actions-area.quiz-buttons button,
     .secondary-buttons button {
         width: 100%;
-        min-height: 54px;
+        min-height: 52px;
         border-radius: 16px;
     }
     .action-buttons .button-wide,
@@ -3696,7 +3771,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
     </div>
 
-    <!-- Quiz Card: card-fixed (question + input + Buzzy pill) + card-scroll (keyboard + buttons) -->
+    <!-- Quiz Card: card-fixed (question only) + card-scroll (answer-and-keyboard + buttons) -->
     <div class="quiz-card" id="quizCard">
         <div class="quiz-content quiz-card-content" id="quizScroll">
         <div class="card-fixed">
@@ -4157,47 +4232,52 @@ document.addEventListener('DOMContentLoaded', () => {
             </div> <!-- End morph-content -->
         </div> <!-- End morph-container -->
         </div> <!-- End question-area -->
-
-        <!-- Answer area: letter hint + spelling input -->
-        <div class="answer-area quiz-answer-area">
-            <div class="letter-hint hidden" id="letterHint" aria-live="polite">
-                <span class="hint-label">💡 Hint:</span>
-                <span class="hint-letters" id="hintLetters"></span>
-            </div>
-
-            <!-- Answer Input Field - Moved Higher -->
-            <div class="bee-input" id="beeInputWrapper">
-                <input type="text"
-                       id="spellingInput"
-                       placeholder="Type your answer..."
-                       autocomplete="off"
-                       autocorrect="off"
-                       autocapitalize="off"
-                       spellcheck="false"
-                       inputmode="none"
-                       style="font-size: 16px;">
-            </div>
-            <!-- Show keyboard button (visible when keyboard is hidden so user can bring it back) -->
-            <button type="button" id="showKeyboardBtn" class="action-btn secondary quiz-show-keyboard-btn" style="display: none; margin-top: 8px; width: 100%; max-width: 260px;" aria-label="Show keyboard">
-                <span class="bee-icon" aria-hidden="true">&#9650;</span> Show keyboard
-            </button>
-
-            <!-- 7) Start with Buzzy Voice pill (replaces Ready to Spell block) -->
-            <button type="button" id="buzzyPill" class="buzzy-pill" aria-label="Start with Buzzy voice">
-                &#128266; Start with Buzzy Voice
-            </button>
-            <button type="button" id="startSilentBtn" class="action-btn secondary" style="margin-top: 4px; display: block;" aria-label="Start silent">
-                &#128263; Start silent
-            </button>
-        </div>
         </div>
         <!-- end card-fixed -->
 
         <div class="card-scroll">
-        <!-- Keyboard: inside card-scroll so user can scroll to all keys + buttons -->
-        <div class="keyboard-host keyboard-shell" id="keyboardHost">
+        <!-- Answer + keyboard in same scroll flow: input directly above keyboard, no overlap -->
+        <div class="answer-and-keyboard">
+            <!-- Answer area: letter hint + spelling input (in-flow with keyboard) -->
+            <div class="answer-area quiz-answer-area" id="answerAreaContainer">
+                <div class="letter-hint hidden" id="letterHint" aria-live="polite">
+                    <span class="hint-label">💡 Hint:</span>
+                    <span class="hint-letters" id="hintLetters"></span>
+                </div>
+
+                <!-- Answer Input Field -->
+                <div class="bee-input" id="beeInputWrapper">
+                    <input type="text"
+                           id="spellingInput"
+                           placeholder="Type your answer..."
+                           readonly
+                           inputmode="none"
+                           autocomplete="off"
+                           autocorrect="off"
+                           autocapitalize="off"
+                           spellcheck="false"
+                           style="font-size: 16px;">
+                </div>
+                <!-- Show keyboard button (visible when keyboard is hidden so user can bring it back) -->
+                <button type="button" id="showKeyboardBtn" class="action-btn secondary quiz-show-keyboard-btn" style="display: none; margin-top: 8px; width: 100%; max-width: 260px;" aria-label="Show keyboard">
+                    <span class="bee-icon" aria-hidden="true">&#9650;</span> Show keyboard
+                </button>
+
+                <!-- Start with Buzzy Voice pill -->
+                <button type="button" id="buzzyPill" class="buzzy-pill" aria-label="Start with Buzzy voice">
+                    &#128266; Start with Buzzy Voice
+                </button>
+                <button type="button" id="startSilentBtn" class="action-btn secondary" style="margin-top: 4px; display: block;" aria-label="Start silent">
+                    &#128263; Start silent
+                </button>
+            </div>
+
+            <!-- Keyboard: directly below answer input, same scroll; never fixed -->
+            <div class="keyboard-host keyboard-shell" id="keyboardHost">
             <div id="quizKeyboardContainer" role="region" aria-label="Quiz spelling keyboard"></div>
         </div>
+        </div>
+        <!-- end answer-and-keyboard -->
 
         <script>
         // Ensure desktop intro voice plays reliably by triggering on first user interaction
@@ -6756,6 +6836,13 @@ class QuizManager {
                             var hideBtn = document.getElementById('hideKeyboardBtn');
                             if (keyboardHost && hideBtn) {
                                 keyboardHost.classList.toggle('is-hidden');
+                                if (keyboardHost.classList.contains('is-hidden')) {
+                                    keyboardHost.classList.remove('is-visible', 'is-entering');
+                                } else {
+                                    keyboardHost.classList.add('is-visible');
+                                    keyboardHost.classList.add('is-entering');
+                                    setTimeout(function () { keyboardHost.classList.remove('is-entering'); }, 250);
+                                }
                                 hideBtn.textContent = keyboardHost.classList.contains('is-hidden') ? 'Show keyboard' : '\u25BC Hide keyboard';
                             }
                             var showBtn = document.getElementById('showKeyboardBtn');
@@ -6763,18 +6850,18 @@ class QuizManager {
                             if (quizContainerEl) quizContainerEl.classList.remove('kb-open');
                         },
                         onMounted: function () {
+                            var keyboardHost = document.getElementById('keyboardHost');
+                            if (keyboardHost) {
+                                keyboardHost.classList.remove('is-hidden');
+                                keyboardHost.classList.add('is-visible');
+                                keyboardHost.classList.add('is-entering');
+                                setTimeout(function () { keyboardHost.classList.remove('is-entering'); }, 250);
+                            }
                             if (quizContainerEl) quizContainerEl.classList.add('kb-open');
                             if (typeof window.updateKeyboardReservedSpace === 'function') window.updateKeyboardReservedSpace();
                             if (typeof window.positionKeyboardBelowInput === 'function') {
                                 setTimeout(window.positionKeyboardBelowInput, 80);
                             }
-                            setTimeout(() => {
-                                var kbEl = keyboardContainer.querySelector('.quiz-keyboard');
-                                if (kbEl) {
-                                    kbEl.classList.add('quiz-keyboard-pop-out');
-                                    setTimeout(function () { kbEl.classList.remove('quiz-keyboard-pop-out'); }, 400);
-                                }
-                            }, 100);
                         },
                         onUnmounted: function () {
                             if (quizContainerEl) quizContainerEl.classList.remove('kb-open');
@@ -6788,7 +6875,12 @@ class QuizManager {
                         if (showBtn) showBtn.addEventListener('click', function () {
                             var keyboardHost = document.getElementById('keyboardHost');
                             var hideBtn = document.getElementById('hideKeyboardBtn');
-                            if (keyboardHost) keyboardHost.classList.remove('is-hidden');
+                            if (keyboardHost) {
+                                keyboardHost.classList.remove('is-hidden');
+                                keyboardHost.classList.add('is-visible');
+                                keyboardHost.classList.add('is-entering');
+                                setTimeout(function () { keyboardHost.classList.remove('is-entering'); }, 250);
+                            }
                             if (hideBtn) hideBtn.textContent = '\u25BC Hide keyboard';
                             showBtn.style.display = 'none';
                         });
@@ -6883,10 +6975,7 @@ class QuizManager {
                 await this.announceAndStartTimer();
             }
             
-            // Show "Can't hear?" helper notification after first word loads
-            if (this.announcerEnabled && questionNumber === 1) {
-                this.showVoiceHelperNotification();
-            }
+            // "Can't hear Buzzy?" modal removed (no longer shown on quiz)
 
         } catch (error) {
             console.error('Error loading word:', error);
@@ -7013,6 +7102,13 @@ class QuizManager {
                             var hideBtn = document.getElementById('hideKeyboardBtn');
                             if (keyboardHost && hideBtn) {
                                 keyboardHost.classList.toggle('is-hidden');
+                                if (keyboardHost.classList.contains('is-hidden')) {
+                                    keyboardHost.classList.remove('is-visible', 'is-entering');
+                                } else {
+                                    keyboardHost.classList.add('is-visible');
+                                    keyboardHost.classList.add('is-entering');
+                                    setTimeout(function () { keyboardHost.classList.remove('is-entering'); }, 250);
+                                }
                                 hideBtn.textContent = keyboardHost.classList.contains('is-hidden') ? 'Show keyboard' : '\u25BC Hide keyboard';
                             }
                             var showBtn = document.getElementById('showKeyboardBtn');
@@ -7020,6 +7116,13 @@ class QuizManager {
                             if (quizContainerEl) quizContainerEl.classList.remove('kb-open');
                         },
                         onMounted: function () {
+                            var keyboardHost = document.getElementById('keyboardHost');
+                            if (keyboardHost) {
+                                keyboardHost.classList.remove('is-hidden');
+                                keyboardHost.classList.add('is-visible');
+                                keyboardHost.classList.add('is-entering');
+                                setTimeout(function () { keyboardHost.classList.remove('is-entering'); }, 250);
+                            }
                             if (quizContainerEl) quizContainerEl.classList.add('kb-open');
                             if (typeof window.updateKeyboardReservedSpace === 'function') window.updateKeyboardReservedSpace();
                             if (typeof window.positionKeyboardBelowInput === 'function') {
@@ -7965,105 +8068,8 @@ class QuizManager {
         }
     }
 
-    // Show helper notification if user can't hear announcer
-    showVoiceHelperNotification() {
-        if (window.DISABLE_BUZZY_HELP_MODAL) return;
-        // Don't show if already dismissed this session
-        if (sessionStorage.getItem('voiceHelperDismissed')) {
-            return;
-        }
-        
-        const notification = document.createElement('div');
-        notification.id = 'voiceHelperNotification';
-        notification.style.cssText = `
-            position: fixed;
-            top: 120px;
-            right: 20px;
-            background: linear-gradient(135deg, #FF6B00 0%, #FFD700 100%);
-            color: white;
-            padding: 1.5rem;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(255, 107, 0, 0.4);
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            z-index: 1500;
-            max-width: 320px;
-            animation: slideInRight 0.5s ease-out;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            -webkit-font-smoothing: antialiased;
-        `;
-        
-        notification.innerHTML = `
-            <div style="display: flex; align-items: flex-start; gap: 1rem;">
-                <div style="font-size: 2.5rem;">🔊</div>
-                <div style="flex: 1;">
-                    <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">
-                        Can't hear Buzzy?
-                    </div>
-                    <div style="font-size: 0.95rem; margin-bottom: 1rem; line-height: 1.4;">
-                        If you can't hear the announcer, tap the <strong>Mute/Unmute button</strong> below the quiz to enable voice!
-                    </div>
-                    <button id="dismissVoiceHelper" style="
-                        background: white;
-                        color: #FF6B00;
-                        border: none;
-                        border-radius: 8px;
-                        padding: 8px 16px;
-                        font-size: 0.9rem;
-                        font-weight: 600;
-                        cursor: pointer;
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                        width: 100%;
-                    ">
-                        Got it! 👍
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Add slide-in animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideInRight {
-                from {
-                    transform: translateX(400px);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-            @keyframes slideOutRight {
-                from {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-                to {
-                    transform: translateX(400px);
-                    opacity: 0;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-        
-        // Dismiss button handler
-        document.getElementById('dismissVoiceHelper').addEventListener('click', () => {
-            sessionStorage.setItem('voiceHelperDismissed', 'true');
-            notification.style.animation = 'slideOutRight 0.3s ease-in';
-            setTimeout(() => notification.remove(), 300);
-        });
-        
-        // Auto-dismiss after 12 seconds
-        setTimeout(() => {
-            if (notification.parentElement) {
-                sessionStorage.setItem('voiceHelperDismissed', 'true');
-                notification.style.animation = 'slideOutRight 0.3s ease-in';
-                setTimeout(() => notification.remove(), 300);
-            }
-        }, 12000);
-    }
+    // "Can't hear Buzzy?" modal removed entirely (no HTML, no JS creation)
+    showVoiceHelperNotification() {}
 
     async loadNextWord() {
         console.log('🔄 loadNextWord() called - starting to load next word...');
