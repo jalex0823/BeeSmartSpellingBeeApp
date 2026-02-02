@@ -116,7 +116,7 @@ if ('speechSynthesis' in window) {
         padding: 10px 12px;
     }
 
-    /* Card: vertical layout; keyboard floats above action buttons (absolute at bottom of card) */
+    /* Card: vertical layout; keyboard in-flow between input and action buttons */
     .quiz-card {
         position: relative;
         width: 100%;
@@ -182,8 +182,10 @@ if ('speechSynthesis' in window) {
     }
     .actions-area.quiz-buttons {
         position: relative;
-        z-index: 1;
+        z-index: 10; /* Above keyboard, below modals */
         padding-top: 6px;
+        margin-top: 0;
+        clear: both;
     }
     @media (max-width: 420px) {
         .quiz-card { padding: 12px; gap: 12px; }
@@ -4312,14 +4314,31 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function positionKeyboardBelowInput() {
-    // Keyboard is in-flow; no positioning needed
+    // Keyboard is in-flow; ensure no absolute/fixed positioning
     var host = document.getElementById('keyboardShell');
-    if (host) { host.style.top = ''; host.style.left = ''; host.style.width = ''; }
+    if (host) {
+      host.style.position = 'relative';
+      host.style.top = '';
+      host.style.left = '';
+      host.style.bottom = '';
+      host.style.right = '';
+      host.style.width = '';
+      host.style.zIndex = '';
+    }
   }
 
   function clearKeyboardPosition() {
+    // Keyboard is in-flow; ensure no absolute/fixed positioning
     var host = document.getElementById('keyboardShell');
-    if (host) { host.style.top = ''; host.style.left = ''; host.style.width = ''; }
+    if (host) {
+      host.style.position = 'relative';
+      host.style.top = '';
+      host.style.left = '';
+      host.style.bottom = '';
+      host.style.right = '';
+      host.style.width = '';
+      host.style.zIndex = '';
+    }
   }
 
   window.addEventListener('load', updateKeyboardReservedSpace);
