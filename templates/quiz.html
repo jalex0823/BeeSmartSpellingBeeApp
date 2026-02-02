@@ -192,6 +192,8 @@ if ('speechSynthesis' in window) {
         box-sizing: border-box;
         border-radius: 18px;
         background: rgba(255, 255, 255, 0.85);
+        position: relative;
+        z-index: 2;
     }
     .quiz-card .quiz-card-content {
         padding: 0;
@@ -203,6 +205,7 @@ if ('speechSynthesis' in window) {
     }
     .card-fixed {
         flex: 0 0 auto;
+        min-height: 0;
         padding: 14px 12px 8px 12px;
     }
     .card-scroll {
@@ -417,9 +420,11 @@ if ('speechSynthesis' in window) {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         border: 2px solid rgba(255, 193, 7, 0.2);
         margin-bottom: 1.5rem;
-        position: sticky;
-        top: 0;
-        z-index: 100;
+        position: static;
+        inset: auto;
+        z-index: 1;
+        flex: 0 0 auto !important;
+        min-height: 0;
         backdrop-filter: blur(10px);
     }
     
@@ -1199,14 +1204,45 @@ if ('speechSynthesis' in window) {
     .voice-visualizer {
         background: rgba(255, 179, 0, 0.15); /* More visible amber background for debugging */
         border-radius: 16px; /* Soft rounded corners to match card style */
-        padding: 1rem 1.5rem; /* tighter padding to reduce vertical space */
-        margin-bottom: 1rem; /* Add space below visualizer */
+        padding: 0.5rem 1rem; /* compact padding */
+        margin-bottom: 0.5rem;
         position: relative;
-        overflow: visible; /* Allow full wave pattern visibility - no clipping */
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Subtle shadow to make it stand out */
-        border: 1px solid rgba(255, 179, 0, 0.2); /* Subtle border for definition */
-        min-height: 180px; /* taller for fuller waves */
-        width: 100%; /* full width */
+        overflow: visible;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border: 1px solid rgba(255, 179, 0, 0.2);
+        min-height: 0;
+        width: 100%;
+    }
+
+    /* Quiz: visualizer in-flow, compact height so keyboard + buttons stay visible */
+    .quiz-card .voice-visualizer,
+    .quiz-card #voiceVisualizer,
+    .quiz-card .morph-content .voice-visualizer {
+        position: static !important;
+        inset: auto !important;
+        z-index: auto !important;
+        max-height: 72px;
+        overflow: hidden;
+        flex: 0 0 auto;
+        padding: 4px 8px;
+        margin-bottom: 0.25rem;
+    }
+    .quiz-card .morph-container {
+        max-height: 84px;
+        min-height: 0;
+        overflow: hidden;
+        flex: 0 0 auto;
+        margin-bottom: 0.25rem;
+    }
+    .quiz-card .voice-visualizer .dotwave-wrapper,
+    .quiz-card .voice-visualizer canvas {
+        height: 56px !important;
+        max-height: 56px !important;
+    }
+    .quiz-card .voice-visualizer .voice-definition {
+        font-size: 0.85rem;
+        padding: 2px 0;
+        line-height: 1.2;
     }
 
     /* Generic quiz form spacing normalization */
@@ -1629,6 +1665,11 @@ if ('speechSynthesis' in window) {
     .morph-container.mode-timer {
         /* Timer is visible, visualizer is hidden */
         min-height: 200px; /* Same as voice mode for consistent height */
+    }
+    /* Quiz: keep morph compact in both modes so card-scroll gets space */
+    .quiz-card .morph-container.mode-timer {
+        min-height: 0;
+        max-height: 84px;
     }
     
     /* Layered content - stack visualizer and timer in SAME POSITION */
