@@ -8,8 +8,8 @@
    ======================================== */
 @media screen and (max-width: 768px) {
     /* Prevent scroll jank/flickering on Android */
+    /* Removed -webkit-overflow-scrolling: touch from * selector - causes sticky scrolling */
     * {
-        -webkit-overflow-scrolling: touch !important;
         -webkit-tap-highlight-color: transparent !important;
     }
     
@@ -19,11 +19,7 @@
         -webkit-overflow-scrolling: touch;
         /* Prevent background attachment flicker */
         background-attachment: scroll !important;
-        /* Hardware acceleration */
-        transform: translateZ(0);
-        -webkit-transform: translateZ(0);
-        backface-visibility: hidden;
-        -webkit-backface-visibility: hidden;
+        /* Removed transform: translateZ(0) and backface-visibility - causes sticky scrolling */
     }
     
     /* Prevent white flash during scroll */
@@ -38,7 +34,7 @@
     #honeyLoader,
     #systemChecks {
         -webkit-overflow-scrolling: touch;
-        will-change: scroll-position;
+        /* Removed will-change: scroll-position - causes sticky scrolling */
     }
 }
 
@@ -81,15 +77,9 @@
         to { opacity: 0.5; }
     }
     
-    /* Hardware acceleration for smoother animations */
-    * {
-        -webkit-transform: translateZ(0);
-        transform: translateZ(0);
-        -webkit-backface-visibility: hidden;
-        backface-visibility: hidden;
-        -webkit-perspective: 1000;
-        perspective: 1000;
-    }
+    /* Hardware acceleration for smoother animations - REMOVED from * selector */
+    /* Applying transform: translateZ(0) to all elements causes sticky scrolling */
+    /* Only apply to specific animated elements if needed */
     
     /* Reduce motion for accessibility */
     @media (prefers-reduced-motion: reduce) {
