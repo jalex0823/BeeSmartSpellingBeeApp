@@ -53,9 +53,9 @@
     min-width: 0;
     box-sizing: border-box;
     overflow-x: hidden;
-    padding: 4px 4px calc(4px + env(safe-area-inset-bottom, 0)); /* Further reduced padding */
-    padding-left: max(4px, env(safe-area-inset-left, 0));
-    padding-right: max(4px, env(safe-area-inset-right, 0));
+    padding: 4px 2px calc(4px + env(safe-area-inset-bottom, 0));
+    padding-left: max(2px, env(safe-area-inset-left, 0));
+    padding-right: max(2px, env(safe-area-inset-right, 0));
     background: linear-gradient(180deg, #FFF8E1 0%, #FFECB3 40%, #FFE082 100%);
     border-top: 2px solid #FFB300; /* Reduced border */
     box-shadow:
@@ -261,10 +261,11 @@
     filter: saturate(0.6);
 }
 
+/* Letter keys: fill grid cell and shrink so keyboard fits card (no side clipping) */
 .quiz-keyboard-key-letter {
-    flex: 0 0 auto;
-    width: calc((100% - 9 * 6px) / 10);
-    max-width: 36px;
+    min-width: 0;
+    width: 100%;
+    max-width: none;
 }
 
 /* Mobile (≤420px): smaller keys so keyboard stays inside card/button margins */
@@ -326,14 +327,16 @@
     }
 }
 
-/* Very narrow screens: tighter gaps so all keys fit */
+/* Very narrow: even tighter so keys never clipped */
 @media (max-width: 380px) {
-    .quiz-keyboard-row {
-        gap: 3px;
+    .quiz-keyboard-row,
+    .quiz-keyboard-row-bottom {
+        gap: 2px;
     }
     .quiz-keyboard-key {
-        padding: 8px 2px;
-        font-size: 0.8rem;
+        padding: 5px 1px;
+        font-size: 0.7rem;
+        min-height: 26px;
     }
 }
 
@@ -368,8 +371,8 @@
 
 .quiz-keyboard-key-space {
     flex: 1;
-    min-width: 80px;
-    max-width: 200px;
+    min-width: 0;
+    max-width: none;
     font-size: 0.9rem;
     font-weight: 600;
     color: #5A2C15;
@@ -383,8 +386,8 @@
 }
 
 .quiz-keyboard-key-backspace {
-    flex: 0 0 auto;
-    min-width: 52px;
+    flex: 0 1 auto;
+    min-width: 0;
     font-size: 1.25rem;
     color: #5A2C15;
     border: 2px solid #5A2C15;
@@ -397,15 +400,15 @@
 }
 
 .quiz-keyboard-key-spacer {
-    flex: 0 0 auto;
-    min-width: 52px;
+    flex: 0 1 auto;
+    min-width: 0;
     pointer-events: none;
 }
 
 /* Submit / Return key – same 3D style, BeeSmart green theme */
 .quiz-keyboard-key-submit {
-    flex: 0 0 auto;
-    min-width: 58px;
+    flex: 0 1 auto;
+    min-width: 0;
     font-size: 0.95rem;
     font-weight: 800;
     color: #1B5E20;
@@ -462,14 +465,12 @@
     }
 }
 
+/* Wider screens: slightly more padding; keys still shrink to fit card */
 @media (min-width: 600px) {
-    .quiz-keyboard-key-letter {
-        max-width: 44px;
-    }
     .quiz-keyboard {
-        padding-left: 12px;
-        padding-right: 12px;
-        gap: 10px;
+        padding-left: 8px;
+        padding-right: 8px;
+        gap: 8px;
     }
     .quiz-keyboard-row {
         gap: 8px;
