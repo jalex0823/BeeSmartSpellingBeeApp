@@ -1812,7 +1812,8 @@ if ('speechSynthesis' in window) {
     .question-area-compact {
         flex: 0 1 auto;
         min-height: 0;
-        max-height: 160px; /* Increased to prevent clipping */
+        /* Give the voice visualizer / timer / sentence room (no crunching) */
+        max-height: none;
         overflow: visible; /* Changed from hidden to visible */
         margin-bottom: 1rem; /* Added spacing below question area */
     }
@@ -1833,8 +1834,9 @@ if ('speechSynthesis' in window) {
         position: relative;
         width: calc(100% + 40px); /* Extend 20px on each side outside card */
         max-width: calc(100vw - 32px); /* iPhone safe area: 16px margin on each side */
-        min-height: 60px;
-        max-height: 140px; /* Increased to prevent clipping */
+        /* Bigger container so wave + sentence + honey timer are fully visible */
+        min-height: 320px;
+        max-height: none;
         margin: 0 -20px; /* Negative margin to extend outside card */
         margin-bottom: 1rem; /* Increased spacing below morph container */
         margin-top: 0.5rem; /* Added top spacing */
@@ -1852,6 +1854,36 @@ if ('speechSynthesis' in window) {
         background: rgba(255, 255, 255, 0.0); /* transparent to blend with quiz */
         overflow: hidden; /* allow internal effects without page overflow */
         /* no border or shadow to integrate naturally */
+    }
+
+    /* Crest + avatar centered on the card (per reference) */
+    .quiz-card-crest-avatar {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 10px 0 6px;
+        text-align: center;
+    }
+    .quiz-card-crest-avatar .quiz-card-crest {
+        width: 72px;
+        height: 72px;
+        object-fit: contain;
+        filter: drop-shadow(0 6px 14px rgba(255, 193, 7, 0.25));
+        opacity: 0.95;
+    }
+    .quiz-card-crest-avatar .mascot-3d-container {
+        width: 160px;
+        height: 160px;
+        max-width: 60vw;
+        max-height: 60vw;
+        margin: 0 auto;
+    }
+    @media (max-width: 420px) {
+        .quiz-card-crest-avatar .quiz-card-crest { width: 64px; height: 64px; }
+        .quiz-card-crest-avatar .mascot-3d-container { width: 140px; height: 140px; }
     }
     
     /* Optional: subtle placeholder while avatar loads */
@@ -1881,8 +1913,8 @@ if ('speechSynthesis' in window) {
     
     /* Honey jar timer state (countdown mode) */
     .morph-container.mode-timer {
-        min-height: 70px;
-        max-height: 110px;
+        min-height: 320px;
+        max-height: none;
     }
     
     /* Layered content - stack visualizer and timer in SAME POSITION */
@@ -1905,7 +1937,7 @@ if ('speechSynthesis' in window) {
         position: absolute;
         top: 50%;
         left: 50%;
-        transform: translate(-50%, -50%) scale(0.85); /* Center and scale */
+        transform: translate(-50%, -50%) scale(1); /* Center and full scale */
         opacity: 0;
         transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
         pointer-events: none;
@@ -4056,59 +4088,27 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="card-scroll">
         <!-- 1) Visualizer + Timer + Sentence (top of stack) -->
         <div class="quiz-card-top">
-        <!-- Logo - HIDDEN for compact layout -->
-        <div class="quiz-logo" style="display: none;">
-            <!-- Brand logo (transparent background) - MOVED TO TOP -->
-            <img src="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108" alt="BeeSmart Logo">
-            
-            <!-- 3D Mascot (renamed to mascotBee3D) - MOVED BELOW TITLE -->
-            <div id="mascotBee3D" class="mascot-3d-container"></div>
-            
-            <!-- Avatar Name Badge (shows user's chosen avatar name) -->
+        <!-- Crest + user's chosen avatar (centered on card) -->
+        <div class="quiz-card-crest-avatar">
+            <img id="quizCardBadge" class="quiz-card-crest" src="/static/assets/badges/Novice.png" alt="Rank Badge" title="Loading rank...">
+            <div id="mascotBee3D" class="mascot-3d-container" aria-label="Your avatar"></div>
             {% if user_name %}
             <div id="avatarNameBadge" style="
-                display: block;
-                margin: 8px auto 10px;
+                display: inline-block;
+                margin: 0 auto;
                 padding: 4px 12px;
                 background: linear-gradient(135deg, #FF4444, #FF0000);
                 border-radius: 12px;
                 font-size: 11px;
-                font-weight: 600;
+                font-weight: 700;
                 text-align: center;
                 color: white;
-                box-shadow: 0 2px 4px rgba(255, 0, 0, 0.3);
-                max-width: 120px;
-                position: relative;
-                z-index: 10;
+                box-shadow: 0 2px 6px rgba(255, 0, 0, 0.28);
                 border: 1px solid rgba(255, 0, 0, 0.5);
             " title="Your chosen avatar name">
                 <span>🔴 {{ user_name if (user_name is defined and user_name) else 'User' }} 🔴</span>
             </div>
-            {% else %}
-            <div style="
-                display: block;
-                margin: 8px auto 10px;
-                padding: 4px 12px;
-                background: linear-gradient(135deg, #00FF00, #008800);
-                border-radius: 12px;
-                font-size: 11px;
-                font-weight: 600;
-                text-align: center;
-                color: white;
-                box-shadow: 0 2px 4px rgba(0, 255, 0, 0.3);
-                max-width: 120px;
-                position: relative;
-                z-index: 10;
-                border: 1px solid rgba(0, 255, 0, 0.5);
-            " title="Debug: No user logged in">
-                <span>🟢 GUEST 🟢</span>
-            </div>
             {% endif %}
-            
-            <!-- Filtered content badge (role-agnostic, Apple Feb 2025) -->
-            <div class="kid-safe-badge-quiz" title="All words are automatically filtered for appropriate vocabulary">
-                <span>Filtered Words</span>
-            </div>
         </div>
 
         <!-- Version Info - HIDDEN for compact layout -->
@@ -11353,9 +11353,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const rankData = await rankResponse.json();
 
-                const badgeImg = document.getElementById('quizHeaderBadge');
-                if (!badgeImg) {
-                    debugLog('ℹ️ quizHeaderBadge not found; skipping badge render');
+                const badgeImgs = [
+                    document.getElementById('quizHeaderBadge'),
+                    document.getElementById('quizCardBadge')
+                ].filter(Boolean);
+                if (!badgeImgs.length) {
+                    debugLog('ℹ️ No badge image targets found; skipping badge render');
                     return;
                 }
 
@@ -11373,10 +11376,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const correctedFileName =
                     badgeFileName.toLowerCase() === 'elite.png' ? 'Elete.png' : badgeFileName;
 
-                badgeImg.src = `/static/assets/badges/${encodeURIComponent(correctedFileName)}`;
-                badgeImg.alt = beeClass.label || 'Buzz Dust Badge';
                 const totalBuzzDust = __nn(rankData && rankData.total_buzz_dust, 0);
-                badgeImg.title = `${beeClass.label || 'Badge'} - ${totalBuzzDust} Buzz Dust`;
+                const nextSrc = `/static/assets/badges/${encodeURIComponent(correctedFileName)}`;
+                badgeImgs.forEach((img) => {
+                    try {
+                        img.src = nextSrc;
+                        img.alt = beeClass.label || 'Buzz Dust Badge';
+                        img.title = `${beeClass.label || 'Badge'} - ${totalBuzzDust} Buzz Dust`;
+                    } catch (_) {}
+                });
 
                 debugLog('✅ Buzz Dust badge displayed', beeClass.label, correctedFileName);
             } catch (rankError) {
