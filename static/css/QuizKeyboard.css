@@ -23,22 +23,22 @@
     border-radius: 16px;
     overflow: hidden;
     box-sizing: border-box;
-    padding: 10px;
+    padding: 6px; /* Reduced from 10px */
 }
 .custom-keyboard .quiz-keyboard-row,
 .custom-keyboard .row {
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: 1fr;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: 4px; /* Reduced from 8px */
+    margin-bottom: 4px; /* Reduced from 8px */
 }
 .custom-keyboard .quiz-keyboard-key,
 .custom-keyboard .key {
     width: 100%;
     min-width: 0;
-    padding: 10px 0;
-    font-size: 14px;
+    padding: 6px 2px; /* Reduced from 10px 0 */
+    font-size: 0.75rem; /* Reduced from 14px */
     box-sizing: border-box;
 }
 @media (max-width: 480px) {
@@ -57,27 +57,29 @@
 }
 
 /* In-flow keyboard (lives inside .keyboard-shell in quiz card); never extend beyond card */
+/* Matches guide image: yellow-orange gradient container with rounded corners */
 .quiz-keyboard {
     width: 100%;
     max-width: 100%;
     min-width: 0;
     box-sizing: border-box;
     overflow-x: hidden;
-    padding: 4px 2px calc(4px + env(safe-area-inset-bottom, 0));
-    padding-left: max(2px, env(safe-area-inset-left, 0));
-    padding-right: max(2px, env(safe-area-inset-right, 0));
-    background: linear-gradient(180deg, #FFF8E1 0%, #FFECB3 40%, #FFE082 100%);
-    border-top: 2px solid #FFB300; /* Reduced border */
+    padding: 8px 6px calc(8px + env(safe-area-inset-bottom, 0)); /* Padding to match guide image */
+    padding-left: max(6px, env(safe-area-inset-left, 0));
+    padding-right: max(6px, env(safe-area-inset-right, 0));
+    background: linear-gradient(180deg, #FFE082 0%, #FFD54F 30%, #FFC107 60%, #FFB300 100%); /* Yellow-orange gradient matching guide */
+    border-radius: 12px; /* Rounded corners like guide image */
+    border: none; /* No border, just gradient */
     box-shadow:
-        0 -4px 16px rgba(255, 179, 0, 0.3),
-        0 -2px 0 0 rgba(90, 44, 21, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        0 4px 12px rgba(255, 179, 0, 0.25),
+        0 2px 4px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3); /* Subtle inner highlight */
     position: relative; /* Normal flow, NOT fixed */
     z-index: 2; /* Above buttons but below modals */
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px; /* Further reduced gap between rows */
+    gap: 6px; /* Spacing between rows matching guide */
     -webkit-user-select: none;
     user-select: none;
     touch-action: manipulation;
@@ -117,24 +119,7 @@
     }
 }
 
-/* Subtle stripe accent (bee-inspired) */
-.quiz-keyboard::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: repeating-linear-gradient(
-        90deg,
-        transparent,
-        transparent 12px,
-        rgba(255, 152, 0, 0.25) 12px,
-        rgba(255, 152, 0, 0.25) 14px
-    );
-    border-radius: 4px 4px 0 0;
-    pointer-events: none;
-}
+/* Removed stripe accent to match guide image - clean gradient background */
 
 .quiz-keyboard-disabled {
     opacity: 0.6;
@@ -171,12 +156,13 @@
 }
 
 /* 4) Each row = equal-width keys, responsive, no overflow */
+/* Matching guide image: consistent spacing between keys */
 .quiz-keyboard-row {
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: 1fr;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: 5px; /* Spacing between keys matching guide */
+    margin-bottom: 0; /* No extra margin, gap handles spacing */
     width: 100%;
     max-width: 100%;
     min-width: 0;
@@ -185,45 +171,43 @@
 
 /* 4) Space row: make space wide, backspace fixed-ish (responsive, no overflow) */
 .quiz-keyboard-row-bottom {
-    gap: 8px;
-    margin-top: 2px;
-    margin-bottom: 8px;
-    grid-template-columns: 1fr 3fr 1fr;
+    gap: 5px; /* Consistent with other rows */
+    margin-top: 0;
+    margin-bottom: 0;
+    grid-template-columns: 1fr 3fr 1fr; /* Space bar takes 3x width */
 }
 
-/* Letter keys – raised 3D style; 4) responsive, no overflow */
+/* Letter keys – raised 3D style matching guide image */
+/* Keys are rounded rectangles with subtle gradient and shadow */
 .quiz-keyboard-key {
-    min-height: 32px;
+    min-height: 36px; /* Comfortable tap target */
     min-width: 0;
     width: 100%;
-    padding: 10px 0;
-    font-size: 14px;
+    padding: 8px 4px; /* Padding for comfortable key size */
+    font-size: 0.875rem; /* Readable font size */
     box-sizing: border-box;
-    font-size: 0.85rem; /* Further reduced font size */
-    font-weight: 700;
-    color: #5A2C15;
-    background: linear-gradient(180deg, #FFFDE7 0%, #FFEE58 30%, #FFD54F 65%, #FFC107 100%);
-    border: 2px solid #5A2C15;
-    border-radius: 10px; /* Smaller radius */
+    font-weight: 600;
+    color: #5A2C15; /* Dark brown text */
+    background: linear-gradient(180deg, #FFF9C4 0%, #FFEB3B 25%, #FFD54F 60%, #FFC107 100%); /* Slightly darker yellow-orange than container */
+    border: 1.5px solid rgba(90, 44, 21, 0.4); /* Subtle border */
+    border-radius: 10px; /* Rounded corners matching guide */
     box-shadow:
-        0 2px 0 #3d1e0f, /* Further reduced shadow */
-        0 3px 6px rgba(58, 44, 21, 0.25),
-        inset 0 1px 0 rgba(255, 255, 255, 0.7),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+        0 2px 4px rgba(0, 0, 0, 0.15), /* Subtle shadow for depth */
+        0 1px 2px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4); /* Subtle inner highlight */
     cursor: pointer;
-    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
     -webkit-tap-highlight-color: transparent;
     box-sizing: border-box;
 }
 
 .quiz-keyboard-key:hover:not(:disabled) {
-    background: linear-gradient(180deg, #FFF9C4 0%, #FFEB3B 35%, #FFCA28 70%, #FFB300 100%);
+    background: linear-gradient(180deg, #FFEB3B 0%, #FFD54F 30%, #FFC107 70%, #FFB300 100%); /* Slightly brighter on hover */
     box-shadow:
-        0 5px 0 #3d1e0f,
-        0 6px 12px rgba(58, 44, 21, 0.4),
-        inset 0 2px 0 rgba(255, 255, 255, 0.75),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.08);
-    filter: brightness(1.04);
+        0 3px 6px rgba(0, 0, 0, 0.2), /* Enhanced shadow on hover */
+        0 2px 3px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5); /* Brighter inner highlight */
+    transform: translateY(-1px); /* Slight lift effect */
 }
 
 .quiz-keyboard-key:active:not(:disabled) {
@@ -310,16 +294,16 @@
 /* Mobile: morph so all keys visible; keys shrink to fit, no overflow */
 @media (max-width: 767px) {
     .quiz-keyboard {
-        gap: 2px;
-        padding: 3px 3px calc(3px + env(safe-area-inset-bottom, 0));
+        gap: 4px; /* Slightly reduced but still comfortable */
+        padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0)); /* Reduced padding for mobile */
         position: relative;
     }
     .quiz-keyboard-row {
         display: grid;
         grid-auto-flow: column;
         grid-auto-columns: 1fr;
-        gap: 2px;
-        margin-bottom: 4px;
+        gap: 4px; /* Consistent spacing */
+        margin-bottom: 0;
         max-width: 100%;
         min-width: 0;
         box-sizing: border-box;
@@ -327,9 +311,9 @@
     .quiz-keyboard-key {
         min-width: 0;
         width: 100%;
-        min-height: 26px;
-        padding: 4px 2px;
-        font-size: clamp(0.6rem, 2vw, 0.75rem);
+        min-height: 32px; /* Comfortable tap target on mobile */
+        padding: 6px 3px; /* Slightly reduced padding */
+        font-size: clamp(0.7rem, 2vw, 0.875rem); /* Responsive font size */
         box-sizing: border-box;
     }
     .quiz-keyboard-key-letter {
@@ -340,13 +324,13 @@
     .quiz-keyboard-key-space {
         min-width: 0;
         width: 100%;
-        min-height: 26px;
+        min-height: 32px; /* Matching other keys */
     }
     .quiz-keyboard-key-backspace,
     .quiz-keyboard-key-submit {
         min-width: 0;
         width: 100%;
-        min-height: 26px;
+        min-height: 32px; /* Matching other keys */
     }
 }
 
@@ -406,30 +390,28 @@
     flex: 1;
     min-width: 0;
     max-width: none;
-    font-size: 0.9rem;
+    font-size: 0.875rem; /* Matching other keys */
     font-weight: 600;
     color: #5A2C15;
-    border: 2px solid #5A2C15;
-    border-radius: 14px;
+    border: 1.5px solid rgba(90, 44, 21, 0.4); /* Matching other keys */
+    border-radius: 10px; /* Matching other keys */
     box-shadow:
-        0 4px 0 #3d1e0f,
-        0 5px 10px rgba(58, 44, 21, 0.35),
-        inset 0 2px 0 rgba(255, 255, 255, 0.7),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+        0 2px 4px rgba(0, 0, 0, 0.15),
+        0 1px 2px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4); /* Matching other keys */
 }
 
 .quiz-keyboard-key-backspace {
     flex: 0 1 auto;
     min-width: 0;
-    font-size: 1.25rem;
+    font-size: 1.125rem; /* Slightly larger icon */
     color: #5A2C15;
-    border: 2px solid #5A2C15;
-    border-radius: 14px;
+    border: 1.5px solid rgba(90, 44, 21, 0.4); /* Matching other keys */
+    border-radius: 10px; /* Matching other keys */
     box-shadow:
-        0 4px 0 #3d1e0f,
-        0 5px 10px rgba(58, 44, 21, 0.35),
-        inset 0 2px 0 rgba(255, 255, 255, 0.7),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+        0 2px 4px rgba(0, 0, 0, 0.15),
+        0 1px 2px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4); /* Matching other keys */
 }
 
 .quiz-keyboard-key-spacer {
@@ -442,19 +424,18 @@
 .quiz-keyboard-key-submit {
     flex: 0 1 auto;
     min-width: 0;
-    font-size: 0.95rem;
-    font-weight: 800;
+    font-size: 0.875rem; /* Matching other keys */
+    font-weight: 700;
     color: #1B5E20;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     background: linear-gradient(180deg, #C8E6C9 0%, #81C784 35%, #66BB6A 70%, #4CAF50 100%);
-    border: 2px solid #2E7D32;
-    border-radius: 14px;
+    border: 1.5px solid rgba(46, 125, 50, 0.5); /* Subtle border */
+    border-radius: 10px; /* Matching other keys */
     box-shadow:
-        0 4px 0 #1B5E20,
-        0 5px 10px rgba(30, 94, 32, 0.35),
-        inset 0 2px 0 rgba(255, 255, 255, 0.6),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+        0 2px 4px rgba(0, 0, 0, 0.15),
+        0 1px 2px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4); /* Matching other keys */
 }
 
 .quiz-keyboard-key-submit:hover:not(:disabled) {
@@ -501,11 +482,11 @@
 /* Wider screens: slightly more padding; keys still shrink to fit card */
 @media (min-width: 600px) {
     .quiz-keyboard {
-        padding-left: 8px;
-        padding-right: 8px;
-        gap: 8px;
+        padding-left: 10px; /* More padding on wider screens */
+        padding-right: 10px; /* More padding on wider screens */
+        gap: 6px; /* Consistent spacing */
     }
     .quiz-keyboard-row {
-        gap: 8px;
+        gap: 6px; /* Slightly more spacing on wider screens */
     }
 }
