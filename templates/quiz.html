@@ -34,6 +34,29 @@ console.log('🐝 QUIZ BUILD:', '{{ timestamp }}');
 window.QUIZ_CACHED_VOICE = null;
 window.QUIZ_VOICE_INITIALIZED = false;
 
+// 🛡️ Speech API guard (prevents hard crashes in environments missing SpeechSynthesisUtterance)
+// Some WebKit environments (headless/testing shells) expose `speechSynthesis` but not `SpeechSynthesisUtterance`.
+// iOS Safari supports both; this is a safe fallback so the quiz UI/scroll/keyboard never breaks.
+window.BEESMART_SPEECH_SUPPORTED =
+    (typeof window !== 'undefined') &&
+    ('speechSynthesis' in window) &&
+    (typeof window.SpeechSynthesisUtterance === 'function');
+
+if (!window.BEESMART_SPEECH_SUPPORTED) {
+    // Provide no-op stubs to avoid ReferenceError/TypeError cascades.
+    try {
+        if (!('speechSynthesis' in window) || !window.speechSynthesis) {
+            window.speechSynthesis = { speak() {}, cancel() {}, getVoices() { return []; }, speaking: false };
+        }
+    } catch (_e) {}
+
+    try {
+        if (typeof window.SpeechSynthesisUtterance !== 'function') {
+            window.SpeechSynthesisUtterance = function (text) { this.text = text || ''; };
+        }
+    } catch (_e) {}
+}
+
 // Initialize global voice cache on page load
 window.initializeGlobalVoice = function() {
     if (window.QUIZ_VOICE_INITIALIZED) return;
@@ -91,9 +114,32 @@ function selectBestFemaleVoiceGlobal(voices) {
     return scoredVoices.length > 0 ? scoredVoices[0].voice : null;
 }
 
+// Cross-browser voiceschanged hook (Safari often lacks speechSynthesis.addEventListener)
+function BeeSmart_onVoicesChanged(handler, opts) {
+    try {
+        if (!('speechSynthesis' in window) || !window.speechSynthesis) return;
+        const once = !!(opts && opts.once);
+
+        if (typeof window.speechSynthesis.addEventListener === 'function') {
+            window.speechSynthesis.addEventListener('voiceschanged', handler, opts);
+            return;
+        }
+
+        // Safari/WebKit: use onvoiceschanged fallback
+        const prev = window.speechSynthesis.onvoiceschanged;
+        window.speechSynthesis.onvoiceschanged = function (e) {
+            try { if (typeof prev === 'function') prev(e); } catch (_e) {}
+            try { handler(e); } catch (_e) {}
+            if (once) {
+                try { window.speechSynthesis.onvoiceschanged = prev || null; } catch (_e) {}
+            }
+        };
+    } catch (_e) {}
+}
+
 // Initialize voice when voices are loaded
 if ('speechSynthesis' in window) {
-    speechSynthesis.addEventListener('voiceschanged', window.initializeGlobalVoice);
+    BeeSmart_onVoicesChanged(window.initializeGlobalVoice);
     // Try immediate initialization
     setTimeout(window.initializeGlobalVoice, 100);
 }
@@ -118,13 +164,30 @@ if ('speechSynthesis' in window) {
     body.route-quiz {
         overflow: hidden !important;
         position: static !important;
+        overscroll-behavior: none !important; /* Prevent body-level rubber banding */
+        overscroll-behavior-y: none !important;
+        overscroll-behavior-x: none !important;
+        touch-action: none; /* Prevent body-level touch gestures */
+    }
+    /* Prevent html-level rubber banding */
+    html.route-quiz,
+    html body.route-quiz {
+        overscroll-behavior: none !important;
+        overscroll-behavior-y: none !important;
+        overscroll-behavior-x: none !important;
     }
     body.route-quiz .card-scroll {
         overflow-y: auto !important;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
-        overscroll-behavior: contain;
+        overscroll-behavior: none !important; /* Completely prevent rubber banding on iOS */
+        overscroll-behavior-y: none !important;
+        overscroll-behavior-x: none !important;
         touch-action: pan-y;
+        /* Force hardware acceleration for smooth scrolling */
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        will-change: scroll-position;
     }
 
     /* .quiz-page = flex column, height 100dvh; safe-area padding (no magic px) */
@@ -141,6 +204,9 @@ if ('speechSynthesis' in window) {
         margin: 0 auto;
         text-align: center;
         position: relative;
+        overflow: hidden; /* Prevent page-level scrolling */
+        overscroll-behavior: none !important; /* Prevent rubber banding */
+        touch-action: none; /* Prevent page-level touch gestures */
     }
 
     /* Everything above the card: flex 0 so layout can compute height */
@@ -155,6 +221,8 @@ if ('speechSynthesis' in window) {
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        overscroll-behavior: none !important; /* Prevent rubber banding */
+        touch-action: none; /* Prevent container-level touch gestures, allow card-scroll to handle */
     }
 
     .quiz-content {
@@ -166,7 +234,16 @@ if ('speechSynthesis' in window) {
         z-index: auto;
         background: linear-gradient(180deg, #FFFDE7 0%, #FFF8E1 100%);
         padding: 4px 8px;
-        margin-bottom: 0.25rem;
+        margin-bottom: 0.25rem; /* Base margin, overridden by .answer-and-keyboard .quiz-answer-area */
+    }
+
+    /* Standalone buttons (not in the 2-column grids) should be centered in the card */
+    .quiz-answer-area > button.action-btn {
+        display: block;
+        width: 100%;
+        max-width: 280px;
+        margin-left: auto !important;
+        margin-right: auto !important;
     }
     /* Yellow pill CTA - prominent start guidance */
     .buzzy-pill {
@@ -255,7 +332,7 @@ if ('speechSynthesis' in window) {
     /* A) Edge-to-edge card; height from flex (no magic 72px/64px) */
     .quiz-card {
         flex: 1 1 auto;
-        min-height: 0;
+        min-height: 600px; /* Increased minimum height to accommodate all quiz features */
         display: flex;
         flex-direction: column;
         width: 100%;
@@ -281,9 +358,54 @@ if ('speechSynthesis' in window) {
         overflow-y: auto !important;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
-        overscroll-behavior: contain;
+        overscroll-behavior: none !important; /* Completely prevent rubber banding on iOS */
+        overscroll-behavior-y: none !important;
+        overscroll-behavior-x: none !important;
         touch-action: pan-y;
-        padding: max(14px, env(safe-area-inset-top)) 12px 14px 12px; /* Top padding prevents clipping */
+        /* Force hardware acceleration for smooth scrolling */
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        will-change: scroll-position;
+        /* Ensure smooth momentum scrolling */
+        -webkit-overflow-scrolling: touch;
+        padding: max(14px, env(safe-area-inset-top)) 12px 20px 12px; /* Increased bottom padding for better spacing */
+        /* Force scrollbar to be visible when content overflows */
+        scrollbar-width: thin; /* Firefox */
+        scrollbar-color: rgba(0, 0, 0, 0.3) transparent; /* Firefox */
+    }
+    
+    /* Webkit scrollbar styling (Chrome, Safari, Edge) - Always visible */
+    .card-scroll::-webkit-scrollbar {
+        width: 10px !important;
+        display: block !important;
+        -webkit-appearance: none;
+    }
+    
+    .card-scroll::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 5px;
+        -webkit-box-shadow: inset 0 0 2px rgba(0,0,0,0.1);
+    }
+    
+    .card-scroll::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.4) !important;
+        border-radius: 5px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        min-height: 30px;
+    }
+    
+    .card-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.6) !important;
+    }
+    
+    /* Ensure scrollbar is always visible when content overflows */
+    .card-scroll:not(:hover)::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.4) !important;
+    }
+    
+    /* Force scrollbar visibility - override any hiding */
+    .card-scroll {
+        scrollbar-gutter: stable; /* Reserve space for scrollbar */
     }
     
     /* Ensure visualizer/timer containers are not clipped */
@@ -292,27 +414,39 @@ if ('speechSynthesis' in window) {
     }
     
     /* Prevent clipping: ensure containers use static positioning */
+    /* EXCEPT: countdown-container inside morph-content needs absolute for morphing effect */
     .voice-visualizer,
     #voiceVisualizer,
     .honey-jar-timer,
-    .honey-jar-timer,
-    .countdown-container,
-    .morph-container,
-    .morph-content {
+    .morph-container {
         position: static !important;
         margin-top: 0 !important;
         z-index: auto !important;
     }
+    /* countdown-container outside morph-content should be static */
+    .countdown-container:not(.morph-content .countdown-container) {
+        position: static !important;
+        margin-top: 0 !important;
+        z-index: auto !important;
+    }
+    /* morph-content needs relative positioning for absolute children */
+    .morph-content {
+        position: relative !important;
+        margin-top: 0 !important;
+        z-index: auto !important;
+    }
     .quiz-card-top {
-        padding-bottom: 0.5rem;
+        padding-bottom: 1rem; /* Increased spacing */
+        margin-bottom: 0.5rem; /* Added margin for better separation */
     }
     /* Answer + keyboard in same scroll flow; visible gap, no overlap */
     .answer-and-keyboard {
         display: block;
-        margin-bottom: 0;
+        margin-bottom: 1rem; /* Increased spacing */
+        margin-top: 1rem; /* Added top margin for separation */
     }
     .answer-and-keyboard .quiz-answer-area {
-        margin-bottom: 10px;
+        margin-bottom: 16px; /* Increased spacing between answer area and keyboard */
     }
     /* F) Hide keyboard: toggle only; never position:fixed */
     #keyboardHost.is-hidden,
@@ -391,7 +525,8 @@ if ('speechSynthesis' in window) {
         gap: 12px;
         position: static;
         z-index: auto;
-        margin-top: 0;
+        margin-top: 1rem; /* Added top margin for separation from keyboard */
+        margin-bottom: 1rem; /* Added bottom margin */
         width: 100%;
         box-sizing: border-box;
     }
@@ -408,8 +543,19 @@ if ('speechSynthesis' in window) {
         grid-column: span 2;
     }
     @media (max-width: 420px) {
-        .quiz-card { padding: 12px; gap: 12px; }
+        .quiz-card { 
+            padding: 12px; 
+            gap: 12px; 
+            min-height: 500px; /* Slightly smaller min-height on mobile but still accommodates content */
+        }
         /* Keyboard styling handled by QuizKeyboard.css - no overrides needed */
+    }
+    
+    /* Ensure card has enough height on larger screens */
+    @media (min-width: 421px) {
+        .quiz-card {
+            min-height: 650px; /* Even more space on larger screens */
+        }
     }
     
     /* Progress tracker fixed at bottom of viewport */
@@ -759,7 +905,8 @@ if ('speechSynthesis' in window) {
 
     .definition-display {
         font-size: 1.15rem;
-        margin-bottom: 0.75rem; /* Reduced from 1.8rem */
+        margin-bottom: 1.25rem; /* Increased spacing below definition */
+        margin-top: 0.5rem; /* Added top spacing */
         padding: 1rem; /* Reduced from 1.5rem */
         background: rgba(255, 255, 255, 0.9);
         border-radius: 18px;
@@ -1667,6 +1814,7 @@ if ('speechSynthesis' in window) {
         min-height: 0;
         max-height: 160px; /* Increased to prevent clipping */
         overflow: visible; /* Changed from hidden to visible */
+        margin-bottom: 1rem; /* Added spacing below question area */
     }
     
     /* Mobile: Allow morph-container to extend wider on small screens */
@@ -1688,7 +1836,8 @@ if ('speechSynthesis' in window) {
         min-height: 60px;
         max-height: 140px; /* Increased to prevent clipping */
         margin: 0 -20px; /* Negative margin to extend outside card */
-        margin-bottom: 0.25rem;
+        margin-bottom: 1rem; /* Increased spacing below morph container */
+        margin-top: 0.5rem; /* Added top spacing */
         transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: visible; /* Allow content to extend */
     }
@@ -1875,7 +2024,7 @@ if ('speechSynthesis' in window) {
     .feedback-area {
         min-height: 80px;
         padding: 1rem 1.5rem;
-        margin: 1rem 0;
+        margin: 1rem 0 1.5rem 0; /* Increased bottom margin for better separation */
         border-radius: 18px;
         display: none;
         font-size: 1.05rem;
@@ -2121,7 +2270,7 @@ if ('speechSynthesis' in window) {
 
     .phonetic-reveal {
         max-width: 360px;
-        margin: 0.75rem auto 0;
+        margin: 0.75rem auto 1rem; /* Added bottom margin for separation */
     }
 
     /* Letter Hint Display */
@@ -5185,8 +5334,14 @@ class BeeSoundboard {
             
             // Add event listeners for voice visualizer
             if (onEndCallback) {
-                utterance.addEventListener('end', onEndCallback);
-                utterance.addEventListener('error', onEndCallback);
+                // Safari/WebKit compatibility: some engines don't support addEventListener on utterances
+                if (typeof utterance.addEventListener === 'function') {
+                    utterance.addEventListener('end', onEndCallback);
+                    utterance.addEventListener('error', onEndCallback);
+                } else {
+                    utterance.onend = onEndCallback;
+                    utterance.onerror = onEndCallback;
+                }
             }
             
             // Use enhanced voice selection for natural-sounding female voices
@@ -5275,7 +5430,7 @@ class BeeSoundboard {
                 speak();
             }, 2000);
             
-            speechSynthesis.addEventListener('voiceschanged', () => {
+            BeeSmart_onVoicesChanged(() => {
                 clearTimeout(timeout);
                 speak();
             }, { once: true });
@@ -6193,39 +6348,104 @@ class QuizManager {
             });
         }
         
-        // iOS Safari rubber-band prevention:
+        // iOS Safari rubber-band prevention and smooth scrolling fix:
         // - .card-scroll = single scroll owner (entire card content)
-        // - Prevent overscroll bounce at the top/bottom edges
+        // - Completely prevent overscroll bounce at the top/bottom edges
+        // - Ensure smooth momentum scrolling works properly
         try {
             const scroller = document.querySelector('.card-scroll');
             if (scroller && !scroller.__iosRubberbandGuard) {
                 scroller.__iosRubberbandGuard = true;
+                
+                // Force CSS properties for iOS
+                scroller.style.overscrollBehavior = 'none';
+                scroller.style.overscrollBehaviorY = 'none';
+                scroller.style.overscrollBehaviorX = 'none';
+                scroller.style.webkitOverflowScrolling = 'touch';
+                
                 let startY = 0;
+                let startScrollTop = 0;
+                let isScrolling = false;
 
                 scroller.addEventListener('touchstart', (e) => {
                     if (!e.touches || e.touches.length !== 1) return;
                     startY = e.touches[0].clientY;
+                    startScrollTop = scroller.scrollTop;
+                    isScrolling = false;
                 }, { passive: true });
 
                 scroller.addEventListener('touchmove', (e) => {
                     if (!e.touches || e.touches.length !== 1) return;
-                    const dy = e.touches[0].clientY - startY;
-                    const atTop = scroller.scrollTop <= 0;
-                    const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1;
+                    
+                    const currentY = e.touches[0].clientY;
+                    const dy = currentY - startY;
+                    const scrollTop = scroller.scrollTop;
+                    const scrollHeight = scroller.scrollHeight;
+                    const clientHeight = scroller.clientHeight;
+                    
+                    const atTop = scrollTop <= 0;
+                    const atBottom = scrollTop + clientHeight >= scrollHeight - 1;
+                    
+                    // Only prevent if trying to overscroll beyond boundaries
                     if ((atTop && dy > 0) || (atBottom && dy < 0)) {
                         e.preventDefault();
+                        e.stopPropagation();
+                        return false;
                     }
+                    
+                    // Allow normal scrolling
+                    isScrolling = true;
                 }, { passive: false });
 
-                // Block page-level scroll gestures outside the scroller
-                document.addEventListener('touchmove', (e) => {
+                scroller.addEventListener('touchend', (e) => {
+                    // Ensure scroll position is valid
+                    setTimeout(() => {
+                        const scrollTop = scroller.scrollTop;
+                        const scrollHeight = scroller.scrollHeight;
+                        const clientHeight = scroller.clientHeight;
+                        
+                        if (scrollTop < 0) {
+                            scroller.scrollTop = 0;
+                        } else if (scrollTop + clientHeight > scrollHeight) {
+                            scroller.scrollTop = scrollHeight - clientHeight;
+                        }
+                    }, 0);
+                }, { passive: true });
+
+                // Block page-level scroll gestures outside the scroller (prevent body rubber banding)
+                const preventBodyScroll = (e) => {
+                    const target = e.target;
+                    if (!target) return;
+                    
+                    // Allow scrolling in card-scroll and modals
                     const allow =
-                        (e.target && typeof e.target.closest === 'function' && e.target.closest('.card-scroll')) ||
-                        (e.target && typeof e.target.closest === 'function' && e.target.closest('.exit-modal-content, .resume-modal-content, .voice-intro-content'));
-                    if (!allow) e.preventDefault();
-                }, { passive: false });
+                        (typeof target.closest === 'function' && target.closest('.card-scroll')) ||
+                        (typeof target.closest === 'function' && target.closest('.exit-modal-content, .resume-modal-content, .voice-intro-content')) ||
+                        (typeof target.closest === 'function' && target.closest('input, textarea, select, button, a'));
+                    
+                    if (!allow && e.cancelable) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                };
+                
+                // Use capture phase to catch events early
+                document.addEventListener('touchmove', preventBodyScroll, { passive: false, capture: true });
+                document.addEventListener('touchstart', preventBodyScroll, { passive: false, capture: true });
+                
+                // Also prevent wheel events that might cause rubber banding
+                document.addEventListener('wheel', (e) => {
+                    const target = e.target;
+                    if (target && typeof target.closest === 'function' && !target.closest('.card-scroll')) {
+                        if (e.cancelable) {
+                            e.preventDefault();
+                        }
+                    }
+                }, { passive: false, capture: true });
             }
-        } catch (_) {}
+        } catch (err) {
+            console.warn('⚠️ iOS scroll fix error:', err);
+        }
 
         console.log('✅ iOS keyboard + scroll handling configured');
     }
@@ -6492,7 +6712,7 @@ class QuizManager {
             if (speechSynthesis.getVoices().length > 0) {
                 speak();
             } else {
-                speechSynthesis.addEventListener('voiceschanged', speak, { once: true });
+                BeeSmart_onVoicesChanged(speak, { once: true });
             }
         });
     }
@@ -7015,7 +7235,7 @@ class QuizManager {
                         maxLength: null,
                         disableInputWhenRoundEnds: true,
                         practiceMode: false,
-                        showSubmitKey: false,
+                        showSubmitKey: true,
                         onHide: function () {
                             var keyboardHost = document.getElementById('keyboardHost');
                             var hideBtn = document.getElementById('hideKeyboardBtn');
@@ -7281,7 +7501,7 @@ class QuizManager {
                         maxLength: null,
                         disableInputWhenRoundEnds: true,
                         practiceMode: false,
-                        showSubmitKey: false,
+                        showSubmitKey: true,
                         onHide: function () {
                             var keyboardHost = document.getElementById('keyboardHost');
                             var hideBtn = document.getElementById('hideKeyboardBtn');
@@ -11026,6 +11246,80 @@ document.addEventListener('visibilitychange', () => {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
+    // 🍎 SCROLL FIX: Initialize immediately to prevent rubber banding, stuck scrolling, and ensure visible scrollbar
+    (function initScrollFix() {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        
+        if (isIOS) {
+            // Force CSS properties on html and body immediately for iOS
+            document.documentElement.style.overscrollBehavior = 'none';
+            document.documentElement.style.overscrollBehaviorY = 'none';
+            document.documentElement.style.overscrollBehaviorX = 'none';
+            document.body.style.overscrollBehavior = 'none';
+            document.body.style.overscrollBehaviorY = 'none';
+            document.body.style.overscrollBehaviorX = 'none';
+        }
+        
+        // Initialize scroll container as soon as it exists (for ALL devices)
+        const initScrollContainer = () => {
+            const scroller = document.querySelector('.card-scroll');
+            if (!scroller) {
+                // Retry if not ready yet
+                setTimeout(initScrollContainer, 50);
+                return;
+            }
+            
+            // Force CSS properties
+            if (isIOS) {
+                scroller.style.overscrollBehavior = 'none';
+                scroller.style.overscrollBehaviorY = 'none';
+                scroller.style.overscrollBehaviorX = 'none';
+                scroller.style.webkitOverflowScrolling = 'touch';
+            }
+            scroller.style.transform = 'translateZ(0)';
+            scroller.style.webkitTransform = 'translateZ(0)';
+            scroller.style.willChange = 'scroll-position';
+            
+            // Force scrollbar visibility for ALL browsers
+            scroller.style.overflowY = 'auto';
+            scroller.style.scrollbarWidth = 'thin'; // Firefox
+            scroller.style.scrollbarColor = 'rgba(0, 0, 0, 0.4) transparent'; // Firefox
+            
+            // Ensure scrollbar is visible by checking if content overflows
+            const checkScrollbar = () => {
+                if (scroller.scrollHeight > scroller.clientHeight) {
+                    scroller.style.overflowY = 'auto';
+                    // Force a reflow to ensure scrollbar appears
+                    scroller.offsetHeight;
+                }
+            };
+            
+            // Check immediately and after delays to catch dynamic content
+            checkScrollbar();
+            setTimeout(checkScrollbar, 100);
+            setTimeout(checkScrollbar, 500);
+            setTimeout(checkScrollbar, 1000);
+            
+            // Also check when content changes
+            const observer = new MutationObserver(() => {
+                checkScrollbar();
+            });
+            observer.observe(scroller, { childList: true, subtree: true, attributes: true });
+            
+            // Also check on window resize
+            window.addEventListener('resize', checkScrollbar);
+            
+            console.log('✅ Scroll container initialized with visible scrollbar');
+        };
+        
+        // Start initialization immediately
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initScrollContainer);
+        } else {
+            initScrollContainer();
+        }
+    })();
+    
     // DEBUG gated logging helper
     
     // DEBUG gated logging helper

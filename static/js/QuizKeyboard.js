@@ -219,16 +219,26 @@
 
         const row4 = document.createElement('div');
         row4.className = 'quiz-keyboard-row quiz-keyboard-row-bottom';
-        const spacer = document.createElement('div');
-        spacer.className = 'quiz-keyboard-key-spacer';
-        spacer.setAttribute('aria-hidden', 'true');
-        row4.appendChild(spacer);
+        row4.classList.toggle('has-submit', !!showSubmitKey);
+        row4.classList.toggle('no-space', !allowSpaces);
+
+        // Layout:
+        // - If spaces allowed: [spacer][Space][Backspace][Submit?]
+        // - If spaces NOT allowed: [Backspace][Submit?]
         if (allowSpaces) {
+            const spacer = document.createElement('div');
+            spacer.className = 'quiz-keyboard-key-spacer';
+            spacer.setAttribute('aria-hidden', 'true');
+            row4.appendChild(spacer);
+
             const spaceBtn = createSpecialKey('Space', 'quiz-keyboard-key-space', 'Space', handleSpace, false, useHexKeys);
             row4.appendChild(spaceBtn);
         }
+
         const backspaceBtn = createSpecialKey('⌫', 'quiz-keyboard-key-backspace', 'Backspace', handleBackspace, false, useHexKeys);
         row4.appendChild(backspaceBtn);
+
+        // Submit key should sit right next to backspace
         if (showSubmitKey) {
             const submitBtn = createSpecialKey('Submit', 'quiz-keyboard-key-submit', 'Submit answer', handleSubmit, true, useHexKeys);
             row4.appendChild(submitBtn);
