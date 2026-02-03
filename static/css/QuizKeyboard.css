@@ -41,6 +41,16 @@
     font-size: 14px;
     box-sizing: border-box;
 }
+@media (max-width: 480px) {
+    .custom-keyboard {
+        padding: 4px;
+    }
+    .custom-keyboard .quiz-keyboard-row,
+    .custom-keyboard .row {
+        gap: 3px;
+        margin-bottom: 3px;
+    }
+}
 .custom-keyboard .quiz-keyboard-row-bottom.space-row,
 .custom-keyboard .row.space-row {
     grid-template-columns: 1fr 3fr 1fr;
@@ -268,45 +278,58 @@
     max-width: none;
 }
 
-/* Mobile (≤420px): smaller keys so keyboard stays inside card/button margins */
+/* Mobile (≤420px): morph keyboard so all keys visible – smaller keys, tighter gaps */
 @media (max-width: 420px) {
     .quiz-keyboard-key {
         min-width: 0;
-        padding: 4px 3px; /* Further reduced for mobile */
-        font-size: 0.75rem; /* Smaller font */
-        min-height: 28px; /* Smaller height */
+        padding: 3px 2px;
+        font-size: 0.7rem;
+        min-height: 24px;
     }
     .quiz-keyboard {
-        padding: 3px 3px calc(3px + env(safe-area-inset-bottom, 0));
-        gap: 2px; /* Tighter gap on mobile */
+        padding: 2px 2px calc(2px + env(safe-area-inset-bottom, 0));
+        gap: 1px;
     }
-    .quiz-keyboard-row {
-        gap: 2px; /* Tighter key spacing on mobile */
+    .quiz-keyboard-row,
+    .quiz-keyboard-row-bottom {
+        gap: 2px;
+        margin-bottom: 2px;
+    }
+    .quiz-keyboard-key-space,
+    .quiz-keyboard-key-backspace,
+    .quiz-keyboard-key-submit {
+        min-height: 24px;
+    }
+    .custom-keyboard .quiz-keyboard-row,
+    .custom-keyboard .row {
+        gap: 2px;
+        margin-bottom: 2px;
     }
 }
 
-/* Mobile: fit within viewport; keys shrink so all letters visible, no overflow */
+/* Mobile: morph so all keys visible; keys shrink to fit, no overflow */
 @media (max-width: 767px) {
     .quiz-keyboard {
-        gap: 3px; /* Further reduced gap */
-        padding: 4px 4px calc(4px + env(safe-area-inset-bottom, 0)); /* Further reduced padding */
-        position: relative; /* Ensure NOT fixed on mobile */
+        gap: 2px;
+        padding: 3px 3px calc(3px + env(safe-area-inset-bottom, 0));
+        position: relative;
     }
     .quiz-keyboard-row {
         display: grid;
         grid-auto-flow: column;
         grid-auto-columns: 1fr;
-        gap: 2px; /* Further reduced gap */
+        gap: 2px;
+        margin-bottom: 4px;
         max-width: 100%;
         min-width: 0;
         box-sizing: border-box;
     }
     .quiz-keyboard-key {
         min-width: 0;
-        width: 100%; /* Fill grid cell */
-        min-height: 30px; /* Further reduced from 36px */
-        padding: 5px 2px; /* Further reduced padding */
-        font-size: clamp(0.65rem, 2vw, 0.8rem); /* Smaller font */
+        width: 100%;
+        min-height: 26px;
+        padding: 4px 2px;
+        font-size: clamp(0.6rem, 2vw, 0.75rem);
         box-sizing: border-box;
     }
     .quiz-keyboard-key-letter {
@@ -316,27 +339,37 @@
     }
     .quiz-keyboard-key-space {
         min-width: 0;
-        width: 100%; /* Fill grid cell */
-        min-height: 30px; /* Further reduced */
+        width: 100%;
+        min-height: 26px;
     }
     .quiz-keyboard-key-backspace,
     .quiz-keyboard-key-submit {
         min-width: 0;
-        width: 100%; /* Fill grid cell */
-        min-height: 30px; /* Further reduced */
+        width: 100%;
+        min-height: 26px;
     }
 }
 
-/* Very narrow: even tighter so keys never clipped */
+/* Very narrow: morph so all keys visible, minimal clipping */
 @media (max-width: 380px) {
     .quiz-keyboard-row,
     .quiz-keyboard-row-bottom {
-        gap: 2px;
+        gap: 1px;
+        margin-bottom: 2px;
     }
     .quiz-keyboard-key {
-        padding: 5px 1px;
-        font-size: 0.7rem;
-        min-height: 26px;
+        padding: 3px 1px;
+        font-size: 0.65rem;
+        min-height: 22px;
+    }
+    .quiz-keyboard-key-space,
+    .quiz-keyboard-key-backspace,
+    .quiz-keyboard-key-submit {
+        min-height: 22px;
+    }
+    .quiz-keyboard {
+        gap: 1px;
+        padding: 2px 2px calc(2px + env(safe-area-inset-bottom, 0));
     }
 }
 

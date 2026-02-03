@@ -114,19 +114,17 @@ if ('speechSynthesis' in window) {
         overflow-x: hidden;
     }
 
-    /* D) Quiz-only: body locked, exactly ONE scroll owner (.card-scroll) */
+    /* D) Quiz-only: body locked – NO position:fixed (causes iOS overlay/layering) */
     body.route-quiz {
         overflow: hidden !important;
-        /* iOS Safari: prevent page scroll + rubber-banding */
-        position: fixed;
-        inset: 0;
-        width: 100%;
-        height: 100%;
+        position: static !important;
     }
     body.route-quiz .card-scroll {
         overflow-y: auto !important;
+        overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
-        overscroll-behavior: none;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
     }
 
     /* .quiz-page = flex column, height 100dvh; safe-area padding (no magic px) */
@@ -164,8 +162,8 @@ if ('speechSynthesis' in window) {
     }
 
     .quiz-answer-area {
-        position: relative;
-        z-index: 5;
+        position: static;
+        z-index: auto;
         background: linear-gradient(180deg, #FFFDE7 0%, #FFF8E1 100%);
         padding: 4px 8px;
         margin-bottom: 0.25rem;
@@ -205,12 +203,9 @@ if ('speechSynthesis' in window) {
         display: flex;
         flex-direction: column;
         flex: 1;
-        overflow: visible;
+        overflow: hidden;
     }
-    .card-fixed {
-        flex: 0 0 auto;
-        padding: 14px 12px 8px 12px;
-    }
+    /* Single scroll owner: entire card content (timer, viz, answer, keyboard, buttons) */
     .card-scroll {
         flex: 1 1 auto;
         min-height: 0;
@@ -220,6 +215,9 @@ if ('speechSynthesis' in window) {
         overscroll-behavior: contain;
         touch-action: pan-y;
         padding: 10px 12px 14px 12px;
+    }
+    .quiz-card-top {
+        padding-bottom: 0.5rem;
     }
     /* Answer + keyboard in same scroll flow; visible gap, no overlap */
     .answer-and-keyboard {
@@ -235,8 +233,7 @@ if ('speechSynthesis' in window) {
     .keyboard-shell.is-hidden {
         display: none !important;
     }
-    /* Visual lock: keyboard NEVER fixed/sticky/absolute; always in-flow */
-    /* Fit inside card: allow shrink so side keys are never clipped */
+    /* Keyboard: always visible by default; only hide when .is-hidden */
     #keyboardHost,
     .keyboard-host,
     .keyboard-shell {
@@ -250,15 +247,14 @@ if ('speechSynthesis' in window) {
         max-width: 100%;
         min-width: 0;
         box-sizing: border-box;
-        padding: 0 8px;
-        margin-top: 0;
-        margin-bottom: 12px;
+        padding: 0 12px;
+        margin: 10px 0 12px;
         overflow: hidden;
         display: block;
         border-radius: 16px;
         box-shadow: 0 4px 16px rgba(0,0,0,.1);
-        transform: translateY(10px);
-        opacity: 0;
+        transform: none;
+        opacity: 1;
     }
     #quizKeyboardContainer {
         min-width: 0;
@@ -267,12 +263,6 @@ if ('speechSynthesis' in window) {
     .keyboard-host * {
         max-width: 100%;
         box-sizing: border-box;
-    }
-    #keyboardHost.is-visible,
-    .keyboard-host.is-visible {
-        transform: translateY(0);
-        opacity: 1;
-        transition: transform .25s ease, opacity .25s ease;
     }
     .custom-keyboard {
         width: 100%;
@@ -327,8 +317,8 @@ if ('speechSynthesis' in window) {
         gap: 8px;
         position: relative;
     }
-    /* Dev-only: visual verification outlines – enable with ?debug=layout (remove after iPhone testing) */
-    body.dev-visual-debug .answer-area.quiz-answer-area { outline: 2px solid red; outline-offset: 2px; }
+    /* Dev-only: ?debug=layout – red=prompt/timer, blue=keyboard, green=action grid */
+    body.dev-visual-debug .quiz-card-top { outline: 2px solid red; outline-offset: 2px; }
     body.dev-visual-debug #keyboardHost { outline: 2px solid blue; outline-offset: 2px; }
     body.dev-visual-debug .action-buttons { outline: 2px solid green; outline-offset: 2px; }
     /* 8) Action + secondary buttons: 2 columns */
@@ -338,8 +328,8 @@ if ('speechSynthesis' in window) {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 12px;
-        position: relative;
-        z-index: 1;
+        position: static;
+        z-index: auto;
         margin-top: 0;
         width: 100%;
         box-sizing: border-box;
@@ -855,11 +845,11 @@ if ('speechSynthesis' in window) {
         gap: 0.5rem;
     }
     
-    /* SVG Jar Styling - WIDER JAR */
+    /* SVG Jar Styling - compact so not clipped when viz/timer shortened */
     .jar-svg {
-        width: 180px; /* Increased from 120px */
-        height: 200px; /* Increased from 160px */
-        filter: drop-shadow(0 8px 24px rgba(255, 193, 7, 0.4));
+        width: 68px;
+        height: 80px;
+        filter: drop-shadow(0 6px 16px rgba(255, 193, 7, 0.4));
         transition: all 0.3s ease;
     }
     
@@ -916,13 +906,13 @@ if ('speechSynthesis' in window) {
         }
     }
     
-    /* Timer number - OVERLAY ON JAR */
+    /* Timer number - OVERLAY ON JAR (scaled to jar size) */
     .timer-number {
-        position: absolute; /* Position over the jar */
-        top: 50%; /* Center vertically on jar */
+        position: absolute;
+        top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        font-size: 3rem; /* Larger for visibility */
+        font-size: 1.5rem;
         font-weight: 900;
         color: #5d4100;
         text-shadow: 
@@ -1208,18 +1198,27 @@ if ('speechSynthesis' in window) {
         background: linear-gradient(90deg, #66BB6A 0%, #A5D6A7 100%);
     }
 
-    /* Voice Visualizer with Bee Theme */
-    .voice-visualizer {
-        background: rgba(255, 179, 0, 0.15); /* More visible amber background for debugging */
-        border-radius: 16px; /* Soft rounded corners to match card style */
-        padding: 1rem 1.5rem; /* tighter padding to reduce vertical space */
-        margin-bottom: 1rem; /* Add space below visualizer */
-        position: relative;
-        overflow: visible; /* Allow full wave pattern visibility - no clipping */
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Subtle shadow to make it stand out */
-        border: 1px solid rgba(255, 179, 0, 0.2); /* Subtle border for definition */
-        min-height: 180px; /* taller for fuller waves */
-        width: 100%; /* full width */
+    /* Voice Visualizer - compact header, never overlay; in-flow */
+    .voice-visualizer,
+    #voiceVisualizer {
+        position: static !important;
+        z-index: auto !important;
+        background: rgba(255, 179, 0, 0.15);
+        border-radius: 10px;
+        padding: 0.35rem 0.75rem;
+        margin-bottom: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border: 1px solid rgba(255, 179, 0, 0.2);
+        max-height: 72px;
+        width: 100%;
+    }
+    .voice-visualizer canvas,
+    .voice-visualizer svg,
+    #voiceVisualizer canvas,
+    #voiceVisualizer svg {
+        height: 56px !important;
+        max-height: 56px !important;
     }
 
     /* Generic quiz form spacing normalization */
@@ -1591,14 +1590,34 @@ if ('speechSynthesis' in window) {
         }
     }
 
-    /* 🎭 MORPHING CONTAINER - Smooth transition between voice visualizer and honey jar timer */
+    /* No z-index layering – visualizer/timer/sentence must not sit "in front" */
+    .visualizer-container,
+    #voiceVisualizer,
+    .quiz-card-top,
+    .quiz-timer,
+    .quiz-sentence,
+    .question-area,
+    .question-area-compact,
+    .morph-container,
+    .quiz-prompt {
+        position: static !important;
+        z-index: auto !important;
+    }
+    .question-area-compact {
+        flex: 0 1 auto;
+        min-height: 0;
+        max-height: 140px;
+        overflow: hidden;
+    }
+    /* 🎭 MORPHING CONTAINER - compact: viz/timer take less space */
     .morph-container {
         position: relative;
         width: 100%;
-        min-height: 120px; /* Reduced from 200px for compact layout */
-        margin: 0; /* remove vertical spacing between morph sections */
-        margin-bottom: 0.25rem; /* Minimal spacing below */
-        transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
+        min-height: 60px;
+        max-height: 120px;
+        margin: 0;
+        margin-bottom: 0.25rem;
+        transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     /* 🧩 Avatar container for quiz body (placed in the red square area) */
@@ -1640,8 +1659,8 @@ if ('speechSynthesis' in window) {
     
     /* Honey jar timer state (countdown mode) */
     .morph-container.mode-timer {
-        /* Timer is visible, visualizer is hidden */
-        min-height: 200px; /* Same as voice mode for consistent height */
+        min-height: 70px;
+        max-height: 110px;
     }
     
     /* Layered content - stack visualizer and timer in SAME POSITION */
@@ -3809,12 +3828,13 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
     </div>
 
-    <!-- Quiz Card: card-fixed (question only) + card-scroll (answer-and-keyboard + buttons) -->
+    <!-- Quiz Card: entire content in .card-scroll, scrolls as one stack -->
     <div class="quiz-card" id="quizCard">
         <div class="quiz-content quiz-card-content" id="quizScroll">
-        <div class="card-fixed">
-        <!-- UPLOAD MY LIST button moved here for proper positioning -->
-        <!-- Logo at top center - HIDDEN for compact layout matching reference image -->
+        <div class="card-scroll">
+        <!-- 1) Visualizer + Timer + Sentence (top of stack) -->
+        <div class="quiz-card-top">
+        <!-- Logo - HIDDEN for compact layout -->
         <div class="quiz-logo" style="display: none;">
             <!-- Brand logo (transparent background) - MOVED TO TOP -->
             <img src="/static/images/BeeSmartSpellingBeeApplication.png?v=20251108" alt="BeeSmart Logo">
@@ -3888,8 +3908,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
         </div>
 
-        <!-- Question area: timer / sentence -->
-        <div class="question-area">
+        <!-- Question area: timer / sentence - compact to avoid overlapping keyboard -->
+        <div class="question-area question-area-compact">
         <!-- 🎭 Morphing Container - Smooth transition between voice and timer -->
         <div class="morph-container mode-voice" id="morphContainer">
             <div class="morph-content">
@@ -3981,24 +4001,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                 </div>
 
-                <!-- Center-Flowing Amber Wave CSS -->
+                <!-- Center-Flowing Amber Wave CSS - compact to avoid overlapping keyboard -->
                 <style>
                     .voice-card.speaking-mode {
                         background: transparent;
-                        border-radius: 28px;
-                        padding: 12px 16px 6px; /* Further reduced padding for ultra-compact layout */
+                        border-radius: 12px;
+                        padding: 4px 10px 2px;
                         border: none;
                         box-shadow: none;
-                        max-width: 920px; /* Much wider for more room */
-                        margin: 0 auto 0.5rem auto; /* Minimal margin for compact layout */
+                        max-width: 100%;
+                        margin: 0 auto 0.25rem auto;
                         color: #fff;
                         text-align: center;
                         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto", sans-serif;
-                        overflow: visible; /* Allow full wave pattern visibility */
+                        overflow: visible;
                     }
 
                     .voice-header {
-                        font-size: 1.25rem;
+                        font-size: 1rem;
                         font-weight: 600;
                         color: #fff8e1;
                         text-shadow:
@@ -4008,11 +4028,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         align-items: center;
                         justify-content: center;
                         letter-spacing: 0.02em;
-                        margin-bottom: 20px;
+                        margin-bottom: 8px;
                     }
 
                     .voice-bee {
-                        margin-right: 8px;
+                        margin-right: 6px;
                         display: inline-block;
                         filter:
                             drop-shadow(0 0 4px #fff)
@@ -4020,27 +4040,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     .voice-definition {
-                        font-size: 1.1rem;
+                        font-size: 0.85rem;
                         font-weight: 500;
-                        color: #5A2C15; /* Dark brown for better visibility */
+                        color: #5A2C15;
                         text-shadow: none;
-                        padding: 16px 20px;
-                        margin-top: 12px;
-                        line-height: 1.5;
+                        padding: 4px 10px;
+                        margin-top: 4px;
+                        line-height: 1.4;
                         letter-spacing: 0.01em;
                     }
 
-                                .dotwave-wrapper {
-                                    display: flex;
-                                    justify-content: center;
-                                    align-items: center;
-                                    padding: 28px 24px; /* Maximum padding for wave clearance */
-                                    overflow: visible; /* Ensure waves aren't clipped */
-                                }
+                    .dotwave-wrapper {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        padding: 4px 12px;
+                        overflow: visible;
+                    }
 
-                                .dotwave-wrapper canvas {
-                                    width: 100%;
-                                    height: 280px; /* Taller for bigger waves */
+                    .dotwave-wrapper canvas {
+                        width: 100%;
+                        height: 56px !important;
+                        max-height: 56px !important;
                                     filter:
                                         drop-shadow(0 0 4px rgba(255,255,255,0.4))
                                         drop-shadow(0 0 12px rgba(255,200,0,0.4));
@@ -4271,10 +4292,9 @@ document.addEventListener('DOMContentLoaded', () => {
         </div> <!-- End morph-container -->
         </div> <!-- End question-area -->
         </div>
-        <!-- end card-fixed -->
+        <!-- end quiz-card-top (visualizer, timer, sentence) -->
 
-        <div class="card-scroll">
-        <!-- Answer + keyboard in same scroll flow: input directly above keyboard, no overlap -->
+        <!-- 2) Answer input row -->
         <div class="answer-and-keyboard">
             <!-- Answer area: letter hint + spelling input (in-flow with keyboard) -->
             <div class="answer-area quiz-answer-area" id="answerAreaContainer">
@@ -4315,7 +4335,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="quizKeyboardContainer" role="region" aria-label="Quiz spelling keyboard"></div>
         </div>
         </div>
-        <!-- end answer-and-keyboard -->
+        <!-- end answer-and-keyboard (3) keyboard inside above -->
 
         <script>
         // Ensure desktop intro voice plays reliably by triggering on first user interaction
@@ -6080,8 +6100,8 @@ class QuizManager {
         }
         
         // iOS Safari rubber-band prevention:
-        // - Allow scrolling ONLY inside .card-scroll (single scroll owner)
-        // - Prevent overscroll bounce at the top/bottom edges of that scroller
+        // - .card-scroll = single scroll owner (entire card content)
+        // - Prevent overscroll bounce at the top/bottom edges
         try {
             const scroller = document.querySelector('.card-scroll');
             if (scroller && !scroller.__iosRubberbandGuard) {
