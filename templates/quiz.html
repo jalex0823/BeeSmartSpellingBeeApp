@@ -321,6 +321,7 @@ if ('speechSynthesis' in window) {
         display: none !important;
     }
     /* Keyboard: always visible by default; only hide when .is-hidden */
+    /* Styling moved to QuizKeyboard.css - only positioning rules here */
     #keyboardHost,
     .keyboard-host,
     .keyboard-shell {
@@ -330,16 +331,6 @@ if ('speechSynthesis' in window) {
         left: auto !important;
         right: auto !important;
         z-index: auto !important;
-        width: 100%;
-        max-width: 100%;
-        min-width: 0;
-        box-sizing: border-box;
-        padding: 0 12px;
-        margin: 10px 0 12px;
-        overflow: hidden;
-        display: block;
-        border-radius: 16px;
-        box-shadow: 0 4px 16px rgba(0,0,0,.1);
         transform: none;
         opacity: 1;
     }
@@ -347,14 +338,13 @@ if ('speechSynthesis' in window) {
         min-width: 0;
         max-width: 100%;
     }
+    /* Legacy keyboard styles removed - handled by QuizKeyboard.css */
+    /* Ensure keys can shrink: max-width on children is OK, but don't block min-width: 0 */
     .keyboard-host * {
         max-width: 100%;
         box-sizing: border-box;
-    }
-    .custom-keyboard {
-        width: 100%;
-        box-sizing: border-box;
-        overflow: hidden;
+        /* CRITICAL: Don't override min-width - let grid handle it for responsive shrink */
+        /* min-width is handled by QuizKeyboard.css with !important */
     }
     /* Key press pop (transform only, no layout shift) */
     .keyboard-host .key-pop,
@@ -386,24 +376,8 @@ if ('speechSynthesis' in window) {
             opacity: 1;
         }
     }
-    .keyboard-host .quiz-keyboard,
-    .keyboard-host .custom-keyboard,
-    .keyboard-shell .quiz-keyboard,
-    .keyboard-shell .custom-keyboard {
-        width: 100%;
-        max-width: 100%;
-        min-width: 0;
-        box-sizing: border-box;
-        overflow: hidden;
-        border-radius: 16px;
-        box-shadow: 0 10px 22px rgba(0,0,0,.12);
-        background: rgba(255,255,255,.85);
-        backdrop-filter: blur(6px);
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        position: relative;
-    }
+    /* Legacy keyboard styles removed - now handled by QuizKeyboard.css */
+    /* All keyboard styling moved to static/css/QuizKeyboard.css for consistency */
     /* Dev-only: ?debug=layout – red=prompt/timer, blue=keyboard, green=action grid */
     body.dev-visual-debug .quiz-card-top { outline: 2px solid red; outline-offset: 2px; }
     body.dev-visual-debug #keyboardHost { outline: 2px solid blue; outline-offset: 2px; }
@@ -435,10 +409,7 @@ if ('speechSynthesis' in window) {
     }
     @media (max-width: 420px) {
         .quiz-card { padding: 12px; gap: 12px; }
-        .keyboard-host .quiz-keyboard,
-        .keyboard-host .custom-keyboard,
-        .keyboard-shell .quiz-keyboard,
-        .keyboard-shell .custom-keyboard { border-radius: 14px; }
+        /* Keyboard styling handled by QuizKeyboard.css - no overrides needed */
     }
     
     /* Progress tracker fixed at bottom of viewport */

@@ -198,23 +198,26 @@
 }
 
 /* Letter keys – BeeSmart honey gold theme with soft bevel */
-/* Critical: min-width: 0 allows keys to shrink in grid */
+/* CRITICAL: min-width: 0 !important allows keys to shrink in CSS grid */
+/* This prevents keys from being cut off on small screens */
+/* Legacy code may try to set min-width - !important ensures grid shrink works */
 .quiz-keyboard-key {
     min-height: 36px; /* Comfortable tap target */
-    min-width: 0 !important; /* CRITICAL: allows grid shrink */
-    width: 100%;
+    min-width: 0 !important; /* CRITICAL: allows grid shrink - prevents clipping */
+    max-width: none !important; /* Allow keys to fill grid cell */
+    width: 100% !important; /* Fill grid cell */
     padding: 10px 6px; /* Mobile-friendly padding */
     font-size: clamp(12px, 3.2vw, 16px); /* Responsive font */
     border-radius: 12px; /* Soft rounded corners */
-    box-sizing: border-box;
+    box-sizing: border-box !important; /* Ensure padding included in width */
     font-weight: 800;
     text-transform: uppercase;
     color: #5a2d00; /* Dark brown text */
-    background: linear-gradient(180deg, rgba(255,214,102,0.95) 0%, rgba(255,175,0,0.95) 100%); /* Warm gold gradient */
-    border: 2px solid rgba(160,90,0,0.35); /* Subtle border */
+    background: linear-gradient(180deg, rgba(255,214,102,0.95) 0%, rgba(255,175,0,0.95) 100%) !important; /* Warm gold gradient - override legacy */
+    border: 2px solid rgba(160,90,0,0.35) !important; /* Subtle border - override legacy */
     box-shadow: 
         0 6px 0 rgba(140,75,0,0.35), /* Soft bevel shadow */
-        0 10px 20px rgba(0,0,0,0.10); /* Depth shadow */
+        0 10px 20px rgba(0,0,0,0.10) !important; /* Depth shadow - override legacy */
     cursor: pointer;
     transition: transform 0.1s ease, box-shadow 0.1s ease;
     -webkit-tap-highlight-color: transparent;
@@ -347,26 +350,27 @@
     }
 }
 
-/* Very narrow: morph so all keys visible, minimal clipping */
+/* Very narrow: ensure keys still fit without clipping */
 @media (max-width: 380px) {
     .quiz-keyboard-row,
     .quiz-keyboard-row-bottom {
-        gap: 1px;
-        margin-bottom: 2px;
+        gap: 3px; /* Minimum gap for usability */
+        margin-bottom: 0;
     }
     .quiz-keyboard-key {
-        padding: 3px 1px;
-        font-size: 0.65rem;
-        min-height: 22px;
+        min-width: 0 !important; /* CRITICAL */
+        padding: 7px 3px; /* Slightly reduced but still usable */
+        font-size: clamp(10px, 2.5vw, 12px);
+        min-height: 28px; /* Minimum comfortable tap target */
     }
     .quiz-keyboard-key-space,
     .quiz-keyboard-key-backspace,
     .quiz-keyboard-key-submit {
-        min-height: 22px;
+        min-height: 28px;
     }
     .quiz-keyboard {
-        gap: 1px;
-        padding: 2px 2px calc(2px + env(safe-area-inset-bottom, 0));
+        gap: 3px;
+        padding: 5px 3px calc(5px + env(safe-area-inset-bottom, 0));
     }
 }
 
@@ -402,28 +406,33 @@
 .quiz-keyboard-key-space {
     flex: 1;
     min-width: 0 !important; /* CRITICAL for grid shrink */
-    max-width: none;
+    max-width: none !important;
+    width: 100% !important; /* Fill grid cell */
     font-size: clamp(12px, 3vw, 14px);
     font-weight: 800;
     text-transform: uppercase;
     color: #5a2d00;
-    border: 2px solid rgba(160,90,0,0.35);
+    border: 2px solid rgba(160,90,0,0.35) !important;
     border-radius: 12px;
     box-shadow: 
         0 6px 0 rgba(140,75,0,0.35),
-        0 10px 20px rgba(0,0,0,0.10);
+        0 10px 20px rgba(0,0,0,0.10) !important;
+    box-sizing: border-box !important;
 }
 
 .quiz-keyboard-key-backspace {
     flex: 0 1 auto;
     min-width: 0 !important; /* CRITICAL for grid shrink */
+    max-width: none !important;
+    width: 100% !important; /* Fill grid cell */
     font-size: clamp(14px, 3.5vw, 18px);
     color: #5a2d00;
-    border: 2px solid rgba(160,90,0,0.35);
+    border: 2px solid rgba(160,90,0,0.35) !important;
     border-radius: 12px;
     box-shadow: 
         0 6px 0 rgba(140,75,0,0.35),
-        0 10px 20px rgba(0,0,0,0.10);
+        0 10px 20px rgba(0,0,0,0.10) !important;
+    box-sizing: border-box !important;
 }
 
 .quiz-keyboard-key-spacer {
@@ -436,17 +445,20 @@
 .quiz-keyboard-key-submit {
     flex: 0 1 auto;
     min-width: 0 !important; /* CRITICAL for grid shrink */
+    max-width: none !important;
+    width: 100% !important; /* Fill grid cell */
     font-size: clamp(12px, 3vw, 14px);
     font-weight: 800;
     color: #1B5E20;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    background: linear-gradient(180deg, #C8E6C9 0%, #81C784 35%, #66BB6A 70%, #4CAF50 100%);
-    border: 2px solid rgba(46, 125, 50, 0.5);
+    background: linear-gradient(180deg, #C8E6C9 0%, #81C784 35%, #66BB6A 70%, #4CAF50 100%) !important;
+    border: 2px solid rgba(46, 125, 50, 0.5) !important;
     border-radius: 12px;
     box-shadow: 
         0 6px 0 rgba(30, 94, 32, 0.4),
-        0 10px 20px rgba(0,0,0,0.10);
+        0 10px 20px rgba(0,0,0,0.10) !important;
+    box-sizing: border-box !important;
 }
 
 .quiz-keyboard-key-submit:hover:not(:disabled) {
@@ -499,5 +511,9 @@
     }
     .quiz-keyboard-row {
         gap: 6px; /* Slightly more spacing on wider screens */
+    }
+    /* Ensure keys still respect grid shrink on wider screens */
+    .quiz-keyboard-key {
+        min-width: 0 !important; /* CRITICAL: maintain grid shrink */
     }
 }
