@@ -1386,15 +1386,16 @@ if ('speechSynthesis' in window) {
         text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
     }
 
-    /* Voice wave bars container */
+    /* Voice wave bars container - wider to prevent clipping */
     #voiceWaveContainer {
         display: flex;
         align-items: center; /* center alignment for symmetric expansion */
         justify-content: space-evenly; /* better distribution */
         gap: 2px; /* tighter gaps */
-        height: 100px; /* taller container */
-        padding: 12px 20px; /* more padding for edge spacing */
+        height: 120px; /* Increased height to prevent clipping */
+        padding: 12px 10px; /* Reduced padding since container is wider */
         width: 100%; /* full width */
+        overflow: visible; /* Prevent clipping */
     }
 
     .wave-bar {
@@ -1606,18 +1607,32 @@ if ('speechSynthesis' in window) {
     .question-area-compact {
         flex: 0 1 auto;
         min-height: 0;
-        max-height: 140px;
-        overflow: hidden;
+        max-height: 160px; /* Increased to prevent clipping */
+        overflow: visible; /* Changed from hidden to visible */
     }
-    /* 🎭 MORPHING CONTAINER - compact: viz/timer take less space */
+    
+    /* Mobile: Allow morph-container to extend wider on small screens */
+    @media (max-width: 480px) {
+        .morph-container {
+            width: calc(100% + 32px); /* Slightly less extension on mobile */
+            max-width: calc(100vw - 24px); /* iPhone safe area */
+            margin: 0 -16px; /* Negative margin */
+        }
+        .morph-content {
+            padding: 0 16px; /* Matching padding */
+        }
+    }
+    /* 🎭 MORPHING CONTAINER - wider to prevent clipping, can extend outside card */
     .morph-container {
         position: relative;
-        width: 100%;
+        width: calc(100% + 40px); /* Extend 20px on each side outside card */
+        max-width: calc(100vw - 32px); /* iPhone safe area: 16px margin on each side */
         min-height: 60px;
-        max-height: 120px;
-        margin: 0;
+        max-height: 140px; /* Increased to prevent clipping */
+        margin: 0 -20px; /* Negative margin to extend outside card */
         margin-bottom: 0.25rem;
         transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: visible; /* Allow content to extend */
     }
     
     /* 🧩 Avatar container for quiz body (placed in the red square area) */
