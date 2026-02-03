@@ -168,20 +168,89 @@ if ('speechSynthesis' in window) {
         padding: 4px 8px;
         margin-bottom: 0.25rem;
     }
+    /* Yellow pill CTA - prominent start guidance */
     .buzzy-pill {
         width: 100%;
+        max-width: 280px;
+        margin: 12px auto;
         border-radius: 999px;
-        padding: 10px 12px;
-        border: 2px solid rgba(255, 180, 0, 0.45);
-        background: rgba(255, 255, 255, 0.75);
-        font-weight: 700;
+        padding: 14px 20px;
+        border: 2px solid rgba(255, 193, 7, 0.6);
+        background: linear-gradient(135deg, #FFD93D 0%, #FFA000 100%);
+        color: #5A2C15;
+        font-weight: 800;
+        font-size: 1rem;
         cursor: pointer;
-        margin-top: 8px;
-        margin-bottom: 8px;
+        box-shadow: 0 6px 20px rgba(255, 170, 0, 0.4);
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
         -webkit-tap-highlight-color: transparent;
+        text-transform: none;
     }
-    .buzzy-pill:hover { background: rgba(255, 248, 225, 0.9); }
-    .buzzy-pill:active { transform: scale(0.98); }
+    .buzzy-pill:hover { 
+        background: linear-gradient(135deg, #FFE082 0%, #FFB300 100%);
+        box-shadow: 0 8px 24px rgba(255, 170, 0, 0.5);
+        transform: translateY(-2px);
+    }
+    .buzzy-pill:active { 
+        transform: translateY(0) scale(0.98);
+        box-shadow: 0 4px 12px rgba(255, 170, 0, 0.3);
+    }
+    
+    /* Green start guidance modal */
+    .start-guidance-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 20px;
+        backdrop-filter: blur(4px);
+    }
+    
+    .start-guidance-modal-content {
+        background: linear-gradient(135deg, #C8E6C9 0%, #81C784 50%, #66BB6A 100%);
+        border-radius: 20px;
+        padding: 24px;
+        max-width: 320px;
+        width: 100%;
+        box-shadow: 0 12px 40px rgba(76, 175, 80, 0.4);
+        border: 3px solid rgba(46, 125, 50, 0.3);
+        text-align: center;
+    }
+    
+    .start-guidance-modal-content h3 {
+        color: #1B5E20;
+        font-size: 1.3rem;
+        font-weight: 800;
+        margin: 0 0 12px 0;
+    }
+    
+    .start-guidance-modal-content p {
+        color: #2E7D32;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin: 0 0 20px 0;
+    }
+    
+    .start-guidance-modal-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .start-guidance-modal-buttons .action-btn {
+        width: 100%;
+        min-height: 48px;
+    }
 
     /* A) Edge-to-edge card; height from flex (no magic 72px/64px) */
     .quiz-card {
@@ -214,7 +283,25 @@ if ('speechSynthesis' in window) {
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
         touch-action: pan-y;
-        padding: 10px 12px 14px 12px;
+        padding: max(14px, env(safe-area-inset-top)) 12px 14px 12px; /* Top padding prevents clipping */
+    }
+    
+    /* Ensure visualizer/timer containers are not clipped */
+    .quiz-card .quiz-card-content .card-scroll {
+        padding-top: max(14px, env(safe-area-inset-top));
+    }
+    
+    /* Prevent clipping: ensure containers use static positioning */
+    .voice-visualizer,
+    #voiceVisualizer,
+    .honey-jar-timer,
+    .honey-jar-timer,
+    .countdown-container,
+    .morph-container,
+    .morph-content {
+        position: static !important;
+        margin-top: 0 !important;
+        z-index: auto !important;
     }
     .quiz-card-top {
         padding-bottom: 0.5rem;
@@ -4336,9 +4423,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="bee-icon" aria-hidden="true">&#9650;</span> Show keyboard
                 </button>
 
-                <!-- Start with Buzzy Voice pill -->
-                <button type="button" id="buzzyPill" class="buzzy-pill" aria-label="Start with Buzzy voice">
-                    &#128266; Start with Buzzy Voice
+                <!-- Start with Buzzy Voice pill - Yellow CTA -->
+                <button type="button" id="buzzyPill" class="buzzy-pill" aria-label="Start with Buzzy voice" style="display: none;">
+                    <span>▶</span> Start with Buzzy Voice
                 </button>
                 <button type="button" id="startSilentBtn" class="action-btn secondary" style="margin-top: 4px; display: block;" aria-label="Start silent">
                     &#128263; Start silent
@@ -4543,6 +4630,24 @@ document.addEventListener('DOMContentLoaded', () => {
             <p style="font-size: 0.92rem; color:#7a5a00; margin-top: 1.1rem;">
                 Starting over resets progress for this session.
             </p>
+        </div>
+    </div>
+
+    <!-- Green Start Guidance Modal (one-time per session) -->
+    <div class="start-guidance-modal" id="startGuidanceModal" style="display: none;">
+        <div class="start-guidance-modal-content">
+            <h3>🐝 Ready to Start?</h3>
+            <p>Tap the yellow button to start Buzzy's voice and begin the quiz.</p>
+            <div class="start-guidance-modal-buttons">
+                <button type="button" class="action-btn primary" id="startGuidanceVoiceBtn">
+                    <span class="bee-icon" aria-hidden="true">🔊</span>
+                    Start with Buzzy Voice
+                </button>
+                <button type="button" class="action-btn secondary" id="startGuidanceSilentBtn">
+                    <span class="bee-icon" aria-hidden="true">🔇</span>
+                    Start Silent
+                </button>
+            </div>
         </div>
     </div>
 
@@ -5942,6 +6047,9 @@ class QuizManager {
             this.setupiOSKeyboardHandling();
         }
         
+        // Show green start guidance modal first (one-time per session)
+        this.showStartGuidanceModal();
+        
         // Single "Ready to spell?" screen: one tap = voice choice + start (replaces voice modal + Play step)
         this.updateVoiceToggleUI();
         this.updateMusicToggleUI();
@@ -5966,8 +6074,8 @@ class QuizManager {
                 return;
             }
         }
-        // New quiz (or resume on iOS first time): one screen, one tap
-        this.showCombinedStartScreen();
+        // New quiz (or resume on iOS first time): show start guidance modal
+        this.showStartGuidanceModal();
         
         // Start background music only after a user gesture (prevents unwanted looping on load).
         if (this.musicEnabled) {
@@ -7955,6 +8063,62 @@ class QuizManager {
         }
 
         if (spellingInput) spellingInput.focus();
+    }
+
+    // Show green start guidance modal (one-time per session)
+    showStartGuidanceModal() {
+        // Check if already shown this session
+        if (sessionStorage.getItem('startGuidanceShown') === 'true') {
+            // Skip modal, go straight to combined start screen
+            this.showCombinedStartScreen();
+            return;
+        }
+        
+        const modal = document.getElementById('startGuidanceModal');
+        if (!modal) {
+            // Modal not found, fallback to combined start screen
+            this.showCombinedStartScreen();
+            return;
+        }
+        
+        modal.style.display = 'flex';
+        
+        const startWithVoice = () => {
+            sessionStorage.setItem('startGuidanceShown', 'true');
+            modal.style.display = 'none';
+            this.showCombinedStartScreen();
+            // Trigger voice start
+            setTimeout(() => {
+                const buzzyPill = document.getElementById('buzzyPill');
+                if (buzzyPill) buzzyPill.click();
+            }, 100);
+        };
+        
+        const startSilent = () => {
+            sessionStorage.setItem('startGuidanceShown', 'true');
+            modal.style.display = 'none';
+            this.showCombinedStartScreen();
+            // Trigger silent start
+            setTimeout(() => {
+                const startSilentBtn = document.getElementById('startSilentBtn');
+                if (startSilentBtn) startSilentBtn.click();
+            }, 100);
+        };
+        
+        const voiceBtn = document.getElementById('startGuidanceVoiceBtn');
+        const silentBtn = document.getElementById('startGuidanceSilentBtn');
+        
+        if (voiceBtn) voiceBtn.addEventListener('click', startWithVoice, { once: true });
+        if (silentBtn) silentBtn.addEventListener('click', startSilent, { once: true });
+        
+        // Close on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                sessionStorage.setItem('startGuidanceShown', 'true');
+                modal.style.display = 'none';
+                this.showCombinedStartScreen();
+            }
+        }, { once: true });
     }
 
     // 7) Start screen: "Start with Buzzy Voice" pill + "Start silent" (no green Ready-to-Spell block)
