@@ -146,9 +146,14 @@ if ('speechSynthesis' in window) {
 </script>
 
 <style>
-    /* A) iPhone-first: safe-area gutters, no 100vw jitter */
+    /* BeeSmart theme (style guide): #FFF4C6 light yellow, #EE9323 orange, #5B311A dark brown, #3DB4A4 teal, #F3F5F5 cream */
     :root {
         --page-gutter: 10px;
+        --beesmart-light-yellow: #FFF4C6;
+        --beesmart-orange: #EE9323;
+        --beesmart-dark-brown: #5B311A;
+        --beesmart-teal: #3DB4A4;
+        --beesmart-cream: #F3F5F5;
     }
 
     /* B) Option 1: Page does NOT scroll; only .card-scroll scrolls */
@@ -190,7 +195,7 @@ if ('speechSynthesis' in window) {
         will-change: scroll-position;
     }
 
-    /* .quiz-page = flex column, height 100dvh; safe-area padding (no magic px) */
+    /* .quiz-page = theme background (style guide), flex column */
     .quiz-page {
         height: 100dvh;
         display: flex;
@@ -204,9 +209,10 @@ if ('speechSynthesis' in window) {
         margin: 0 auto;
         text-align: center;
         position: relative;
-        overflow: hidden; /* Prevent page-level scrolling */
-        overscroll-behavior: none !important; /* Prevent rubber banding */
-        touch-action: none; /* Prevent page-level touch gestures */
+        overflow: hidden;
+        overscroll-behavior: none !important;
+        touch-action: none;
+        background: var(--beesmart-light-yellow);
     }
 
     /* Everything above the card: flex 0 so layout can compute height */
@@ -329,10 +335,10 @@ if ('speechSynthesis' in window) {
         min-height: 48px;
     }
 
-    /* A) Edge-to-edge card; height from flex (no magic 72px/64px) */
+    /* A) Edge-to-edge card – theme cream (match menu card from style guide) */
     .quiz-card {
         flex: 1 1 auto;
-        min-height: 600px; /* Increased minimum height to accommodate all quiz features */
+        min-height: 600px;
         display: flex;
         flex-direction: column;
         width: 100%;
@@ -341,7 +347,8 @@ if ('speechSynthesis' in window) {
         overflow: hidden;
         box-sizing: border-box;
         border-radius: 18px;
-        background: rgba(255, 255, 255, 0.85);
+        background: var(--beesmart-cream);
+        border: 1px solid rgba(238, 147, 35, 0.15);
     }
     .quiz-card .quiz-card-content {
         padding: 0;
@@ -1403,27 +1410,29 @@ if ('speechSynthesis' in window) {
         background: linear-gradient(90deg, #66BB6A 0%, #A5D6A7 100%);
     }
 
-    /* Voice Visualizer - compact header, never overlay; in-flow */
+    /* Voice Visualizer – visible when announcer talks; theme orange; enough height to show wave */
     .voice-visualizer,
     #voiceVisualizer {
         position: static !important;
         z-index: auto !important;
-        background: rgba(255, 179, 0, 0.15);
-        border-radius: 10px;
-        padding: 0.35rem 0.75rem;
-        margin-bottom: 8px;
-        overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        border: 1px solid rgba(255, 179, 0, 0.2);
-        max-height: 72px;
+        background: rgba(238, 147, 35, 0.12);
+        border-radius: 12px;
+        padding: 0.5rem 0.75rem;
+        margin-bottom: 10px;
+        overflow: visible;
+        box-shadow: 0 4px 12px rgba(91, 49, 26, 0.08);
+        border: 1px solid rgba(238, 147, 35, 0.25);
+        min-height: 100px;
+        max-height: 200px;
         width: 100%;
     }
     .voice-visualizer canvas,
     .voice-visualizer svg,
     #voiceVisualizer canvas,
     #voiceVisualizer svg {
-        height: 56px !important;
-        max-height: 56px !important;
+        height: 90px !important;
+        max-height: 140px !important;
+        min-height: 60px !important;
     }
 
     /* Generic quiz form spacing normalization */
@@ -1856,7 +1865,7 @@ if ('speechSynthesis' in window) {
         /* no border or shadow to integrate naturally */
     }
 
-    /* Crest + avatar centered on the card (per reference) */
+    /* Crest + avatar centered – crest much larger (style guide); red pill hidden */
     .quiz-card-crest-avatar {
         width: 100%;
         display: flex;
@@ -1867,12 +1876,17 @@ if ('speechSynthesis' in window) {
         padding: 10px 0 6px;
         text-align: center;
     }
+    /* BeeSmart crest logo at top – prominent size (was extremely too small) */
     .quiz-card-crest-avatar .quiz-card-crest {
-        width: 72px;
-        height: 72px;
+        width: clamp(160px, 38vw, 260px);
+        height: auto;
+        max-height: 200px;
         object-fit: contain;
-        filter: drop-shadow(0 6px 14px rgba(255, 193, 7, 0.25));
-        opacity: 0.95;
+        filter: drop-shadow(0 6px 14px rgba(238, 147, 35, 0.25));
+        opacity: 0.98;
+    }
+    #avatarNameBadge {
+        display: none !important; /* Red pill removed per user request */
     }
     .quiz-card-crest-avatar .mascot-3d-container {
         width: 160px;
@@ -1882,7 +1896,7 @@ if ('speechSynthesis' in window) {
         margin: 0 auto;
     }
     @media (max-width: 420px) {
-        .quiz-card-crest-avatar .quiz-card-crest { width: 64px; height: 64px; }
+        .quiz-card-crest-avatar .quiz-card-crest { width: clamp(140px, 36vw, 200px); max-height: 160px; }
         .quiz-card-crest-avatar .mascot-3d-container { width: 140px; height: 140px; }
     }
     
@@ -2587,15 +2601,20 @@ if ('speechSynthesis' in window) {
         transition: all 0.1s ease;
     }
 
-    /* Quiz Buttons Container - 2 columns, 3 rows grid matching reference image */
-    .quiz-buttons {
-        display: grid;
+    /* Quiz Buttons Container – always visible; theme teal primary */
+    .quiz-buttons,
+    .actions-area.quiz-buttons,
+    #quizActionButtons {
+        display: grid !important;
         grid-template-columns: 1fr 1fr;
-        gap: 0.35rem; /* Further reduced gap for ultra-compact layout */
-        margin-top: 0.25rem; /* Minimal spacing above buttons */
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+        margin-bottom: 0.75rem;
         padding: 0;
         width: 100%;
         box-sizing: border-box;
+        visibility: visible !important;
+        opacity: 1 !important;
     }
 
     .quiz-buttons .action-btn,
@@ -3036,21 +3055,22 @@ if ('speechSynthesis' in window) {
         font-size: 1.1rem;
     }
 
+    /* Primary = teal (style guide #3DB4A4) – blue action buttons */
     .action-btn.primary {
-        background: linear-gradient(90deg, #FFB300 0%, #FFD54F 100%);
-        color: #2b2100;
-        box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+        background: linear-gradient(135deg, #3DB4A4 0%, #2d9d8f 100%);
+        color: #fff;
+        box-shadow: 0 4px 15px rgba(61, 180, 164, 0.35);
     }
 
     .action-btn.primary:hover:not(:disabled) {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(255, 193, 7, 0.5);
-        background: linear-gradient(90deg, #FFA000 0%, #FFC107 100%);
+        box-shadow: 0 6px 20px rgba(61, 180, 164, 0.45);
+        background: linear-gradient(135deg, #45c4b5 0%, #3DB4A4 100%);
     }
 
     .action-btn.primary:active {
         transform: translateY(0px);
-        box-shadow: 0 2px 10px rgba(255, 193, 7, 0.3);
+        box-shadow: 0 2px 10px rgba(61, 180, 164, 0.3);
         transition: all 0.1s ease;
     }
 
@@ -3063,9 +3083,9 @@ if ('speechSynthesis' in window) {
     }
 
     .action-btn.secondary {
-        background: #FFFDE7; /* Cream/pale yellow background to match reference */
-        color: #5A2C15; /* Dark brown text */
-        border: 2px solid rgba(255, 193, 7, 0.3);
+        background: var(--beesmart-cream);
+        color: var(--beesmart-dark-brown);
+        border: 2px solid rgba(238, 147, 35, 0.25);
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
         position: relative;
         overflow: hidden;
@@ -4090,7 +4110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="quiz-card-top">
         <!-- Crest + user's chosen avatar (centered on card) -->
         <div class="quiz-card-crest-avatar">
-            <img id="quizCardBadge" class="quiz-card-crest" src="/static/assets/badges/Novice.png" alt="Rank Badge" title="Loading rank...">
+            <img id="quizCardCrest" class="quiz-card-crest" src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Spelling Bee" title="BeeSmart Crest">
             <div id="mascotBee3D" class="mascot-3d-container" aria-label="Your avatar"></div>
             {% if user_name %}
             <div id="avatarNameBadge" style="
@@ -4203,11 +4223,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
 
-                <!-- Voice Visualizer (Upgraded center-flowing amber wave) -->
+                <!-- Voice Visualizer (per BUG_FIXES_VOICE_VISUALIZER.md: animates during speech, status visible) -->
                 <div class="voice-visualizer" id="voiceVisualizer">
                         <div class="voice-card speaking-mode">
-                            <!-- Hidden status for JavaScript (not displayed visually) -->
-                            <div class="voice-header" style="display: none;">
+                            <!-- Status shown when speaking / ready -->
+                            <div class="voice-header" id="voiceHeader" aria-live="polite">
                                 <span class="voice-bee">🐝</span>
                                 <span class="voice-text" id="voiceStatus">Ready</span>
                             </div>
@@ -4228,30 +4248,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     .voice-card.speaking-mode {
                         background: transparent;
                         border-radius: 12px;
-                        padding: 4px 10px 2px;
+                        padding: 8px 10px 6px;
                         border: none;
                         box-shadow: none;
                         max-width: 100%;
                         margin: 0 auto 0.25rem auto;
-                        color: #fff;
+                        color: var(--beesmart-dark-brown);
                         text-align: center;
                         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto", sans-serif;
                         overflow: visible;
+                        min-height: 90px;
+                    }
+                    .dotwave-wrapper {
+                        min-height: 70px;
                     }
 
                     .voice-header {
-                        font-size: 1rem;
+                        font-size: 0.95rem;
                         font-weight: 600;
-                        color: #fff8e1;
-                        text-shadow:
-                            0 0 6px rgba(255,255,255,0.8),
-                            0 0 12px rgba(255,214,64,0.8);
+                        color: var(--beesmart-dark-brown, #5B311A);
                         display: flex;
                         align-items: center;
                         justify-content: center;
                         letter-spacing: 0.02em;
-                        margin-bottom: 8px;
+                        margin-bottom: 6px;
                     }
+                    .voice-visualizer.speaking .voice-header { color: var(--beesmart-orange, #EE9323); }
 
                     .voice-bee {
                         margin-right: 6px;
@@ -5361,17 +5383,18 @@ class BeeSoundboard {
                 utterance.voice = this.cachedVoice;
             }
             
-            // Sync visual display with announcer + morph to voice visualizer
+            // Sync visual display with announcer (per BUG_FIXES_VOICE_VISUALIZER.md: animate during speech)
             utterance.onstart = () => {
                 if (visualizer) visualizer.classList.add('speaking');
-                if (statusEl) statusEl.textContent = this.cachedVoice
-                    ? `🎙️ Speaking (${this.cachedVoice.lang} • ${this.cachedVoice.name})`
-                    : '🎙️ Speaking';
-                
-                // ⚠️ NO morphing here - only morph after "timer starts now" announcement
+                if (statusEl) {
+                    statusEl.textContent = '🔊 Speaking...';
+                    statusEl.style.display = '';
+                }
+                try { window.dispatchEvent(new CustomEvent('quiz-speech-start')); } catch (e) {}
             };
             
             utterance.onboundary = (event) => {
+                try { window.dispatchEvent(new CustomEvent('quiz-speech-boundary')); } catch (e) {}
                 // Word-level micro pauses for natural cadence
                 if (event.name === 'word' || event.charLength > 0) {
                     if (visualizer) {
@@ -5399,16 +5422,14 @@ class BeeSoundboard {
             
             utterance.onend = () => {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
-                if (statusEl) statusEl.textContent = '🐝 Ready';
-                
-                // ⚠️ NO morphing here - only morph after "timer starts now" announcement
+                if (statusEl) { statusEl.textContent = '🐝 Ready'; statusEl.style.display = ''; }
+                try { window.dispatchEvent(new CustomEvent('quiz-speech-end')); } catch (e) {}
             };
             
             utterance.onerror = () => {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
-                if (statusEl) statusEl.textContent = '⚠️ Voice error';
-                
-                // ⚠️ NO morphing here - only morph after "timer starts now" announcement
+                if (statusEl) { statusEl.textContent = '⚠️ Voice error'; statusEl.style.display = ''; }
+                try { window.dispatchEvent(new CustomEvent('quiz-speech-end')); } catch (e) {}
             };
 
             try {
@@ -6815,7 +6836,7 @@ class QuizManager {
                         <div style="margin-bottom: 1.5rem; color: #666; font-size: 1.1rem;">
                             I'm Buzzy, your announcer bee! 🍯
                         </div>
-                        <div id="voiceStatusMessage" style="margin-top: 1rem; font-size: 0.95rem; color: #666;">
+                        <div class="voice-status-message" style="margin-top: 1rem; font-size: 0.95rem; color: #666;">
                             Starting with voice announcements...
                         </div>
                         ${recoveryButtonHtml}
@@ -6984,7 +7005,7 @@ class QuizManager {
                     <div style="margin-top: 0.5rem;">
                         🌟 Listen carefully to each word, then spell it correctly! 🌟
                     </div>
-                    <div id="voiceStatusMessage" style="margin-top: 1rem; font-size: 0.95rem; color: #666;">
+                    <div class="voice-status-message" style="margin-top: 1rem; font-size: 0.95rem; color: #666;">
                         Starting automatically…
                     </div>
                     ${recoveryButtonHtml}
@@ -11353,9 +11374,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const rankData = await rankResponse.json();
 
+                /* Only update header badge; card shows BeeSmart crest (quizCardCrest) and is not a rank badge */
                 const badgeImgs = [
-                    document.getElementById('quizHeaderBadge'),
-                    document.getElementById('quizCardBadge')
+                    document.getElementById('quizHeaderBadge')
                 ].filter(Boolean);
                 if (!badgeImgs.length) {
                     debugLog('ℹ️ No badge image targets found; skipping badge render');
