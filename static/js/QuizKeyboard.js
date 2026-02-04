@@ -36,24 +36,7 @@
         }, duration);
     }
 
-    function pressKey(el) {
-        if (!el || !el.classList) return;
-        el.classList.add('is-pressed');
-        setTimeout(() => {
-            try { el.classList.remove('is-pressed'); } catch (_) {}
-        }, 80);
-    }
-
-    function playSubmitSound() {
-        try {
-            if (window.quizManager && window.quizManager.soundboard && typeof window.quizManager.soundboard.play === 'function') {
-                window.quizManager.soundboard.play('correct');
-            } else if (typeof window.BeeSmartButtonSfx !== 'undefined' && window.BeeSmartButtonSfx.playRandom) {
-                window.BeeSmartButtonSfx.playRandom({ volume: 0.5 });
-            }
-        } catch (_) {}
-    }
-
+    /* Only click sound + one visual (pop). No extra press state or submit sound on key. */
     function createKey(letter, opts) {
         const button = document.createElement('button');
         button.type = 'button';
@@ -64,7 +47,6 @@
         button.textContent = opts.autoCaps !== false ? letter : letter.toLowerCase();
         button.dataset.letter = letter;
         const onLetter = () => {
-            pressKey(button);
             keyPopAnimation(button);
             playKeyClick(0.3);
             opts.onLetter(letter);
@@ -86,17 +68,8 @@
         button.setAttribute('data-no-button-sfx', '1');
         button.innerHTML = label;
         const wrapped = () => {
-            if (!isSubmit) {
-                pressKey(button);
-                keyPopAnimation(button);
-            }
-            if (isSubmit) {
-                playSubmitSound();
-                button.classList.add('quiz-keyboard-submit-pressed');
-                setTimeout(() => button.classList.remove('quiz-keyboard-submit-pressed'), 420);
-            } else {
-                playKeyClick(0.32);
-            }
+            keyPopAnimation(button);
+            playKeyClick(0.32);
             onClick();
         };
         button.addEventListener('click', wrapped);
