@@ -442,9 +442,15 @@ if ('speechSynthesis' in window) {
         margin-top: 0 !important;
         z-index: auto !important;
     }
+    /* Top card: center and equally space avatar, honeypot, sentence (no excess gap at bottom) */
     .quiz-card-top {
-        padding-bottom: 1rem; /* Increased spacing */
-        margin-bottom: 0.5rem; /* Added margin for better separation */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 1rem; /* Even spacing between avatar and question area (timer/sentence) */
+        padding-bottom: 0.65rem;
+        margin-bottom: 0.5rem;
     }
     /* Answer + keyboard in same scroll flow; visible gap, no overlap */
     .answer-and-keyboard {
@@ -1055,6 +1061,15 @@ if ('speechSynthesis' in window) {
         flex-direction: column;
         align-items: center;
         gap: 0.5rem;
+    }
+    /* Space between honeypot timer and sentence below (mobile: sentence rests clearly beneath timer) */
+    .countdown-container .honey-jar-timer {
+        margin-bottom: 0.65rem;
+    }
+    @media (max-width: 480px) {
+        .countdown-container .honey-jar-timer {
+            margin-bottom: 0.9rem;
+        }
     }
     
     /* SVG Jar Styling - compact so not clipped when viz/timer shortened */
@@ -1821,10 +1836,10 @@ if ('speechSynthesis' in window) {
     .question-area-compact {
         flex: 0 1 auto;
         min-height: 0;
-        /* Give the voice visualizer / timer / sentence room (no crunching) */
         max-height: none;
-        overflow: visible; /* Changed from hidden to visible */
-        margin-bottom: 1rem; /* Added spacing below question area */
+        overflow: visible;
+        margin-bottom: 0.6rem; /* Balanced gap below sentence */
+        width: 100%;
     }
     
     /* Mobile: Allow morph-container to extend wider on small screens */
@@ -1838,17 +1853,16 @@ if ('speechSynthesis' in window) {
             padding: 0 16px; /* Matching padding */
         }
     }
-    /* 🎭 MORPHING CONTAINER - wider to prevent clipping, can extend outside card */
+    /* 🎭 MORPHING CONTAINER - compact so avatar/honeypot/sentence are equally spaced (not oversized) */
     .morph-container {
         position: relative;
         width: calc(100% + 40px); /* Extend 20px on each side outside card */
         max-width: calc(100vw - 32px); /* iPhone safe area: 16px margin on each side */
-        /* Bigger container so wave + sentence + honey timer are fully visible */
-        min-height: 320px;
+        min-height: 200px; /* Reduced from 320px – give voice vis room without huge empty space */
         max-height: none;
         margin: 0 -20px; /* Negative margin to extend outside card */
-        margin-bottom: 1rem; /* Increased spacing below morph container */
-        margin-top: 0.5rem; /* Added top spacing */
+        margin-bottom: 0.65rem;
+        margin-top: 0.6rem;
         transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: visible; /* Allow content to extend */
     }
@@ -1865,7 +1879,7 @@ if ('speechSynthesis' in window) {
         /* no border or shadow to integrate naturally */
     }
 
-    /* Crest + avatar centered – crest much larger (style guide); red pill hidden */
+    /* Crest + avatar centered – part of equal-spaced top card (avatar, honeypot, sentence) */
     .quiz-card-crest-avatar {
         width: 100%;
         display: flex;
@@ -1925,9 +1939,9 @@ if ('speechSynthesis' in window) {
         display: block;
     }
     
-    /* Honey jar timer state (countdown mode) */
+    /* Honey jar timer state (countdown mode) – same compact height as voice mode */
     .morph-container.mode-timer {
-        min-height: 320px;
+        min-height: 200px;
         max-height: none;
     }
     
@@ -4248,7 +4262,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .voice-card.speaking-mode {
                         background: transparent;
                         border-radius: 12px;
-                        padding: 8px 10px 6px;
+                        padding: 6px 10px 6px;
                         border: none;
                         box-shadow: none;
                         max-width: 100%;
@@ -4257,10 +4271,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         text-align: center;
                         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto", sans-serif;
                         overflow: visible;
-                        min-height: 90px;
+                        min-height: 100px; /* Room for wave animation (icon removed for more vis space) */
                     }
                     .dotwave-wrapper {
-                        min-height: 70px;
+                        min-height: 80px; /* More room for voice vis to animate (per BUG_FIXES_VOICE_VISUALIZER.md) */
                     }
 
                     .voice-header {
@@ -4275,12 +4289,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     .voice-visualizer.speaking .voice-header { color: var(--beesmart-orange, #EE9323); }
 
+                    /* Hide bee icon to give voice visualization more room to animate (per BUG_FIXES_VOICE_VISUALIZER.md) */
                     .voice-bee {
-                        margin-right: 6px;
-                        display: inline-block;
-                        filter:
-                            drop-shadow(0 0 4px #fff)
-                            drop-shadow(0 0 8px #ffd54f);
+                        display: none !important;
+                    }
+                    .voice-header {
+                        gap: 0;
                     }
 
                     .voice-definition {
@@ -4292,6 +4306,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         margin-top: 4px;
                         line-height: 1.4;
                         letter-spacing: 0.01em;
+                    }
+                    /* Mobile: bring sentence down so it rests clearly beneath honeypot timer */
+                    @media (max-width: 480px) {
+                        .voice-definition {
+                            margin-top: 0.85rem;
+                        }
+                        .morph-container.mode-timer .voice-visualizer .voice-definition {
+                            margin-top: 0.85rem;
+                        }
                     }
 
                     .dotwave-wrapper {
