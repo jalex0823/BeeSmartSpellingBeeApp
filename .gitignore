@@ -1,4 +1,4 @@
-﻿### Xcode local StoreKit test config (created by Xcode / Capacitor sync)
+### Xcode local StoreKit test config (created by Xcode / Capacitor sync)
 mobile/ios/App/*.storekit
 # Python
 __pycache__/
@@ -129,6 +129,9 @@ yarn-error.log*
 pnpm-lock.yaml
 dist/
 build/
+
+# Android app bundle (build artifact; do not commit)
+*.aab
 
 # Large media not required in git
 *.mp4

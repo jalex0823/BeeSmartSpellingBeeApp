@@ -1,0 +1,654 @@
+diff --git a/node_modules/@capacitor/haptics/android/build.gradle b/node_modules/@capacitor/haptics/android/build.gradle
+index 402e6fc..0405f60 100644
+--- a/node_modules/@capacitor/haptics/android/build.gradle
++++ b/node_modules/@capacitor/haptics/android/build.gradle
+@@ -42,7 +42,7 @@ android {
+     buildTypes {
+         release {
+             minifyEnabled false
+-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
++            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+         }
+     }
+     lintOptions {
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/aapt_friendly_merged_manifests/release/aapt/AndroidManifest.xml b/node_modules/@capacitor/haptics/android/build/intermediates/aapt_friendly_merged_manifests/release/aapt/AndroidManifest.xml
+new file mode 100644
+index 0000000..4d4e65e
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/aapt_friendly_merged_manifests/release/aapt/AndroidManifest.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="com.capacitorjs.plugins.haptics" >
++
++    <uses-sdk android:minSdkVersion="22" />
++
++    <uses-permission android:name="android.permission.VIBRATE" />
++
++</manifest>
+\ No newline at end of file
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/aapt_friendly_merged_manifests/release/aapt/output-metadata.json b/node_modules/@capacitor/haptics/android/build/intermediates/aapt_friendly_merged_manifests/release/aapt/output-metadata.json
+new file mode 100644
+index 0000000..1b19a89
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/aapt_friendly_merged_manifests/release/aapt/output-metadata.json
+@@ -0,0 +1,18 @@
++{
++  "version": 3,
++  "artifactType": {
++    "type": "AAPT_FRIENDLY_MERGED_MANIFESTS",
++    "kind": "Directory"
++  },
++  "applicationId": "com.capacitorjs.plugins.haptics",
++  "variantName": "release",
++  "elements": [
++    {
++      "type": "SINGLE",
++      "filters": [],
++      "attributes": [],
++      "outputFile": "AndroidManifest.xml"
++    }
++  ],
++  "elementType": "File"
++}
+\ No newline at end of file
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml b/node_modules/@capacitor/haptics/android/build/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml
+new file mode 100644
+index 0000000..4d4e65e
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/AndroidManifest.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="com.capacitorjs.plugins.haptics" >
++
++    <uses-sdk android:minSdkVersion="22" />
++
++    <uses-permission android:name="android.permission.VIBRATE" />
++
++</manifest>
+\ No newline at end of file
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/output-metadata.json b/node_modules/@capacitor/haptics/android/build/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/output-metadata.json
+new file mode 100644
+index 0000000..1b19a89
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/aapt_friendly_merged_manifests/release/processReleaseManifest/aapt/output-metadata.json
+@@ -0,0 +1,18 @@
++{
++  "version": 3,
++  "artifactType": {
++    "type": "AAPT_FRIENDLY_MERGED_MANIFESTS",
++    "kind": "Directory"
++  },
++  "applicationId": "com.capacitorjs.plugins.haptics",
++  "variantName": "release",
++  "elements": [
++    {
++      "type": "SINGLE",
++      "filters": [],
++      "attributes": [],
++      "outputFile": "AndroidManifest.xml"
++    }
++  ],
++  "elementType": "File"
++}
+\ No newline at end of file
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/aar_metadata/release/aar-metadata.properties b/node_modules/@capacitor/haptics/android/build/intermediates/aar_metadata/release/aar-metadata.properties
+new file mode 100644
+index 0000000..776557e
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/aar_metadata/release/aar-metadata.properties
+@@ -0,0 +1,5 @@
++aarFormatVersion=1.0
++aarMetadataVersion=1.0
++minCompileSdk=1
++minCompileSdkExtension=0
++minAndroidGradlePluginVersion=1.0.0
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/aar_metadata/release/writeReleaseAarMetadata/aar-metadata.properties b/node_modules/@capacitor/haptics/android/build/intermediates/aar_metadata/release/writeReleaseAarMetadata/aar-metadata.properties
+new file mode 100644
+index 0000000..1211b1e
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/aar_metadata/release/writeReleaseAarMetadata/aar-metadata.properties
+@@ -0,0 +1,6 @@
++aarFormatVersion=1.0
++aarMetadataVersion=1.0
++minCompileSdk=1
++minCompileSdkExtension=0
++minAndroidGradlePluginVersion=1.0.0
++coreLibraryDesugaringEnabled=false
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/annotation_processor_list/release/annotationProcessors.json b/node_modules/@capacitor/haptics/android/build/intermediates/annotation_processor_list/release/annotationProcessors.json
+new file mode 100644
+index 0000000..9e26dfe
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/annotation_processor_list/release/annotationProcessors.json
+@@ -0,0 +1 @@
++{}
+\ No newline at end of file
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/annotation_processor_list/release/javaPreCompileRelease/annotationProcessors.json b/node_modules/@capacitor/haptics/android/build/intermediates/annotation_processor_list/release/javaPreCompileRelease/annotationProcessors.json
+new file mode 100644
+index 0000000..9e26dfe
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/annotation_processor_list/release/javaPreCompileRelease/annotationProcessors.json
+@@ -0,0 +1 @@
++{}
+\ No newline at end of file
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/compile_library_classes_jar/release/classes.jar b/node_modules/@capacitor/haptics/android/build/intermediates/compile_library_classes_jar/release/classes.jar
+new file mode 100644
+index 0000000..ca031cc
+Binary files /dev/null and b/node_modules/@capacitor/haptics/android/build/intermediates/compile_library_classes_jar/release/classes.jar differ
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/compile_r_class_jar/release/R.jar b/node_modules/@capacitor/haptics/android/build/intermediates/compile_r_class_jar/release/R.jar
+new file mode 100644
+index 0000000..5c4d56f
+Binary files /dev/null and b/node_modules/@capacitor/haptics/android/build/intermediates/compile_r_class_jar/release/R.jar differ
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/compile_symbol_list/release/R.txt b/node_modules/@capacitor/haptics/android/build/intermediates/compile_symbol_list/release/R.txt
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/default_proguard_files/global/proguard-android-optimize.txt-8.13.2 b/node_modules/@capacitor/haptics/android/build/intermediates/default_proguard_files/global/proguard-android-optimize.txt-8.13.2
+new file mode 100644
+index 0000000..5a3e3a5
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/default_proguard_files/global/proguard-android-optimize.txt-8.13.2
+@@ -0,0 +1,89 @@
++# This is a configuration file for ProGuard.
++# http://proguard.sourceforge.net/index.html#manual/usage.html
++#
++# Starting with version 2.2 of the Android plugin for Gradle, this file is distributed together with
++# the plugin and unpacked at build-time. The files in $ANDROID_HOME are no longer maintained and
++# will be ignored by new version of the Android plugin for Gradle.
++
++# Optimizations: If you don't want to optimize, use the proguard-android.txt configuration file
++# instead of this one, which turns off the optimization flags.
++-allowaccessmodification
++
++# Preserve some attributes that may be required for reflection.
++-keepattributes AnnotationDefault,
++                EnclosingMethod,
++                InnerClasses,
++                RuntimeVisibleAnnotations,
++                RuntimeVisibleParameterAnnotations,
++                RuntimeVisibleTypeAnnotations,
++                Signature
++
++-keep public class com.google.vending.licensing.ILicensingService
++-keep public class com.android.vending.licensing.ILicensingService
++-keep public class com.google.android.vending.licensing.ILicensingService
++-dontnote com.android.vending.licensing.ILicensingService
++-dontnote com.google.vending.licensing.ILicensingService
++-dontnote com.google.android.vending.licensing.ILicensingService
++
++# For native methods, see https://www.guardsquare.com/manual/configuration/examples#native
++-keepclasseswithmembernames,includedescriptorclasses class * {
++    native <methods>;
++}
++
++# Keep setters in Views so that animations can still work.
++-keepclassmembers public class * extends android.view.View {
++    void set*(***);
++    *** get*();
++}
++
++# We want to keep methods in Activity that could be used in the XML attribute onClick.
++-keepclassmembers class * extends android.app.Activity {
++    public void *(android.view.View);
++}
++
++# For enumeration classes, see https://www.guardsquare.com/manual/configuration/examples#enumerations
++-keepclassmembers enum * {
++    public static **[] values();
++    public static ** valueOf(java.lang.String);
++}
++
++-keepclassmembers class * implements android.os.Parcelable {
++    public static final ** CREATOR;
++}
++
++# Preserve annotated Javascript interface methods.
++-keepclassmembers class * {
++    @android.webkit.JavascriptInterface <methods>;
++}
++
++# The support libraries contains references to newer platform versions.
++# Don't warn about those in case this app is linking against an older
++# platform version. We know about them, and they are safe.
++-dontnote android.support.**
++-dontnote androidx.**
++-dontwarn android.support.**
++-dontwarn androidx.**
++
++# Understand the @Keep support annotation.
++-keep class android.support.annotation.Keep
++
++-keep @android.support.annotation.Keep class * {*;}
++
++-keepclasseswithmembers class * {
++    @android.support.annotation.Keep <methods>;
++}
++
++-keepclasseswithmembers class * {
++    @android.support.annotation.Keep <fields>;
++}
++
++-keepclasseswithmembers class * {
++    @android.support.annotation.Keep <init>(...);
++}
++
++# These classes are duplicated between android.jar and org.apache.http.legacy.jar.
++-dontnote org.apache.http.**
++-dontnote android.net.http.**
++
++# These classes are duplicated between android.jar and core-lambda-stubs.jar.
++-dontnote java.lang.invoke.**
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/default_proguard_files/global/proguard-android.txt-8.13.2 b/node_modules/@capacitor/haptics/android/build/intermediates/default_proguard_files/global/proguard-android.txt-8.13.2
+new file mode 100644
+index 0000000..6f7e4ef
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/default_proguard_files/global/proguard-android.txt-8.13.2
+@@ -0,0 +1,95 @@
++# This is a configuration file for ProGuard.
++# http://proguard.sourceforge.net/index.html#manual/usage.html
++#
++# Starting with version 2.2 of the Android plugin for Gradle, this file is distributed together with
++# the plugin and unpacked at build-time. The files in $ANDROID_HOME are no longer maintained and
++# will be ignored by new version of the Android plugin for Gradle.
++
++# Optimization is turned off by default. Dex does not like code run
++# through the ProGuard optimize steps (and performs some
++# of these optimizations on its own).
++# Note that if you want to enable optimization, you cannot just
++# include optimization flags in your own project configuration file;
++# instead you will need to point to the
++# "proguard-android-optimize.txt" file instead of this one from your
++# project.properties file.
++-dontoptimize
++
++# Preserve some attributes that may be required for reflection.
++-keepattributes AnnotationDefault,
++                EnclosingMethod,
++                InnerClasses,
++                RuntimeVisibleAnnotations,
++                RuntimeVisibleParameterAnnotations,
++                RuntimeVisibleTypeAnnotations,
++                Signature
++
++-keep public class com.google.vending.licensing.ILicensingService
++-keep public class com.android.vending.licensing.ILicensingService
++-keep public class com.google.android.vending.licensing.ILicensingService
++-dontnote com.android.vending.licensing.ILicensingService
++-dontnote com.google.vending.licensing.ILicensingService
++-dontnote com.google.android.vending.licensing.ILicensingService
++
++# For native methods, see https://www.guardsquare.com/manual/configuration/examples#native
++-keepclasseswithmembernames,includedescriptorclasses class * {
++    native <methods>;
++}
++
++# Keep setters in Views so that animations can still work.
++-keepclassmembers public class * extends android.view.View {
++    void set*(***);
++    *** get*();
++}
++
++# We want to keep methods in Activity that could be used in the XML attribute onClick.
++-keepclassmembers class * extends android.app.Activity {
++    public void *(android.view.View);
++}
++
++# For enumeration classes, see https://www.guardsquare.com/manual/configuration/examples#enumerations
++-keepclassmembers enum * {
++    public static **[] values();
++    public static ** valueOf(java.lang.String);
++}
++
++-keepclassmembers class * implements android.os.Parcelable {
++    public static final ** CREATOR;
++}
++
++# Preserve annotated Javascript interface methods.
++-keepclassmembers class * {
++    @android.webkit.JavascriptInterface <methods>;
++}
++
++# The support libraries contains references to newer platform versions.
++# Don't warn about those in case this app is linking against an older
++# platform version. We know about them, and they are safe.
++-dontnote android.support.**
++-dontnote androidx.**
++-dontwarn android.support.**
++-dontwarn androidx.**
++
++# Understand the @Keep support annotation.
++-keep class android.support.annotation.Keep
++
++-keep @android.support.annotation.Keep class * {*;}
++
++-keepclasseswithmembers class * {
++    @android.support.annotation.Keep <methods>;
++}
++
++-keepclasseswithmembers class * {
++    @android.support.annotation.Keep <fields>;
++}
++
++-keepclasseswithmembers class * {
++    @android.support.annotation.Keep <init>(...);
++}
++
++# These classes are duplicated between android.jar and org.apache.http.legacy.jar.
++-dontnote org.apache.http.**
++-dontnote android.net.http.**
++
++# These classes are duplicated between android.jar and core-lambda-stubs.jar.
++-dontnote java.lang.invoke.**
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/default_proguard_files/global/proguard-defaults.txt-8.13.2 b/node_modules/@capacitor/haptics/android/build/intermediates/default_proguard_files/global/proguard-defaults.txt-8.13.2
+new file mode 100644
+index 0000000..7bbb228
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/default_proguard_files/global/proguard-defaults.txt-8.13.2
+@@ -0,0 +1,89 @@
++# This is a configuration file for ProGuard.
++# http://proguard.sourceforge.net/index.html#manual/usage.html
++#
++# Starting with version 2.2 of the Android plugin for Gradle, this file is distributed together with
++# the plugin and unpacked at build-time. The files in $ANDROID_HOME are no longer maintained and
++# will be ignored by new version of the Android plugin for Gradle.
++
++# Optimizations can be turned on and off in the 'postProcessing' DSL block.
++# The configuration below is applied if optimizations are enabled.
++-allowaccessmodification
++
++# Preserve some attributes that may be required for reflection.
++-keepattributes AnnotationDefault,
++                EnclosingMethod,
++                InnerClasses,
++                RuntimeVisibleAnnotations,
++                RuntimeVisibleParameterAnnotations,
++                RuntimeVisibleTypeAnnotations,
++                Signature
++
++-keep public class com.google.vending.licensing.ILicensingService
++-keep public class com.android.vending.licensing.ILicensingService
++-keep public class com.google.android.vending.licensing.ILicensingService
++-dontnote com.android.vending.licensing.ILicensingService
++-dontnote com.google.vending.licensing.ILicensingService
++-dontnote com.google.android.vending.licensing.ILicensingService
++
++# For native methods, see https://www.guardsquare.com/manual/configuration/examples#native
++-keepclasseswithmembernames,includedescriptorclasses class * {
++    native <methods>;
++}
++
++# Keep setters in Views so that animations can still work.
++-keepclassmembers public class * extends android.view.View {
++    void set*(***);
++    *** get*();
++}
++
++# We want to keep methods in Activity that could be used in the XML attribute onClick.
++-keepclassmembers class * extends android.app.Activity {
++    public void *(android.view.View);
++}
++
++# For enumeration classes, see https://www.guardsquare.com/manual/configuration/examples#enumerations
++-keepclassmembers enum * {
++    public static **[] values();
++    public static ** valueOf(java.lang.String);
++}
++
++-keepclassmembers class * implements android.os.Parcelable {
++    public static final ** CREATOR;
++}
++
++# Preserve annotated Javascript interface methods.
++-keepclassmembers class * {
++    @android.webkit.JavascriptInterface <methods>;
++}
++
++# The support libraries contains references to newer platform versions.
++# Don't warn about those in case this app is linking against an older
++# platform version. We know about them, and they are safe.
++-dontnote android.support.**
++-dontnote androidx.**
++-dontwarn android.support.**
++-dontwarn androidx.**
++
++# Understand the @Keep support annotation.
++-keep class android.support.annotation.Keep
++
++-keep @android.support.annotation.Keep class * {*;}
++
++-keepclasseswithmembers class * {
++    @android.support.annotation.Keep <methods>;
++}
++
++-keepclasseswithmembers class * {
++    @android.support.annotation.Keep <fields>;
++}
++
++-keepclasseswithmembers class * {
++    @android.support.annotation.Keep <init>(...);
++}
++
++# These classes are duplicated between android.jar and org.apache.http.legacy.jar.
++-dontnote org.apache.http.**
++-dontnote android.net.http.**
++
++# These classes are duplicated between android.jar and core-lambda-stubs.jar.
++-dontnote java.lang.invoke.**
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/incremental/mergeReleaseAssets/merger.xml b/node_modules/@capacitor/haptics/android/build/intermediates/incremental/mergeReleaseAssets/merger.xml
+new file mode 100644
+index 0000000..43b05ef
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/incremental/mergeReleaseAssets/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet config="main" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="F:\mobile\node_modules\@capacitor\haptics\android\src\main\assets"/></dataSet><dataSet config="release" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="F:\mobile\node_modules\@capacitor\haptics\android\src\release\assets"/></dataSet><dataSet config="generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="F:\mobile\node_modules\@capacitor\haptics\android\build\intermediates\shader_assets\release\compileReleaseShaders\out"/></dataSet></merger>
+\ No newline at end of file
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/incremental/mergeReleaseJniLibFolders/merger.xml b/node_modules/@capacitor/haptics/android/build/intermediates/incremental/mergeReleaseJniLibFolders/merger.xml
+new file mode 100644
+index 0000000..8ac48d5
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/incremental/mergeReleaseJniLibFolders/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet config="main" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="F:\mobile\node_modules\@capacitor\haptics\android\src\main\jniLibs"/></dataSet><dataSet config="release" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="F:\mobile\node_modules\@capacitor\haptics\android\src\release\jniLibs"/></dataSet></merger>
+\ No newline at end of file
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/incremental/mergeReleaseShaders/merger.xml b/node_modules/@capacitor/haptics/android/build/intermediates/incremental/mergeReleaseShaders/merger.xml
+new file mode 100644
+index 0000000..c3a5172
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/incremental/mergeReleaseShaders/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet config="main" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="F:\mobile\node_modules\@capacitor\haptics\android\src\main\shaders"/></dataSet><dataSet config="release" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="F:\mobile\node_modules\@capacitor\haptics\android\src\release\shaders"/></dataSet></merger>
+\ No newline at end of file
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/incremental/packageReleaseAssets/merger.xml b/node_modules/@capacitor/haptics/android/build/intermediates/incremental/packageReleaseAssets/merger.xml
+new file mode 100644
+index 0000000..fe93e29
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/incremental/packageReleaseAssets/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet config="main" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="C:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile\node_modules\@capacitor\haptics\android\src\main\assets"/></dataSet><dataSet config="release" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="C:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile\node_modules\@capacitor\haptics\android\src\release\assets"/></dataSet><dataSet config="generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="C:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile\node_modules\@capacitor\haptics\android\build\intermediates\shader_assets\release\out"/></dataSet></merger>
+\ No newline at end of file
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/incremental/release-mergeJavaRes/merge-state b/node_modules/@capacitor/haptics/android/build/intermediates/incremental/release-mergeJavaRes/merge-state
+new file mode 100644
+index 0000000..1c983fc
+Binary files /dev/null and b/node_modules/@capacitor/haptics/android/build/intermediates/incremental/release-mergeJavaRes/merge-state differ
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/incremental/release/packageReleaseResources/compile-file-map.properties b/node_modules/@capacitor/haptics/android/build/intermediates/incremental/release/packageReleaseResources/compile-file-map.properties
+new file mode 100644
+index 0000000..3413939
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/incremental/release/packageReleaseResources/compile-file-map.properties
+@@ -0,0 +1 @@
++#Tue Feb 03 07:14:11 CST 2026
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/incremental/release/packageReleaseResources/merger.xml b/node_modules/@capacitor/haptics/android/build/intermediates/incremental/release/packageReleaseResources/merger.xml
+new file mode 100644
+index 0000000..97c7594
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/incremental/release/packageReleaseResources/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="main$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="C:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile\node_modules\@capacitor\haptics\android\src\main\res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="main" generated-set="main$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="C:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile\node_modules\@capacitor\haptics\android\src\main\res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="release$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="C:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile\node_modules\@capacitor\haptics\android\src\release\res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="release" generated-set="release$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="C:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile\node_modules\@capacitor\haptics\android\src\release\res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="generated$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="C:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile\node_modules\@capacitor\haptics\android\build\generated\res\resValues\release"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="generated" generated-set="generated$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="C:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile\node_modules\@capacitor\haptics\android\build\generated\res\resValues\release"/></dataSet><mergedItems/></merger>
+\ No newline at end of file
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/Haptics.class b/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/Haptics.class
+new file mode 100644
+index 0000000..4578122
+Binary files /dev/null and b/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/Haptics.class differ
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/HapticsPlugin.class b/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/HapticsPlugin.class
+new file mode 100644
+index 0000000..92752dc
+Binary files /dev/null and b/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/HapticsPlugin.class differ
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/arguments/HapticsImpactType.class b/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/arguments/HapticsImpactType.class
+new file mode 100644
+index 0000000..6422aba
+Binary files /dev/null and b/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/arguments/HapticsImpactType.class differ
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/arguments/HapticsNotificationType.class b/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/arguments/HapticsNotificationType.class
+new file mode 100644
+index 0000000..4fc222d
+Binary files /dev/null and b/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/arguments/HapticsNotificationType.class differ
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/arguments/HapticsSelectionType.class b/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/arguments/HapticsSelectionType.class
+new file mode 100644
+index 0000000..a7776b1
+Binary files /dev/null and b/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/arguments/HapticsSelectionType.class differ
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/arguments/HapticsVibrationType.class b/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/arguments/HapticsVibrationType.class
+new file mode 100644
+index 0000000..aec2e81
+Binary files /dev/null and b/node_modules/@capacitor/haptics/android/build/intermediates/javac/release/classes/com/capacitorjs/plugins/haptics/arguments/HapticsVibrationType.class differ
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/lint_model_metadata/release/writeReleaseLintModelMetadata/lint-model-metadata.properties b/node_modules/@capacitor/haptics/android/build/intermediates/lint_model_metadata/release/writeReleaseLintModelMetadata/lint-model-metadata.properties
+new file mode 100644
+index 0000000..c08f9a0
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/lint_model_metadata/release/writeReleaseLintModelMetadata/lint-model-metadata.properties
+@@ -0,0 +1,3 @@
++mavenArtifactId=capacitor-haptics
++mavenGroupId=android
++mavenVersion=unspecified
+\ No newline at end of file
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/local_only_symbol_list/release/R-def.txt b/node_modules/@capacitor/haptics/android/build/intermediates/local_only_symbol_list/release/R-def.txt
+new file mode 100644
+index 0000000..78ac5b8
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/local_only_symbol_list/release/R-def.txt
+@@ -0,0 +1,2 @@
++R_DEF: Internal format may change without notice
++local
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/manifest_merge_blame_file/release/manifest-merger-blame-release-report.txt b/node_modules/@capacitor/haptics/android/build/intermediates/manifest_merge_blame_file/release/manifest-merger-blame-release-report.txt
+new file mode 100644
+index 0000000..1f6a4d0
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/manifest_merge_blame_file/release/manifest-merger-blame-release-report.txt
+@@ -0,0 +1,12 @@
++1<?xml version="1.0" encoding="utf-8"?>
++2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++3    package="com.capacitorjs.plugins.haptics" >
++4
++5    <uses-sdk android:minSdkVersion="22" />
++5-->C:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml
++6
++7    <uses-permission android:name="android.permission.VIBRATE" />
++7-->C:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml:2:5-66
++7-->C:\Users\Jeff\OneDrive\Documents\GitHub\BeeSmartSpellingBeeApp\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml:2:22-63
++8
++9</manifest>
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/manifest_merge_blame_file/release/processReleaseManifest/manifest-merger-blame-release-report.txt b/node_modules/@capacitor/haptics/android/build/intermediates/manifest_merge_blame_file/release/processReleaseManifest/manifest-merger-blame-release-report.txt
+new file mode 100644
+index 0000000..289b139
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/manifest_merge_blame_file/release/processReleaseManifest/manifest-merger-blame-release-report.txt
+@@ -0,0 +1,11 @@
++1<?xml version="1.0" encoding="utf-8"?>
++2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++3    package="com.capacitorjs.plugins.haptics" >
++4
++5    <uses-sdk android:minSdkVersion="22" />
++6
++7    <uses-permission android:name="android.permission.VIBRATE" />
++7-->F:\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml:2:5-66
++7-->F:\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml:2:22-63
++8
++9</manifest>
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/merged_java_res/release/mergeReleaseJavaResource/feature-capacitor-haptics.jar b/node_modules/@capacitor/haptics/android/build/intermediates/merged_java_res/release/mergeReleaseJavaResource/feature-capacitor-haptics.jar
+new file mode 100644
+index 0000000..15cb0ec
+Binary files /dev/null and b/node_modules/@capacitor/haptics/android/build/intermediates/merged_java_res/release/mergeReleaseJavaResource/feature-capacitor-haptics.jar differ
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/merged_manifest/release/AndroidManifest.xml b/node_modules/@capacitor/haptics/android/build/intermediates/merged_manifest/release/AndroidManifest.xml
+new file mode 100644
+index 0000000..4d4e65e
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/merged_manifest/release/AndroidManifest.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="com.capacitorjs.plugins.haptics" >
++
++    <uses-sdk android:minSdkVersion="22" />
++
++    <uses-permission android:name="android.permission.VIBRATE" />
++
++</manifest>
+\ No newline at end of file
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml b/node_modules/@capacitor/haptics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml
+new file mode 100644
+index 0000000..4d4e65e
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="com.capacitorjs.plugins.haptics" >
++
++    <uses-sdk android:minSdkVersion="22" />
++
++    <uses-permission android:name="android.permission.VIBRATE" />
++
++</manifest>
+\ No newline at end of file
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/navigation_json/release/navigation.json b/node_modules/@capacitor/haptics/android/build/intermediates/navigation_json/release/navigation.json
+new file mode 100644
+index 0000000..0637a08
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/navigation_json/release/navigation.json
+@@ -0,0 +1 @@
++[]
+\ No newline at end of file
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/runtime_library_classes_jar/release/classes.jar b/node_modules/@capacitor/haptics/android/build/intermediates/runtime_library_classes_jar/release/classes.jar
+new file mode 100644
+index 0000000..2a4347e
+Binary files /dev/null and b/node_modules/@capacitor/haptics/android/build/intermediates/runtime_library_classes_jar/release/classes.jar differ
+diff --git a/node_modules/@capacitor/haptics/android/build/intermediates/symbol_list_with_package_name/release/package-aware-r.txt b/node_modules/@capacitor/haptics/android/build/intermediates/symbol_list_with_package_name/release/package-aware-r.txt
+new file mode 100644
+index 0000000..d557658
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/intermediates/symbol_list_with_package_name/release/package-aware-r.txt
+@@ -0,0 +1 @@
++com.capacitorjs.plugins.haptics
+diff --git a/node_modules/@capacitor/haptics/android/build/outputs/logs/manifest-merger-release-report.txt b/node_modules/@capacitor/haptics/android/build/outputs/logs/manifest-merger-release-report.txt
+new file mode 100644
+index 0000000..979a4a6
+--- /dev/null
++++ b/node_modules/@capacitor/haptics/android/build/outputs/logs/manifest-merger-release-report.txt
+@@ -0,0 +1,20 @@
++-- Merging decision tree log ---
++manifest
++ADDED from F:\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml:1:1-3:12
++INJECTED from F:\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml:1:1-3:12
++	package
++		INJECTED from F:\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml
++	xmlns:android
++		ADDED from F:\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml:1:11-69
++uses-permission#android.permission.VIBRATE
++ADDED from F:\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml:2:5-66
++	android:name
++		ADDED from F:\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml:2:22-63
++uses-sdk
++INJECTED from F:\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml reason: use-sdk injection requested
++INJECTED from F:\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml
++INJECTED from F:\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml
++	android:targetSdkVersion
++		INJECTED from F:\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml
++	android:minSdkVersion
++		INJECTED from F:\mobile\node_modules\@capacitor\haptics\android\src\main\AndroidManifest.xml
+diff --git a/node_modules/@capacitor/haptics/android/build/tmp/compileReleaseJavaWithJavac/previous-compilation-data.bin b/node_modules/@capacitor/haptics/android/build/tmp/compileReleaseJavaWithJavac/previous-compilation-data.bin
+new file mode 100644
+index 0000000..113d873
+Binary files /dev/null and b/node_modules/@capacitor/haptics/android/build/tmp/compileReleaseJavaWithJavac/previous-compilation-data.bin differ
