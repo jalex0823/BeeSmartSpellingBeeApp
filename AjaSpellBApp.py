@@ -15183,20 +15183,30 @@ def _teacher_class_or_404():
     """Return the Class for current user (teacher/parent/admin). Create default if none. 403 if not allowed."""
     if current_user.role not in ('teacher', 'parent', 'admin'):
         return None, 403
-    key = (current_user.teacher_key or '').strip()
-    cls = Class.query.filter_by(teacher_id=current_user.id).first()
-    if not cls and key:
-        cls = Class.query.filter_by(teacher_key=key).first()
-    if not cls:
-        # Create default class with new teacher key
-        if not key:
-            key = _generate_unique_teacher_key(current_user.display_name or 'Teacher')
-            current_user.teacher_key = key
-            db.session.flush()
-        cls = Class(teacher_id=current_user.id, name=(current_user.display_name or "Default") + "'s Class", teacher_key=key)
-        db.session.add(cls)
-        db.session.commit()
-    return cls, None
+    try:
+        key = (current_user.teacher_key or '').strip()
+        cls = Class.query.filter_by(teacher_id=current_user.id).first()
+        if not cls and key:
+            cls = Class.query.filter_by(teacher_key=key).first()
+        if not cls:
+            # Create default class with new teacher key
+            if not key:
+                key = _generate_unique_teacher_key(current_user.display_name or 'Teacher')
+                current_user.teacher_key = key
+                db.session.flush()
+            cls = Class(teacher_id=current_user.id, name=(current_user.display_name or "Default") + "'s Class", teacher_key=key)
+            db.session.add(cls)
+            db.session.commit()
+        return cls, None
+    except (sa_exc.OperationalError, sa_exc.ProgrammingError) as e:
+        # Deployed env may be missing roster/class migrations (classes/roster_students tables).
+        # Do NOT crash the whole dashboard; return 503 so UI can show a setup message.
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        print(f" teacher class unavailable (migrations missing?): {e}")
+        return None, 503
 
 
 @app.route('/api/teacher/class', methods=['GET'])
@@ -15205,6 +15215,8 @@ def api_teacher_class():
     """GET /api/teacher/class - Return class for current teacher; create default if none."""
     cls, err = _teacher_class_or_404()
     if err:
+        if err == 503:
+            return jsonify({"status": "error", "message": "Class/roster system not initialized on server yet. Run migrations and retry."}), 503
         return jsonify({"status": "error", "message": "Forbidden"}), 403
     return jsonify({
         "status": "ok",
