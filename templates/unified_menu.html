@@ -4895,10 +4895,10 @@ function showRestoreDialog(title, message, isSuccess) {
                                         Grade
                                     </div>
                                     <div style="font-size: 1.8rem; font-weight: 700; color: #9C27B0; margin-bottom: 0.2rem;">
-                                        <span id="stats-grade-letter">{{ current_user.cumulative_gpa|gpa_to_grade }}</span> 
+                                        <span id="stats-grade-letter">{% if (current_user.total_quizzes_completed or 0) == 0 %}N/A{% else %}{{ current_user.cumulative_gpa|gpa_to_grade }}{% endif %}</span> 
                                     </div>
                                     <div style="font-size: 0.75rem; color: #8B4513; font-weight: 500;">
-                                        GPA: <span id="stats-gpa-value">{{ "%.2f"|format(current_user.cumulative_gpa|float) if current_user.cumulative_gpa and current_user.cumulative_gpa != None else "0.00" }}</span>
+                                        GPA: <span id="stats-gpa-value">{% if (current_user.total_quizzes_completed or 0) == 0 %}N/A{% else %}{{ "%.2f"|format(current_user.cumulative_gpa|float) if current_user.cumulative_gpa is not none else "0.00" }}{% endif %}</span>
                                     </div>
                                 </div>
                                 
@@ -5356,7 +5356,7 @@ function showRestoreDialog(title, message, isSuccess) {
                 </div>
 
                 <!-- Groups — One Quiz, One Code -->
-                <div id="tileGroups" class="menu-option" style="background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%); border-color: rgba(255, 152, 0, 0.6);" onclick="kidSounds.playRandomEffect(); selectOption('groups', this)" onmouseover="kidSounds.playBuzz()" title=" One quiz, one code — create or join a group so the whole class takes the same quiz!">
+                <div id="tileGroups" class="menu-option" style="background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%); border-color: rgba(255, 152, 0, 0.6);" onclick="kidSounds.playRandomEffect(); selectOption('groups', this)" onmouseover="kidSounds.playBuzz()" title=" One quiz, one code — enter your group code to join your class quiz!">
                     <div class="option-icon"></div>
                     <div class="option-title">Groups</div>
                     <div class="option-description">One quiz, one code</div>
@@ -7373,7 +7373,9 @@ function showRestoreDialog(title, message, isSuccess) {
                     showBattleInterface();
                     break;
                 case 'groups':
-                    window.location.href = '/groups';
+                    // Main menu is primarily for students: go straight to Join Group.
+                    // Teachers can use the Teacher Dashboard Groups button for Create.
+                    window.location.href = '/groups?tab=join';
                     break;
                 case 'join_teacher':
                     window.location.href = '/join';
@@ -21413,14 +21415,15 @@ function showRestoreDialog(title, message, isSuccess) {
         function applyStats(stats) {
             if (!stats) return;
 
+            const quizzes = Number(stats.total_quizzes_completed) || 0;
             const gpa = Number(stats.cumulative_gpa) || 0;
             const acc = Number(stats.average_accuracy) || 0;
 
             const elGrade = document.getElementById('stats-grade-letter');
-            if (elGrade) { elGrade.textContent = gpaToLetter(gpa); flashStatEl(elGrade); }
+            if (elGrade) { elGrade.textContent = quizzes === 0 ? 'N/A' : gpaToLetter(gpa); flashStatEl(elGrade); }
 
             const elGpa = document.getElementById('stats-gpa-value');
-            if (elGpa) { elGpa.textContent = gpa.toFixed(2); flashStatEl(elGpa); }
+            if (elGpa) { elGpa.textContent = quizzes === 0 ? 'N/A' : gpa.toFixed(2); flashStatEl(elGpa); }
 
             const elPoints = document.getElementById('stats-points');
             if (elPoints) { elPoints.textContent = numberWithCommas(stats.total_lifetime_points || 0); flashStatEl(elPoints); }

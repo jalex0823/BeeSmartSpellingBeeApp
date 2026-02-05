@@ -14530,6 +14530,15 @@ def teacher_dashboard():
     if current_user.role not in ['teacher', 'parent', 'admin']:
         flash('Access denied: Teachers only', 'error')
         return redirect(url_for('home'))
+
+    # Teacher/Parent/Admin class (for class name + roster)
+    cls = None
+    try:
+        cls, err = _teacher_class_or_404()
+        if err:
+            cls = None
+    except Exception:
+        cls = None
     
     # Get all students linked to this teacher
     students_query = db.session.query(User).join(
@@ -14608,6 +14617,7 @@ def teacher_dashboard():
     from datetime import datetime
     return render_template('teacher/dashboard.html',
                          students=students,
+                         teacher_class=cls,
                          class_stats=class_stats,
                          now=datetime.now())
 
@@ -15205,6 +15215,58 @@ def api_teacher_class():
     })
 
 
+@app.route('/api/teacher/class', methods=['PATCH'])
+@login_required
+def api_teacher_class_patch():
+    """PATCH /api/teacher/class - Update class name for current teacher/parent/admin."""
+    cls, err = _teacher_class_or_404()
+    if err:
+        return jsonify({"status": "error", "message": "Forbidden"}), 403
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({"status": "error", "message": "name is required"}), 400
+    if len(name) > 80:
+        return jsonify({"status": "error", "message": "name is too long (max 80 characters)"}), 400
+    cls.name = name
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    return jsonify({"status": "ok", "name": cls.name})
+
+
+@app.route('/api/teacher/profile-picture', methods=['POST'])
+@login_required
+def api_teacher_profile_picture():
+    """POST /api/teacher/profile-picture - Upload and set teacher profile picture."""
+    if current_user.role not in ('teacher', 'parent', 'admin'):
+        return jsonify({"status": "error", "message": "Forbidden"}), 403
+    f = request.files.get('file')
+    if not f or not getattr(f, 'filename', ''):
+        return jsonify({"status": "error", "message": "No file uploaded"}), 400
+    filename = secure_filename(f.filename or "profile")
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ('.png', '.jpg', '.jpeg', '.webp'):
+        return jsonify({"status": "error", "message": "Only PNG, JPG, or WEBP images are supported"}), 400
+    try:
+        # Store under static so it's served by the app without extra routes
+        rel_dir = os.path.join('static', 'uploads', 'profile')
+        abs_dir = os.path.join(app.root_path, rel_dir)
+        os.makedirs(abs_dir, exist_ok=True)
+        out_name = f"teacher_{current_user.id}_{int(time.time())}{ext}"
+        abs_path = os.path.join(abs_dir, out_name)
+        f.save(abs_path)
+        url_path = f"/static/uploads/profile/{out_name}"
+        current_user.profile_picture = url_path
+        db.session.commit()
+        return jsonify({"status": "ok", "url": url_path})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route('/api/teacher/class/<int:class_id>/students', methods=['GET'])
 @login_required
 def api_teacher_class_students(class_id):
@@ -15565,14 +15627,20 @@ def _roster_import_template_xlsx():
 @login_required
 def api_teacher_roster_import_template():
     """Download CSV or XLSX template for class roster import. ?format=xlsx for Excel."""
-    cls, err = _teacher_class_or_404()
-    if err:
+    # IMPORTANT: This endpoint must work even if roster/class migrations haven't run yet.
+    # It is purely a file download, so avoid touching the Class table here.
+    if current_user.role not in ('teacher', 'parent', 'admin'):
         return jsonify({"status": "error", "message": "Forbidden"}), 403
     fmt = (request.args.get('format') or 'csv').strip().lower()
     if fmt == 'xlsx':
         data = _roster_import_template_xlsx()
+        # If XLSX generation isn't available (e.g. openpyxl not installed in this env),
+        # fall back to CSV which still opens cleanly in Excel/Sheets.
         if not data:
-            return jsonify({"status": "error", "message": "XLSX template unavailable"}), 500
+            data = _roster_import_template_csv()
+            from flask import Response
+            return Response(data, mimetype='text/csv; charset=utf-8',
+                           headers={'Content-Disposition': 'attachment; filename=BeeSmart_roster_import_template.csv'})
         from flask import Response
         return Response(data, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                        headers={'Content-Disposition': 'attachment; filename=BeeSmart_roster_import_template.xlsx'})

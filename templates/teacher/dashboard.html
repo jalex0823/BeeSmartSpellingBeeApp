@@ -10,20 +10,57 @@
     .morph-container { display: none !important; visibility: hidden !important; }
     .roster-filter { padding: 0.4rem 0.8rem; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; cursor: pointer; }
     .roster-filter.active { background: #667eea; color: white; border-color: #667eea; }
+    .students-tab { padding: 0.4rem 0.8rem; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; cursor: pointer; }
+    .students-tab.active { background: #2b6cb0; color: white; border-color: #2b6cb0; }
+
+    /* BeeSmart palette: warm honey cards instead of stark white */
+    :root{
+        --bee-card-bg: linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(255,249,230,0.96) 55%, rgba(255,236,179,0.92) 100%);
+        --bee-card-border: rgba(255, 165, 0, 0.22);
+    }
+    .bee-card{
+        background: var(--bee-card-bg);
+        border: 1px solid var(--bee-card-border);
+        box-sizing: border-box;
+    }
 </style>
 
-<div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem; display: flex; flex-direction: column; align-items: center;">
-    <!-- Centered Title Bar (admin-style) -->
-    <div style="text-align: center; margin-bottom: 1rem; width: 100%;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3); display: inline-block; min-width: 400px;">
-            <h1 style="margin: 0 0 0.5rem 0; font-size: 2rem;">👨‍🏫 Teacher Dashboard</h1>
-            <p style="margin: 0 0 1rem 0; opacity: 0.9;">Welcome back, {{ current_user.display_name }}!</p>
-            <!-- Buzz Dust Rank Badge -->
-            <div id="teacher-buzz-dust-rank" style="margin-top: 0.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
-                <div id="teacher-rank-badge" style="width: 64px; height: 64px; display: none;"></div>
-                <div style="display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: 12px; backdrop-filter: blur(10px);">
-                    <div id="teacher-rank-name" style="font-size: 0.95rem; font-weight: 700; opacity: 0.9;">Loading...</div>
-                    <div id="teacher-buzz-dust-amount" style="font-size: 1.25rem; font-weight: 900;">0 ✨</div>
+<div style="max-width: 1100px; margin: 2rem auto; padding: 0 1rem; display: flex; flex-direction: column; align-items: center;">
+    <!-- Banner Header (uniform width with page content) -->
+    <div style="margin-bottom: 1rem; width: 100%;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.25rem 1.5rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3); width: 100%; box-sizing: border-box;">
+            <div style="display:flex; align-items:center; justify-content: space-between; gap: 1rem; flex-wrap:wrap;">
+                <!-- Left: profile + class title -->
+                <div style="display:flex; align-items:center; gap: 1rem; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap: 0.75rem;">
+                        <div id="teacherProfilePicWrap" style="width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,0.18); border: 3px solid rgba(255,255,255,0.35); overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                            {% if current_user.profile_picture %}
+                            <img id="teacherProfilePic" src="{{ current_user.profile_picture }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+                            {% else %}
+                            <div id="teacherProfilePicPlaceholder" style="font-size: 1.75rem; font-weight: 800; line-height: 1;">👩‍🏫</div>
+                            {% endif %}
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap: 0.35rem;">
+                            <div style="display:flex; align-items:center; gap: 0.5rem; flex-wrap:wrap;">
+                                <div style="font-size: 1.6rem; font-weight: 900; letter-spacing: 0.2px; line-height: 1.1;">
+                                    <span id="classNameDisplay">{{ (teacher_class.name if teacher_class else 'Teacher Dashboard') }}</span>
+                                </div>
+                                <button type="button" id="classNameEditBtn" style="padding: 0.4rem 0.7rem; background: rgba(255,255,255,0.18); color: white; border: 1px solid rgba(255,255,255,0.35); border-radius: 10px; font-weight: 800; cursor: pointer;">✏️ Rename</button>
+                                <button type="button" id="teacherProfilePicBtn" style="padding: 0.4rem 0.7rem; background: rgba(255,255,255,0.18); color: white; border: 1px solid rgba(255,255,255,0.35); border-radius: 10px; font-weight: 800; cursor: pointer;">📷 Photo</button>
+                                <input type="file" id="teacherProfilePicInput" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" style="display:none;">
+                            </div>
+                            <div id="classNameEditor" style="display:none; gap: 0.5rem; align-items:center; flex-wrap:wrap;">
+                                <input type="text" id="classNameInput" maxlength="80" value="{{ teacher_class.name if teacher_class else '' }}" placeholder="e.g. Miss Johnson's Class" style="padding: 0.55rem 0.75rem; border-radius: 10px; border: none; width: min(460px, 78vw);">
+                                <button type="button" id="classNameSaveBtn" style="padding: 0.55rem 0.9rem; background: #22c55e; color: white; border: none; border-radius: 10px; font-weight: 900; cursor: pointer;">Save</button>
+                                <button type="button" id="classNameCancelBtn" style="padding: 0.55rem 0.9rem; background: rgba(255,255,255,0.18); color: white; border: 1px solid rgba(255,255,255,0.35); border-radius: 10px; font-weight: 900; cursor: pointer;">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: greeting -->
+                <div style="opacity: 0.92; font-weight: 700; text-align: right;">
+                    Welcome back, {{ current_user.display_name }}!
                 </div>
             </div>
         </div>
@@ -40,31 +77,31 @@
     </div>
 
     <!-- Teacher Key strip (compact, prominent) -->
-    <div style="width: 100%; max-width: 800px; margin-bottom: 2rem; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); border-radius: 16px; padding: 1.25rem 1.5rem; box-shadow: 0 6px 20px rgba(255, 165, 0, 0.25); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem;">
+    <div style="width: 100%; margin-bottom: 2rem; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); border-radius: 16px; padding: 1.25rem 1.5rem; box-shadow: 0 6px 20px rgba(255, 165, 0, 0.25); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; text-align: center;">
         <div style="font-weight: 700; color: #5A2C15; font-size: 1rem;">🔑 Your Teacher Key (share with students):</div>
-        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; flex-wrap: wrap; width: 100%;">
             <div id="teacherKey" style="background: white; padding: 0.6rem 1.2rem; border-radius: 10px; font-family: monospace; font-size: 1.15rem; font-weight: 700; color: #5A2C15; letter-spacing: 1px;">{{ current_user.teacher_key }}</div>
             <button type="button" id="copyTeacherKeyBtn" onclick="copyTeacherKey(this)" style="padding: 0.6rem 1.2rem; background: #5A2C15; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">📋 Copy</button>
             <button type="button" onclick="generateTeacherKey()" style="padding: 0.6rem 1.2rem; background: #8B5CF6; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">🔁 Generate / Rotate</button>
-            <a href="/groups" style="padding: 0.6rem 1.2rem; background: #E65100; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; text-decoration: none;">📋 Groups — One Quiz, One Code</a>
+            <a href="/groups?tab=create" style="padding: 0.6rem 1.2rem; background: #E65100; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; text-decoration: none;">📋 Groups — One Quiz, One Code</a>
         </div>
     </div>
 
     <!-- Stats Grid (admin-style cards) -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; width: 100%;">
-        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
+        <div class="bee-card" style="padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';">
             <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">My Students</div>
             <div style="font-size: 2rem; font-weight: 700; color: #667eea;" class="formatted-number">{{ students|length }}</div>
         </div>
-        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+        <div class="bee-card" style="padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
             <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Total Quizzes</div>
             <div style="font-size: 2rem; font-weight: 700; color: #9f7aea;" id="class-total-quizzes">{{ class_stats.total_quizzes|format_number }}</div>
         </div>
-        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+        <div class="bee-card" style="padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
             <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Class Accuracy</div>
             <div style="font-size: 2rem; font-weight: 700; color: #48bb78;" id="class-avg-accuracy">{{ "%.0f"|format(class_stats.avg_accuracy) }}%</div>
         </div>
-        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+        <div class="bee-card" style="padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
             <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Total Points</div>
             <div style="font-size: 2rem; font-weight: 700; color: #ed8936;" id="class-total-points">{{ class_stats.total_points|format_number }}</div>
         </div>
@@ -75,118 +112,126 @@
     </div>
 
     {% if (class_stats.total_quizzes or 0) == 0 %}
-    <div style="width: 100%; max-width: 700px; margin-bottom: 2rem; background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%); border: 2px solid rgba(255, 165, 0, 0.4); border-radius: 16px; padding: 1.25rem 1.5rem; box-shadow: 0 4px 16px rgba(255, 165, 0, 0.15); text-align: center;">
+    <div style="width: 100%; margin-bottom: 2rem; background: linear-gradient(135deg, #FFF9E6 0%, #FFE8CC 100%); border: 2px solid rgba(255, 165, 0, 0.4); border-radius: 16px; padding: 1.25rem 1.5rem; box-shadow: 0 4px 16px rgba(255, 165, 0, 0.15); text-align: center;">
         <div style="font-size: 2rem; margin-bottom: 0.5rem;">🐝📚</div>
         <h3 style="color: #8B4513; font-size: 1.2rem; font-weight: 700; margin: 0 0 0.5rem 0;">Class stats will appear here</h3>
         <p style="color: #5A2C15; font-size: 0.95rem; margin: 0; line-height: 1.5;">When your students complete quizzes, total quizzes, class accuracy, points, and buzz dust will show here. Share your Teacher Key so students can link their accounts.</p>
     </div>
     {% endif %}
 
-    <!-- Class Roster (managed profiles — no student sign-up) -->
-    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem; width: 100%;">
+    <!-- Students (combined: Managed Roster + Linked Accounts) -->
+    <div class="bee-card" style="padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem; width: 100%;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
-            <h2 style="margin: 0; font-size: 1.5rem;">👥 Class Roster</h2>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <button type="button" id="rosterFilterActive" class="roster-filter active" data-status="ACTIVE">Active</button>
-                <button type="button" id="rosterFilterArchived" class="roster-filter" data-status="ARCHIVED">Archived</button>
-                <button type="button" id="rosterFilterAll" class="roster-filter" data-status="ALL">All</button>
-                <button type="button" id="rosterAddBtn" style="padding: 0.5rem 1rem; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">+ Add Student</button>
-                <a href="/api/teacher/roster-import-template" id="rosterTemplateLink" style="padding: 0.5rem 1rem; background: #607D8B; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block;">📥 Template (CSV)</a>
-                <a href="/api/teacher/roster-import-template?format=xlsx" id="rosterTemplateXlsxLink" style="padding: 0.5rem 1rem; background: #607D8B; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block;">📥 Template (Excel)</a>
-                <button type="button" id="rosterImportBtn" style="padding: 0.5rem 1rem; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Import CSV/XLSX</button>
+            <h2 style="margin: 0; font-size: 1.5rem;">👥 Students</h2>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                <button type="button" id="studentsTabRoster" class="students-tab active">Managed roster</button>
+                <button type="button" id="studentsTabLinked" class="students-tab">Linked accounts</button>
+
+                <div id="rosterControls" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button type="button" id="rosterFilterActive" class="roster-filter active" data-status="ACTIVE">Active</button>
+                    <button type="button" id="rosterFilterArchived" class="roster-filter" data-status="ARCHIVED">Archived</button>
+                    <button type="button" id="rosterFilterAll" class="roster-filter" data-status="ALL">All</button>
+                    <button type="button" id="rosterAddBtn" style="padding: 0.5rem 1rem; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">+ Add Student</button>
+                    <a href="/api/teacher/roster-import-template" id="rosterTemplateLink" style="padding: 0.5rem 1rem; background: #607D8B; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block;">📥 Template (CSV)</a>
+                    <a href="/api/teacher/roster-import-template?format=xlsx" id="rosterTemplateXlsxLink" style="padding: 0.5rem 1rem; background: #607D8B; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block;">📥 Template (Excel)</a>
+                    <button type="button" id="rosterImportBtn" style="padding: 0.5rem 1rem; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Import CSV/XLSX</button>
+                </div>
+
+                <div id="linkedControls" style="display: none; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                    <input type="text" id="searchInput" placeholder="🔍 Search students..." onkeyup="filterStudents()"
+                           style="padding: 0.6rem 1rem; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 1rem; width: 260px; max-width: 100%;" />
+                </div>
             </div>
         </div>
-        <p style="color: #666; font-size: 0.9rem; margin: 0 0 1rem 0;">Students join with your Teacher Key and pick their name (no registration). Add or import names here. Use the <strong>Download template</strong> to get the correct format (Student Name, Student ID, Grade, PIN) for importing your roster.</p>
-        <div id="rosterTableWrap" style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse;" id="rosterTable">
-                <thead>
-                    <tr style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
-                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Name</th>
-                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Username</th>
-                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Student ID</th>
-                        <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Grade</th>
-                        <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;">PIN</th>
-                        <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;">Status</th>
-                        <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="rosterTableBody">
-                    <tr><td colspan="7" style="padding: 1.5rem; text-align: center; color: #718096;">Loading roster…</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
 
-    <!-- My Students Section (registered accounts linked by Teacher Key) -->
-    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 2rem; width: 100%;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
-            <h2 style="margin: 0; font-size: 1.5rem;">📋 My Students</h2>
-            <input type="text" id="searchInput" placeholder="🔍 Search students..." onkeyup="filterStudents()"
-                   style="padding: 0.6rem 1rem; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 1rem; width: 260px; max-width: 100%;" />
+        <p id="rosterHelp" style="color: #666; font-size: 0.9rem; margin: 0 0 1rem 0;">Students join with your Teacher Key and pick their name (no registration). Add or import names here. Use the <strong>Download template</strong> to get the correct format (Student Name, Student ID, Grade, PIN) for importing your roster.</p>
+        <p id="linkedHelp" style="display:none; color: #666; font-size: 0.9rem; margin: 0 0 1rem 0;">These are students who created their own accounts and linked to you using your Teacher Key. Use <strong>View Details</strong> to review quiz history and progress.</p>
+
+        <div id="managedRosterView">
+            <div id="rosterTableWrap" style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;" id="rosterTable">
+                    <thead>
+                        <tr style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Name</th>
+                            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Username</th>
+                            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Student ID</th>
+                            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Grade</th>
+                            <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;">PIN</th>
+                            <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;">Status</th>
+                            <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rosterTableBody">
+                        <tr><td colspan="7" style="padding: 1.5rem; text-align: center; color: #718096;">Loading roster…</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        {% if students %}
-        <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse;" id="studentsTable">
-                <thead>
-                    <tr style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
-                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Avatar</th>
-                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568; cursor: pointer;" onclick="sortTable(1)">Name</th>
-                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568; cursor: pointer;" onclick="sortTable(2)">Grade</th>
-                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568; cursor: pointer;" onclick="sortTable(3)">Quizzes</th>
-                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568; cursor: pointer;" onclick="sortTable(4)">Accuracy</th>
-                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568; cursor: pointer;" onclick="sortTable(5)">Points</th>
-                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">✨ Buzz Dust</th>
-                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Last Active</th>
-                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Status</th>
-                        <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for student in students %}
-                    <tr data-student-id="{{ student.id }}" style="border-bottom: 1px solid #e2e8f0; {% if loop.index % 2 == 0 %}background: #f9fafb;{% endif %}">
-                        <td style="padding: 1rem;">
-                            {% if student.avatar_thumb_url %}
-                            <img src="{{ student.avatar_thumb_url }}" alt="" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0;">
-                            {% else %}
-                            <div style="width: 40px; height: 40px; border-radius: 50%; background: #f2f2f2; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">🐝</div>
-                            {% endif %}
-                        </td>
-                        <td style="padding: 1rem; font-weight: 600; color: #2d3748;">{{ student.display_name }}</td>
-                        <td style="padding: 1rem; color: #718096;">{{ student.grade_level or '—' }}</td>
-                        <td style="padding: 1rem; text-align: center; font-weight: 600; color: #9f7aea;"><span id="student-{{ student.id }}-quizzes">{{ student.total_quizzes_completed|format_number or 0 }}</span></td>
-                        <td style="padding: 1rem; text-align: center;">
-                            {% set accuracy = student.avg_accuracy or 0 %}
-                            <span id="student-{{ student.id }}-acc-text" style="font-weight: 600; color: {% if accuracy >= 80 %}#48bb78{% elif accuracy >= 60 %}#ed8936{% else %}#f56565{% endif %};">{{ "%.0f"|format(accuracy) }}%</span>
-                        </td>
-                        <td style="padding: 1rem; text-align: center; font-weight: 600;"><span id="student-{{ student.id }}-points">{{ student.total_lifetime_points|format_number or 0 }}</span></td>
-                        <td style="padding: 1rem; text-align: center; color: #8B4513; font-weight: 600;">
-                            <span id="student-{{ student.id }}-buzz-dust">{{ student.total_buzz_dust or 0 }}</span>
-                            <div style="font-size: 0.75rem; color: #666;" id="student-{{ student.id }}-bee-class">🐝 {{ student.bee_class or 'Novice Bee' }}</div>
-                        </td>
-                        <td style="padding: 1rem; font-size: 0.875rem; color: #718096;">{{ student.last_login.strftime('%b %d') if student.last_login else 'Never' }}</td>
-                        <td style="padding: 1rem; text-align: center;">
-                            {% if student.last_login and (now - student.last_login).days < 7 %}
-                            <span style="background: #C6F6D5; color: #276749; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">Active</span>
-                            {% else %}
-                            <span style="background: #E2E8F0; color: #4a5568; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">Inactive</span>
-                            {% endif %}
-                        </td>
-                        <td style="padding: 1rem; text-align: center;">
-                            <a href="/teacher/student/{{ student.id }}" style="display: inline-block; padding: 0.5rem 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem;">View Details</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div id="linkedStudentsView" style="display:none;">
+            {% if students %}
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;" id="studentsTable">
+                    <thead>
+                        <tr style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Avatar</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568; cursor: pointer;" onclick="sortTable(1)">Name</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568; cursor: pointer;" onclick="sortTable(2)">Grade</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568; cursor: pointer;" onclick="sortTable(3)">Quizzes</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568; cursor: pointer;" onclick="sortTable(4)">Accuracy</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568; cursor: pointer;" onclick="sortTable(5)">Points</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">✨ Buzz Dust</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Last Active</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Status</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600; color: #4a5568;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr data-student-id="{{ student.id }}" style="border-bottom: 1px solid #e2e8f0; {% if loop.index % 2 == 0 %}background: #f9fafb;{% endif %}">
+                            <td style="padding: 1rem;">
+                                {% if student.avatar_thumb_url %}
+                                <img src="{{ student.avatar_thumb_url }}" alt="" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0;">
+                                {% else %}
+                                <div style="width: 40px; height: 40px; border-radius: 50%; background: #f2f2f2; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">🐝</div>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 1rem; font-weight: 600; color: #2d3748;">{{ student.display_name }}</td>
+                            <td style="padding: 1rem; color: #718096;">{{ student.grade_level or '—' }}</td>
+                            <td style="padding: 1rem; text-align: center; font-weight: 600; color: #9f7aea;"><span id="student-{{ student.id }}-quizzes">{{ student.total_quizzes_completed|format_number or 0 }}</span></td>
+                            <td style="padding: 1rem; text-align: center;">
+                                {% set accuracy = student.avg_accuracy or 0 %}
+                                <span id="student-{{ student.id }}-acc-text" style="font-weight: 600; color: {% if accuracy >= 80 %}#48bb78{% elif accuracy >= 60 %}#ed8936{% else %}#f56565{% endif %};">{{ "%.0f"|format(accuracy) }}%</span>
+                            </td>
+                            <td style="padding: 1rem; text-align: center; font-weight: 600;"><span id="student-{{ student.id }}-points">{{ student.total_lifetime_points|format_number or 0 }}</span></td>
+                            <td style="padding: 1rem; text-align: center; color: #8B4513; font-weight: 600;">
+                                <span id="student-{{ student.id }}-buzz-dust">{{ student.total_buzz_dust or 0 }}</span>
+                                <div style="font-size: 0.75rem; color: #666;" id="student-{{ student.id }}-bee-class">🐝 {{ student.bee_class or 'Novice Bee' }}</div>
+                            </td>
+                            <td style="padding: 1rem; font-size: 0.875rem; color: #718096;">{{ student.last_login.strftime('%b %d') if student.last_login else 'Never' }}</td>
+                            <td style="padding: 1rem; text-align: center;">
+                                {% if student.last_login and (now - student.last_login).days < 7 %}
+                                <span style="background: #C6F6D5; color: #276749; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">Active</span>
+                                {% else %}
+                                <span style="background: #E2E8F0; color: #4a5568; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 1rem; text-align: center;">
+                                <a href="/teacher/student/{{ student.id }}" style="display: inline-block; padding: 0.5rem 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem;">View Details</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 2rem; color: #718096;">
+                <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">👥</div>
+                <p style="font-size: 1.05rem; margin: 0;">No linked accounts yet</p>
+                <p style="font-size: 0.875rem; margin: 0.5rem 0 0 0;">Students will appear here if they create their own account and link using your Teacher Key.</p>
+            </div>
+            {% endif %}
         </div>
-        {% else %}
-        <div style="text-align: center; padding: 3rem; color: #718096;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
-            <p style="font-size: 1.125rem; margin: 0;">No students yet</p>
-            <p style="font-size: 0.875rem; margin: 0.5rem 0 0 0;">Share your Teacher Key with students so they can link their accounts during registration.</p>
-        </div>
-        {% endif %}
     </div>
 
     <!-- Add Student modal -->
@@ -205,9 +250,10 @@
     </div>
 
     <!-- Quick Actions (admin-style) -->
-    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 820px; width: 100%; margin-bottom: 2rem; text-align: center;">
+    <!-- Quick Actions (footer menu) — full width + BeeSmart palette -->
+    <div class="bee-card" style="padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; margin-bottom: 2rem; text-align: center;">
         <h2 style="margin: 0 0 1rem 0; font-size: 1.25rem;">Quick Actions</h2>
-        <div style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); justify-items: center;">
+        <div style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); justify-items: stretch; align-items: stretch; width: 100%;">
             <a href="/" style="display: block; width: 100%; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 10px; text-align: center; font-weight: 600;">🏠 Home</a>
             <a href="/teacher/export/class.csv" style="display: block; width: 100%; padding: 1rem; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #5A2C15; text-decoration: none; border-radius: 10px; text-align: center; font-weight: 600;">📄 Export CSV</a>
             <a href="/teacher/export/class.pdf" style="display: block; width: 100%; padding: 1rem; background: linear-gradient(135deg, #ffb74d 0%, #fb8c00 100%); color: white; text-decoration: none; border-radius: 10px; text-align: center; font-weight: 600;">🧾 Export PDF</a>
@@ -258,8 +304,29 @@
     var teacherClassId = null;
     var rosterStatus = 'ACTIVE';
     function setFilterActive(btn){
-        document.querySelectorAll('.roster-filter').forEach(function(b){ b.classList.remove('active'); });
+        // Only toggle ACTIVE/ARCHIVED/ALL buttons (not other UI controls)
+        document.querySelectorAll('.roster-filter[data-status]').forEach(function(b){ b.classList.remove('active'); });
         if(btn) btn.classList.add('active');
+    }
+    function setStudentsTab(view){
+        var tabRoster = document.getElementById('studentsTabRoster');
+        var tabLinked = document.getElementById('studentsTabLinked');
+        var rosterControls = document.getElementById('rosterControls');
+        var linkedControls = document.getElementById('linkedControls');
+        var rosterHelp = document.getElementById('rosterHelp');
+        var linkedHelp = document.getElementById('linkedHelp');
+        var rosterView = document.getElementById('managedRosterView');
+        var linkedView = document.getElementById('linkedStudentsView');
+
+        var isRoster = (view !== 'linked');
+        if(tabRoster) tabRoster.classList.toggle('active', isRoster);
+        if(tabLinked) tabLinked.classList.toggle('active', !isRoster);
+        if(rosterControls) rosterControls.style.display = isRoster ? 'flex' : 'none';
+        if(linkedControls) linkedControls.style.display = isRoster ? 'none' : 'flex';
+        if(rosterHelp) rosterHelp.style.display = isRoster ? '' : 'none';
+        if(linkedHelp) linkedHelp.style.display = isRoster ? 'none' : '';
+        if(rosterView) rosterView.style.display = isRoster ? '' : 'none';
+        if(linkedView) linkedView.style.display = isRoster ? 'none' : '';
     }
     async function loadRoster(){
         var tbody = document.getElementById('rosterTableBody');
@@ -301,25 +368,36 @@
     document.getElementById('rosterFilterActive')&&document.getElementById('rosterFilterActive').addEventListener('click', function(){ rosterStatus='ACTIVE'; setFilterActive(this); loadRoster(); });
     document.getElementById('rosterFilterArchived')&&document.getElementById('rosterFilterArchived').addEventListener('click', function(){ rosterStatus='ARCHIVED'; setFilterActive(this); loadRoster(); });
     document.getElementById('rosterFilterAll')&&document.getElementById('rosterFilterAll').addEventListener('click', function(){ rosterStatus='ALL'; setFilterActive(this); loadRoster(); });
+    document.getElementById('studentsTabRoster')&&document.getElementById('studentsTabRoster').addEventListener('click', function(){ setStudentsTab('roster'); });
+    document.getElementById('studentsTabLinked')&&document.getElementById('studentsTabLinked').addEventListener('click', function(){ setStudentsTab('linked'); });
     var addModal = document.getElementById('rosterAddModal');
     document.getElementById('rosterAddBtn')&&document.getElementById('rosterAddBtn').addEventListener('click', function(){ if(addModal){ document.getElementById('rosterAddName').value=''; document.getElementById('rosterAddExtId').value=''; document.getElementById('rosterAddGrade').value=''; document.getElementById('rosterAddPin').value=''; addModal.style.display='flex'; } });
     document.getElementById('rosterAddCancel')&&document.getElementById('rosterAddCancel').addEventListener('click', function(){ if(addModal) addModal.style.display='none'; });
     document.getElementById('rosterAddSave')&&document.getElementById('rosterAddSave').addEventListener('click', async function(){
-        if(!teacherClassId) return;
         var name = (document.getElementById('rosterAddName').value||'').trim();
         if(!name){ alert('Name is required'); return; }
+        var classId = teacherClassId;
+        if(!classId){
+            try {
+                var cr = await fetch('/api/teacher/class', { credentials: 'same-origin' });
+                var cData = await cr.json();
+                if(cData.status === 'ok' && cData.class_id){ classId = cData.class_id; teacherClassId = cData.class_id; }
+            } catch(e){}
+            if(!classId){ alert('Unable to load class. Please refresh the page and try again.'); return; }
+        }
         var payload = { display_name: name, external_student_id: (document.getElementById('rosterAddExtId').value||'').trim() || null, grade_level: (document.getElementById('rosterAddGrade').value||'').trim() || null, pin: (document.getElementById('rosterAddPin').value||'').trim() || null };
         try {
-            var r = await fetch('/api/teacher/class/'+teacherClassId+'/students', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            var r = await fetch('/api/teacher/class/'+classId+'/students', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             var d = await r.json();
             if(d.status === 'ok'){
-                addModal.style.display='none';
+                if(addModal) addModal.style.display='none';
                 loadRoster();
                 var stu = d.student || {};
                 if(stu.username && stu.password) alert('Student added. Share this login with them:\n\nUsername: '+stu.username+'\nPassword: '+stu.password+'\n\nThey can sign in at the app login screen. Copy this now — the password cannot be shown again.');
+                else alert('Student added.');
             }
-            else alert(d.message || 'Failed');
-        } catch(e){ alert('Network error'); }
+            else alert(d.message || 'Failed to add student');
+        } catch(e){ alert('Network error. Please try again.'); }
     });
     document.getElementById('rosterImportBtn')&&document.getElementById('rosterImportBtn').addEventListener('click', function(){
         var inp = document.createElement('input'); inp.type='file'; inp.accept='.csv,.xlsx';
@@ -344,8 +422,8 @@
         };
         inp.click();
     });
-    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadRoster);
-    else loadRoster();
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setStudentsTab('roster'); loadRoster(); });
+    else { setStudentsTab('roster'); loadRoster(); }
 })();
 </script>
 <script>
@@ -431,42 +509,89 @@ function sortTable(col) {
 </script>
 <script>
 (function(){
-    function numberWithCommas(x){ try { return Number(x||0).toLocaleString(); } catch { return x; } }
-    async function loadTeacherBuzzDust(){
-        try {
-            var res = await fetch('/api/buzz-dust/info', { credentials: 'same-origin', cache: 'no-store' });
-            if(!res.ok) throw new Error(res.statusText);
-            var data = await res.json();
-            if(data.success && data.current_class){
-                var rankEl = document.getElementById('teacher-rank-name');
-                var badgeEl = document.getElementById('teacher-rank-badge');
-                var amountEl = document.getElementById('teacher-buzz-dust-amount');
-                if(rankEl) rankEl.textContent = data.current_class.label || 'Novice Bee';
-                if(amountEl) amountEl.textContent = numberWithCommas(data.total_buzz_dust||0) + ' ✨';
-                if(badgeEl && data.current_class.badge_image){
-                    badgeEl.innerHTML = ''; badgeEl.style.display = 'block';
-                    if(typeof Badge3DRenderer !== 'undefined'){
-                        try {
-                            new Badge3DRenderer(badgeEl, { badgeFile: data.current_class.badge_image, width: 64, height: 64, autoRotate: true, rotationSpeed: 0.3, enableLighting: true });
-                        } catch(e){
-                            var fn = (data.current_class.badge_image||'').replace('.glb','.png');
-                            badgeEl.innerHTML = '<img src="/static/assets/badges/' + fn + '" alt="" style="width:64px;height:64px;object-fit:contain;">';
-                        }
-                    } else {
-                        var fn = (data.current_class.badge_image||'').replace('.glb','.png');
-                        badgeEl.innerHTML = '<img src="/static/assets/badges/' + fn + '" alt="" style="width:64px;height:64px;object-fit:contain;">';
+    // Teacher profile picture upload
+    var btn = document.getElementById('teacherProfilePicBtn');
+    var inp = document.getElementById('teacherProfilePicInput');
+    if(btn && inp){
+        btn.addEventListener('click', function(){ inp.click(); });
+        inp.addEventListener('change', async function(){
+            if(!inp.files || !inp.files[0]) return;
+            var fd = new FormData();
+            fd.append('file', inp.files[0]);
+            btn.disabled = true;
+            var orig = btn.textContent;
+            btn.textContent = 'Uploading...';
+            try{
+                var r = await fetch('/api/teacher/profile-picture', { method: 'POST', credentials: 'same-origin', body: fd });
+                var d = await r.json();
+                if(d.status === 'ok' && d.url){
+                    var img = document.getElementById('teacherProfilePic');
+                    var ph = document.getElementById('teacherProfilePicPlaceholder');
+                    var wrap = document.getElementById('teacherProfilePicWrap');
+                    if(ph) ph.style.display = 'none';
+                    if(!img){
+                        img = document.createElement('img');
+                        img.id = 'teacherProfilePic';
+                        img.alt = 'Profile';
+                        img.style.width = '100%';
+                        img.style.height = '100%';
+                        img.style.objectFit = 'cover';
+                        if(wrap){ wrap.innerHTML = ''; wrap.appendChild(img); }
                     }
+                    img.src = d.url + '?v=' + Date.now();
+                } else {
+                    alert(d.message || 'Upload failed');
                 }
+            } catch(e){
+                alert('Network error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = orig;
+                inp.value = '';
+            }
+        });
+    }
+
+    // Class name editor
+    var editBtn = document.getElementById('classNameEditBtn');
+    var editor = document.getElementById('classNameEditor');
+    var saveBtn = document.getElementById('classNameSaveBtn');
+    var cancelBtn = document.getElementById('classNameCancelBtn');
+    var input = document.getElementById('classNameInput');
+    var display = document.getElementById('classNameDisplay');
+    function openEditor(){
+        if(editor) editor.style.display = 'flex';
+        if(editBtn) editBtn.style.display = 'none';
+        if(input) input.focus();
+    }
+    function closeEditor(){
+        if(editor) editor.style.display = 'none';
+        if(editBtn) editBtn.style.display = '';
+    }
+    if(editBtn) editBtn.addEventListener('click', openEditor);
+    if(cancelBtn) cancelBtn.addEventListener('click', function(){ closeEditor(); });
+    if(saveBtn) saveBtn.addEventListener('click', async function(){
+        var name = (input && input.value ? input.value : '').trim();
+        if(!name){ alert('Class name is required'); return; }
+        saveBtn.disabled = true;
+        var orig = saveBtn.textContent;
+        saveBtn.textContent = 'Saving...';
+        try{
+            var r = await fetch('/api/teacher/class', { method: 'PATCH', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name }) });
+            var d = await r.json();
+            if(d.status === 'ok'){
+                if(display) display.textContent = d.name || name;
+                closeEditor();
             } else {
-                var rankEl = document.getElementById('teacher-rank-name'); if(rankEl) rankEl.textContent = 'Novice Bee';
+                alert(d.message || 'Save failed');
             }
         } catch(e){
-            var rankEl = document.getElementById('teacher-rank-name'); var amountEl = document.getElementById('teacher-buzz-dust-amount');
-            if(rankEl) rankEl.textContent = 'Novice Bee'; if(amountEl) amountEl.textContent = '0 ✨';
+            alert('Network error');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = orig;
         }
-    }
-    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadTeacherBuzzDust);
-    else loadTeacherBuzzDust();
+    });
 })();
 </script>
 <script>

@@ -111,16 +111,39 @@
 (function() {
     var ts = {{ timestamp }};
 
+    function setActivePanel(panelId) {
+        // panelId: 'create' or 'join'
+        document.querySelectorAll('.groups-tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+        var tab = document.querySelector('.groups-tab[data-panel=\"' + panelId + '\"]');
+        if (tab) tab.classList.add('active');
+        var panel = document.getElementById('panel-' + panelId);
+        if (panel) panel.classList.add('active');
+    }
+
     document.querySelectorAll('.groups-tab').forEach(function(tab) {
         tab.addEventListener('click', function() {
             var panelId = tab.getAttribute('data-panel');
-            document.querySelectorAll('.groups-tab').forEach(function(t) { t.classList.remove('active'); });
-            document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
-            tab.classList.add('active');
-            var panel = document.getElementById('panel-' + panelId);
-            if (panel) panel.classList.add('active');
+            setActivePanel(panelId);
         });
     });
+
+    // Deep-link support:
+    // - /groups?tab=join => open Join panel (main menu tile)
+    // - /groups?tab=create => open Create panel (teacher dashboard button)
+    // Keep precedence for ?view=CODE (teacher “view group” links) => Create panel.
+    try {
+        var params = new URLSearchParams(window.location.search || '');
+        var viewCode = params.get('view');
+        var tabParam = (params.get('tab') || params.get('mode') || '').toLowerCase();
+        if (viewCode) {
+            setActivePanel('create');
+        } else if (tabParam === 'join') {
+            setActivePanel('join');
+        } else if (tabParam === 'create') {
+            setActivePanel('create');
+        }
+    } catch (e) {}
 
     document.getElementById('join-code').addEventListener('input', function() {
         this.value = this.value.toUpperCase();
