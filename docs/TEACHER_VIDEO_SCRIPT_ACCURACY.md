@@ -16,14 +16,9 @@ This document verifies each section of the teacher demo script against the curre
 
 ### Script 2
 
-**Script:** *"Teachers register with just a name, email address, and password. During sign-up, you choose the teacher role and submit the form. The setup is quick, so you can focus on your class, not configuration."*
+**Script (recommended):** *"Teachers register with a username, display name, and password. You can add an optional email for password recovery. During sign-up, you choose the teacher role and submit the form. The setup is quick, so you can focus on your class, not configuration."*
 
-**Status:** ⚠️ **Minor tweak for accuracy.**
-
-- **Actual behavior:** Registration requires **username**, **display name** (how they appear), **password**, and **role** (Teacher is an option). **Email is optional** (used for password recovery).
-- **Suggested script (optional):**  
-  *"Teachers register with a username, display name, and password. You can add an optional email for password recovery. During sign-up, you choose the teacher role and submit the form. The setup is quick, so you can focus on your class, not configuration."*  
-- If you keep the current wording, "name" can be understood as display name; just note that **email is optional**, not required.
+**Status:** ✅ **Accurate.** The app requires username, display name, password, and role; email is optional. Use the script wording above.
 
 ### Script 3
 
@@ -75,12 +70,7 @@ This document verifies each section of the teacher demo script against the curre
 
 **Script:** *"Students join the group using that code and their name. Everyone gets the same words in the same order, which keeps assessments fair and consistent."*
 
-**Status:** ⚠️ **Clarify "same order".**
-
-- **Actual behavior:** Everyone gets the **same word list**. Word **order** is **randomized per student** when they start the quiz (so each student may see the words in a different order).
-- **Suggested script (optional):**  
-  *"Students join the group using that code and their name. Everyone gets the same words for the quiz, which keeps the assessment fair and consistent."*  
-- If you want to say "same order" in the video, the app would need a change to support a fixed order for group quizzes (e.g. no shuffle when in group mode).
+**Status:** ✅ **Accurate.** Group quizzes use a fixed word order (no shuffle) so every student sees the same words in the same sequence.
 
 ### Script 10
 
@@ -128,10 +118,10 @@ This document verifies each section of the teacher demo script against the curre
 
 ## Summary of Recommended Changes
 
-| Item | Recommendation |
-|------|----------------|
-| **Script 2** | Optionally say "username, display name, and password" and that email is optional. |
-| **Script 9** | Say "same words" (drop "in the same order") unless you add fixed order for group quizzes. |
-| **Code** | Group join bug fixed: `init_quiz_state(len(word_list))` is now called after `set_wordbank(...)` so the group quiz initializes correctly. |
+| Item | Status |
+|------|--------|
+| **Script 2** | ✅ Use recommended wording (username, display name, password; optional email). App matches. |
+| **Script 9** | ✅ Fixed order for group quizzes — everyone gets same words in same order. |
+| **Code** | Group join: `set_wordbank` then `init_quiz_state(len(word_list))`. Group quizzes: no shuffle when `group_code` in session. |
 
-All other script lines match current app behavior.
+All script lines now match app behavior.

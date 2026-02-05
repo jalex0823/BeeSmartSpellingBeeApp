@@ -333,9 +333,9 @@ def init_quiz_state(total_words: int):
     """Initializes or resets the quiz state in the session."""
     order = list(range(total_words))
 
-    # Deterministic ordering in tests: pytest expects stable word sequencing.
-    # Keep production behavior randomized.
-    if not app.config.get("TESTING"):
+    # Deterministic ordering: (1) tests; (2) group quizzes so everyone gets same words in same order.
+    # Otherwise production uses randomized order.
+    if not app.config.get("TESTING") and not session.get("group_code"):
         random.shuffle(order)
 
     # Fingerprint the active wordbank so "resume" can be safely gated to the same list.
@@ -7875,12 +7875,12 @@ def api_groups_join():
         if not _save_group(code, group):
             return jsonify({"status": "error", "message": "Failed to join group"}), 500
         word_list = group.get("word_list", [])
-        # Set session wordbank to group word list so quiz uses same words
-        set_wordbank(word_list, is_user_upload=False)
-        init_quiz_state(len(word_list))
+        # Set session wordbank to group word list so quiz uses same words in same order
         session["group_code"] = code
         session["group_player_id"] = player_id
         session["group_player_name"] = player_name
+        set_wordbank(word_list, is_user_upload=False)
+        init_quiz_state(len(word_list))
         return jsonify({
             "status": "ok",
             "code": code,
