@@ -23,6 +23,90 @@
         border: 1px solid var(--bee-card-border);
         box-sizing: border-box;
     }
+    /* BeeSmart modal (honey/amber) for sharing login credentials */
+    .bee-modal-backdrop{
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(17, 24, 39, 0.55);
+        z-index: 10000;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    .bee-modal{
+        width: min(520px, 94vw);
+        border-radius: 18px;
+        border: 2px solid rgba(245, 158, 11, 0.28);
+        background: linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(255,247,217,0.98) 55%, rgba(255,231,166,0.96) 100%);
+        box-shadow: 0 18px 46px rgba(0,0,0,0.28);
+        overflow: hidden;
+    }
+    .bee-modal-header{
+        display:flex;
+        align-items:center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 1rem 1.1rem;
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: #5A2C15;
+        font-weight: 900;
+        letter-spacing: 0.2px;
+    }
+    .bee-modal-body{ padding: 1.1rem; color: #3b2a1b; }
+    .bee-modal-sub{ margin: 0.2rem 0 0.9rem 0; opacity: 0.85; font-weight: 700; }
+    .bee-field{
+        display:flex;
+        align-items: stretch;
+        gap: 0.5rem;
+        margin: 0.65rem 0;
+        flex-wrap: wrap;
+    }
+    .bee-pill{
+        flex: 1 1 260px;
+        padding: 0.7rem 0.85rem;
+        border-radius: 14px;
+        border: 1px solid rgba(0,0,0,0.10);
+        background: rgba(255,255,255,0.85);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+    }
+    .bee-pill .label{ font-size: 0.8rem; font-weight: 900; opacity: 0.75; margin-bottom: 0.25rem; }
+    .bee-pill .value{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 1rem; font-weight: 900; }
+    .bee-mini-help{ font-size: 0.8rem; opacity: 0.75; margin-top: 0.25rem; }
+    .bee-btn{
+        padding: 0.65rem 0.95rem;
+        border-radius: 999px;
+        border: 1px solid rgba(0,0,0,0.08);
+        font-weight: 900;
+        cursor: pointer;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+        transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+        white-space: nowrap;
+    }
+    .bee-btn:hover{ transform: translateY(-1px); box-shadow: 0 12px 24px rgba(0,0,0,0.16); filter: brightness(1.02); }
+    .bee-btn:active{ transform: translateY(0px); box-shadow: 0 8px 18px rgba(0,0,0,0.12); filter: brightness(0.99); }
+    .bee-btn:focus-visible{ outline: 3px solid rgba(245, 158, 11, 0.35); outline-offset: 2px; }
+    .bee-btn.copy{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; }
+    .bee-btn.primary{ background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #fff; }
+    .bee-btn.neutral{ background: rgba(255,255,255,0.65); color: #5A2C15; }
+    .bee-modal-footer{
+        display:flex;
+        align-items:center;
+        justify-content: flex-end;
+        gap: 0.6rem;
+        padding: 0.95rem 1.1rem 1.1rem 1.1rem;
+        border-top: 1px solid rgba(0,0,0,0.06);
+        background: rgba(255,255,255,0.55);
+    }
+    .bee-x{
+        background: rgba(255,255,255,0.45);
+        border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 12px;
+        padding: 0.35rem 0.55rem;
+        cursor: pointer;
+        font-weight: 900;
+        color: #5A2C15;
+    }
     /* Roster action buttons: compact, professional, theme-aligned */
     #rosterTable .roster-actions{
         display: inline-flex;
@@ -306,6 +390,41 @@
         </div>
     </div>
 
+    <!-- BeeSmart share login modal (replaces browser alert) -->
+    <div id="shareLoginModalBackdrop" class="bee-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="shareLoginModalTitle">
+        <div class="bee-modal">
+            <div class="bee-modal-header">
+                <div id="shareLoginModalTitle">🐝 Student Login</div>
+                <button type="button" class="bee-x" id="shareLoginModalCloseX" aria-label="Close">✕</button>
+            </div>
+            <div class="bee-modal-body">
+                <div class="bee-modal-sub" id="shareLoginModalSubtitle">Share this with the student (copy it now).</div>
+
+                <div class="bee-field">
+                    <div class="bee-pill">
+                        <div class="label">Username</div>
+                        <div class="value" id="shareLoginUsername">—</div>
+                        <div class="bee-mini-help">Tap copy, then paste into a message for the student.</div>
+                    </div>
+                    <button type="button" class="bee-btn copy" id="shareLoginCopyUsername">Copy username</button>
+                </div>
+
+                <div class="bee-field">
+                    <div class="bee-pill">
+                        <div class="label">Password (shown once)</div>
+                        <div class="value" id="shareLoginPassword">—</div>
+                        <div class="bee-mini-help">This password won’t be shown again.</div>
+                    </div>
+                    <button type="button" class="bee-btn copy" id="shareLoginCopyPassword">Copy password</button>
+                </div>
+            </div>
+            <div class="bee-modal-footer">
+                <button type="button" class="bee-btn neutral" id="shareLoginCopyBoth">Copy both</button>
+                <button type="button" class="bee-btn primary" id="shareLoginDone">Got it</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Quick Actions (admin-style) -->
     <!-- Quick Actions (footer menu) — full width + BeeSmart palette -->
     <div class="bee-card" style="padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; margin-bottom: 2rem; text-align: center;">
@@ -375,6 +494,83 @@
         // Only toggle ACTIVE/ARCHIVED/ALL buttons (not other UI controls)
         document.querySelectorAll('.roster-filter[data-status]').forEach(function(b){ b.classList.remove('active'); });
         if(btn) btn.classList.add('active');
+    }
+    function copyText(text){
+        var t = String(text || '');
+        if(!t) return Promise.reject(new Error('No text'));
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            return navigator.clipboard.writeText(t);
+        }
+        return new Promise(function(resolve, reject){
+            try{
+                var ta = document.createElement('textarea');
+                ta.value = t;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                var ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+                ok ? resolve() : reject(new Error('Copy failed'));
+            } catch(e){ reject(e); }
+        });
+    }
+    function showShareLoginModal(opts){
+        opts = opts || {};
+        var bd = document.getElementById('shareLoginModalBackdrop');
+        if(!bd) return;
+        var titleEl = document.getElementById('shareLoginModalTitle');
+        var subEl = document.getElementById('shareLoginModalSubtitle');
+        var userEl = document.getElementById('shareLoginUsername');
+        var passEl = document.getElementById('shareLoginPassword');
+        var btnUser = document.getElementById('shareLoginCopyUsername');
+        var btnPass = document.getElementById('shareLoginCopyPassword');
+        var btnBoth = document.getElementById('shareLoginCopyBoth');
+        var btnDone = document.getElementById('shareLoginDone');
+        var btnX = document.getElementById('shareLoginModalCloseX');
+
+        var username = String(opts.username || '');
+        var password = String(opts.password || '');
+        var title = String(opts.title || '🐝 Student Login');
+        var subtitle = String(opts.subtitle || 'Share this with the student (copy it now).');
+
+        if(titleEl) titleEl.textContent = title;
+        if(subEl) subEl.textContent = subtitle;
+        if(userEl) userEl.textContent = username || '—';
+        if(passEl) passEl.textContent = password || '—';
+
+        function close(){
+            bd.style.display = 'none';
+            document.removeEventListener('keydown', onKey);
+        }
+        function onKey(e){
+            if(e && e.key === 'Escape') close();
+        }
+        function withCopied(btn, label){
+            if(!btn) return;
+            var orig = btn.textContent;
+            btn.textContent = label || 'Copied!';
+            setTimeout(function(){ btn.textContent = orig; }, 1400);
+        }
+        if(btnUser) btnUser.onclick = function(){
+            copyText(username).then(function(){ withCopied(btnUser, 'Copied!'); }).catch(function(){ alert('Copy failed'); });
+        };
+        if(btnPass) btnPass.onclick = function(){
+            copyText(password).then(function(){ withCopied(btnPass, 'Copied!'); }).catch(function(){ alert('Copy failed'); });
+        };
+        if(btnBoth) btnBoth.onclick = function(){
+            var both = 'Username: ' + username + '\nPassword: ' + password;
+            copyText(both).then(function(){ withCopied(btnBoth, 'Copied both!'); }).catch(function(){ alert('Copy failed'); });
+        };
+        if(btnDone) btnDone.onclick = close;
+        if(btnX) btnX.onclick = close;
+        bd.onclick = function(e){ if(e && e.target === bd) close(); };
+        document.addEventListener('keydown', onKey);
+
+        bd.style.display = 'flex';
+        // Focus primary action for keyboard users
+        try{ if(btnDone) btnDone.focus(); } catch(e){}
     }
     function setStudentsTab(view){
         var tabRoster = document.getElementById('studentsTabRoster');
@@ -457,7 +653,14 @@
         try{
             var r = await fetch('/api/teacher/students/'+id+'/reset-password', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } });
             var d = await r.json();
-            if(d.status === 'ok') alert('New login for '+name+'\n\nUsername: '+d.username+'\nPassword: '+d.password+'\n\nCopy this and share with the student. The password cannot be shown again.');
+            if(d.status === 'ok'){
+                showShareLoginModal({
+                    title: '🐝 New login for ' + (name || 'student'),
+                    subtitle: 'Copy this now — the password won’t be shown again.',
+                    username: d.username,
+                    password: d.password,
+                });
+            }
             else alert(d.message || 'Failed');
         } catch(e){ alert('Network error'); }
     }
@@ -489,7 +692,14 @@
                 if(addModal) addModal.style.display='none';
                 loadRoster();
                 var stu = d.student || {};
-                if(stu.username && stu.password) alert('Student added. Share this login with them:\n\nUsername: '+stu.username+'\nPassword: '+stu.password+'\n\nThey can sign in at the app login screen. Copy this now — the password cannot be shown again.');
+                if(stu.username && stu.password){
+                    showShareLoginModal({
+                        title: '🐝 Student added!',
+                        subtitle: 'Share this login with them. Copy it now — the password won’t be shown again.',
+                        username: stu.username,
+                        password: stu.password,
+                    });
+                }
                 else alert('Student added.');
             }
             else alert(d.message || 'Failed to add student');
