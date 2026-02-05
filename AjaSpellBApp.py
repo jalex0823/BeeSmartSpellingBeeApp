@@ -57,6 +57,7 @@ from sqlalchemy.exc import DisconnectionError, OperationalError, SQLAlchemyError
 try:
     from config import get_config
     from models import db, User, QuizSession, QuizResult, WordMastery, TeacherStudent, Achievement
+    from models import Class, RosterStudent
     from models import WordList, WordListItem
     from models import PasswordResetToken
     from models import SessionLog
@@ -353,18 +354,19 @@ def init_quiz_state(total_words: int):
         wordbank_fingerprint = ''
 
     # Ensure we have a stable user context before touching any DB/session-backed
-    # quiz tracking. IMPORTANT: authenticated users must NOT be routed through
-    # guest user creation, otherwise QuizSession records attach to a guest user
-    # and cumulative GPA/accuracy/quiz count won't update for the real account.
+    # quiz tracking. Roster students (join by teacher key) have no User; use roster_student_id.
     db_session_id = None
+    roster_sid = session.get("roster_student_id")
     try:
         is_auth = bool(getattr(current_user, "is_authenticated", False))
     except Exception:
         is_auth = False
 
-    if is_auth:
+    if roster_sid:
+        user_obj = None
+        session["is_guest"] = False
+    elif is_auth:
         user_obj = current_user
-        # Keep a consistent flag for older logic that distinguishes guest UX
         session["is_guest"] = False
     else:
         user_obj = get_or_create_guest_user()
@@ -373,12 +375,10 @@ def init_quiz_state(total_words: int):
     # dropped by any session churn.
     try:
         if not session.get("wordbank_storage_id"):
-            # Prefer hybrid session state first
             hybrid = session.get(DATA_KEY)
             if isinstance(hybrid, dict) and hybrid.get("storage_id"):
                 session["wordbank_storage_id"] = hybrid.get("storage_id")
                 session.modified = True
-            # Fall back to user record (guest users store their last wordbank)
             elif user_obj and getattr(user_obj, "wordbank_storage_id", None):
                 session["wordbank_storage_id"] = user_obj.wordbank_storage_id
                 session.modified = True
@@ -386,17 +386,26 @@ def init_quiz_state(total_words: int):
         pass
 
     if user_obj:
-        # Some legacy deployments had JSON fields stored as TEXT (e.g. "[]").
-        # If a user row still contains those string values, merely loading the
-        # instance can raise via MutableList coercion. Don't let that break the
-        # core quiz flow; the quiz session is an optional analytics record.
         try:
             _ = user_obj.id
         except Exception as _e:
             print(f"️ init_quiz_state: Continuing without DB quiz session due to user coercion error: {_e}")
             user_obj = None
 
-    if user_obj:
+    if roster_sid:
+        try:
+            quiz_session = QuizSession(user_id=None, roster_student_id=roster_sid, total_words=total_words)
+            cls = Class.query.filter_by(id=session.get("roster_class_id")).first()
+            if cls:
+                quiz_session.teacher_key = cls.teacher_key
+            db.session.add(quiz_session)
+            db.session.commit()
+            db_session_id = quiz_session.id
+            print(f" Created database QuizSession ID: {db_session_id} for roster_student_id={roster_sid}")
+        except Exception as e:
+            print(f"️ Failed to create database session (roster): {e}")
+            db.session.rollback()
+    elif user_obj:
         try:
             quiz_session = QuizSession(
                 user_id=user_obj.id,
@@ -446,57 +455,62 @@ def init_quiz_state(total_words: int):
 def ensure_quiz_db_session(state: dict, total_words: int):
     """
     Ensure the quiz state has a valid DB-backed QuizSession id.
-
-    Production issue observed (DO logs):
-      - quiz completes in-memory, but state["db_session_id"] is missing
-      - fallback cannot find a recent incomplete QuizSession row
-      - result: QuizSession.completed never set, and cumulative GPA/quizzes/accuracy remain 0
-
-    This helper creates the missing QuizSession row on-demand for authenticated users
-    and writes the new id back into session quiz state.
+    Supports: (1) authenticated users, (2) roster students (session roster_student_id, no User).
     """
-    try:
-        if not getattr(current_user, "is_authenticated", False):
-            return None
-    except Exception:
-        return None
-
     if not isinstance(state, dict):
         return None
-
     existing = state.get("db_session_id")
     if existing:
         return existing
 
+    roster_sid = session.get("roster_student_id")
     try:
-        # Best-effort parse of started_at into a datetime (keep UTC if present)
+        is_auth = bool(getattr(current_user, "is_authenticated", False))
+    except Exception:
+        is_auth = False
+
+    if not roster_sid and not is_auth:
+        return None
+
+    try:
         started_at = state.get("started_at")
         session_start = None
         if started_at:
             try:
-                # Normalize common ISO forms, including trailing 'Z'
                 started_at_norm = str(started_at).replace("Z", "+00:00")
                 session_start = datetime.fromisoformat(started_at_norm)
             except Exception:
                 session_start = None
 
-        quiz_session = QuizSession(
-            user_id=current_user.id,
-            total_words=int(total_words or 0),
-        )
+        if roster_sid:
+            quiz_session = QuizSession(
+                user_id=None,
+                roster_student_id=roster_sid,
+                total_words=int(total_words or 0),
+            )
+            try:
+                cls = Class.query.filter_by(id=session.get("roster_class_id")).first()
+                if cls:
+                    quiz_session.teacher_key = cls.teacher_key
+            except Exception:
+                pass
+        else:
+            quiz_session = QuizSession(
+                user_id=current_user.id,
+                total_words=int(total_words or 0),
+            )
+            try:
+                link = TeacherStudent.query.filter_by(student_id=current_user.id, is_active=True).first()
+                if link and not quiz_session.teacher_key:
+                    quiz_session.teacher_key = link.teacher_key
+            except Exception:
+                pass
+
         if session_start:
             try:
                 quiz_session.session_start = session_start
             except Exception:
                 pass
-
-        # Link to teacher_key if this user is a student linked under a teacher/parent/admin
-        try:
-            link = TeacherStudent.query.filter_by(student_id=current_user.id, is_active=True).first()
-            if link and not quiz_session.teacher_key:
-                quiz_session.teacher_key = link.teacher_key
-        except Exception:
-            pass
 
         db.session.add(quiz_session)
         db.session.commit()
@@ -509,7 +523,8 @@ def ensure_quiz_db_session(state: dict, total_words: int):
         except Exception:
             pass
 
-        print(f"✅ ensure_quiz_db_session: Created QuizSession id={quiz_session.id} for user_id={current_user.id}")
+        who = f"roster_student_id={roster_sid}" if roster_sid else f"user_id={current_user.id}"
+        print(f"✅ ensure_quiz_db_session: Created QuizSession id={quiz_session.id} for {who}")
         return quiz_session.id
     except Exception as e:
         print(f"⚠️ ensure_quiz_db_session: Failed to create QuizSession: {e}")
@@ -6457,6 +6472,21 @@ def battles_list():
     timestamp = int(time.time())
     return render_template("battles.html", timestamp=timestamp)
 
+
+@app.route("/groups")
+def groups_page():
+    """Groups — One Quiz, One Code: create or join a group for same quiz."""
+    timestamp = int(time.time())
+    return render_template("groups.html", timestamp=timestamp)
+
+
+@app.route("/join")
+def join_teacher_page():
+    """Join Teacher/Class: enter Teacher Key, select your name (no registration)."""
+    timestamp = int(time.time())
+    return render_template("join_teacher.html", timestamp=timestamp)
+
+
 @app.route("/upload")
 def upload_page():
     """Upload word lists page"""
@@ -7233,6 +7263,68 @@ def cleanup_expired_battles() -> int:
         print(f" Failed to cleanup battles: {e}")
         return 0
 
+# --- Groups: One Quiz, One Code (teacher-led same quiz for class) ------------
+# Files: data/groups/GROUP_<code>.json (code e.g. BEE1A2B)
+
+GROUP_FILE_PREFIX = "GROUP_"
+GROUP_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O, 1/I
+
+def _group_path(code: str) -> str:
+    """Path to group JSON file (code is normalized upper)."""
+    return os.path.join(BATTLES_DIR, f"{GROUP_FILE_PREFIX}{code.upper()}.json")
+
+def _generate_group_code() -> str:
+    """Generate a short group code e.g. BEE1A2B (BEE + 4 alphanumeric)."""
+    for _ in range(100):
+        code = "BEE" + "".join(secrets.choice(GROUP_CODE_CHARS) for _ in range(4))
+        if not os.path.exists(_group_path(code)):
+            return code
+    return "BEE" + str(random.randint(1000, 9999))
+
+def _load_group(code: str) -> Optional[Dict]:
+    """Load group data from file. Returns None if not found or invalid."""
+    try:
+        path = _group_path(code.upper())
+        if not os.path.exists(path):
+            return None
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f" Failed to load group {code}: {e}")
+        return None
+
+def _save_group(code: str, data: Dict) -> bool:
+    """Save group data to file."""
+    try:
+        os.makedirs(BATTLES_DIR, exist_ok=True)
+        path = _group_path(code.upper())
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        print(f" Failed to save group {code}: {e}")
+        return False
+
+def _update_group_result(group_code: str, player_id: str, correct: int, total: int, score: int) -> None:
+    """Update group file with a player's quiz result (called when quiz completes)."""
+    try:
+        data = _load_group(group_code)
+        if not data:
+            return
+        players = data.get("players", {})
+        if player_id not in players:
+            return
+        players[player_id]["correct"] = correct
+        players[player_id]["total"] = total
+        players[player_id]["score"] = score
+        players[player_id]["completed"] = True
+        players[player_id]["completed_at"] = datetime.now(timezone.utc).isoformat()
+        data["players"] = players
+        _save_group(group_code, data)
+        print(f" Group result recorded: {group_code} player {player_id} -> {correct}/{total} score={score}")
+    except Exception as e:
+        print(f" Failed to update group result: {e}")
+
 # --- Battle of the Bees: API Routes -------------------------------------------
 
 # DEPRECATED ROUTE - Moved to battles_api.py blueprint
@@ -7703,6 +7795,171 @@ def api_battle_export_DEPRECATED(battle_code):
             "status": "error",
             "message": f"Failed to export results: {str(e)}"
         }), 500
+
+# --- Groups API: create, join, status, export ---------------------------------
+
+@app.route("/api/groups/create", methods=["POST"])
+def api_groups_create():
+    """Create a group: name + word list. Returns short group code (e.g. BEE1A2B)."""
+    try:
+        data = request.get_json() or {}
+        name = (data.get("name") or "").strip()
+        word_list = data.get("word_list") or data.get("words") or []
+        if not name:
+            return jsonify({"status": "error", "message": "Group name is required"}), 400
+        # Normalize word list to [{word, sentence, hint}, ...]
+        rows = []
+        for item in word_list:
+            if isinstance(item, dict):
+                w = (item.get("word") or item.get("text") or "").strip()
+                if w:
+                    rows.append({
+                        "word": w,
+                        "sentence": item.get("sentence") or f"The word is _____.",
+                        "hint": item.get("hint") or ""
+                    })
+            elif isinstance(item, str) and item.strip():
+                rows.append({"word": item.strip(), "sentence": "The word is _____.", "hint": ""})
+        if not rows:
+            return jsonify({"status": "error", "message": "At least one word is required"}), 400
+        code = _generate_group_code()
+        now = datetime.now(timezone.utc)
+        group_data = {
+            "group_code": code,
+            "group_name": name,
+            "created_at": now.isoformat(),
+            "word_list": rows,
+            "players": {},
+            "status": "active"
+        }
+        if not _save_group(code, group_data):
+            return jsonify({"status": "error", "message": "Failed to create group"}), 500
+        return jsonify({
+            "status": "ok",
+            "code": code,
+            "name": name,
+            "word_count": len(rows)
+        })
+    except Exception as e:
+        print(f" api_groups_create error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/groups/join", methods=["POST"])
+def api_groups_join():
+    """Join a group with code + player name. Sets session wordbank and group context."""
+    try:
+        data = request.get_json() or {}
+        code = (data.get("code") or data.get("group_code") or "").strip().upper()
+        player_name = (data.get("player_name") or data.get("name") or "").strip()
+        if not code:
+            return jsonify({"status": "error", "message": "Group code is required"}), 400
+        if not player_name:
+            return jsonify({"status": "error", "message": "Your name is required"}), 400
+        group = _load_group(code)
+        if not group:
+            return jsonify({"status": "error", "message": "Group not found or invalid code"}), 404
+        if group.get("status") != "active":
+            return jsonify({"status": "error", "message": "This group is no longer active"}), 400
+        player_id = str(uuid.uuid4())
+        players = group.get("players", {})
+        players[player_id] = {
+            "name": player_name,
+            "joined_at": datetime.now(timezone.utc).isoformat(),
+            "correct": 0,
+            "total": 0,
+            "score": 0,
+            "completed": False,
+            "completed_at": None
+        }
+        group["players"] = players
+        if not _save_group(code, group):
+            return jsonify({"status": "error", "message": "Failed to join group"}), 500
+        word_list = group.get("word_list", [])
+        # Set session wordbank to group word list so quiz uses same words
+        init_quiz_state()
+        set_wordbank(word_list, is_user_upload=False)
+        session["group_code"] = code
+        session["group_player_id"] = player_id
+        session["group_player_name"] = player_name
+        return jsonify({
+            "status": "ok",
+            "code": code,
+            "group_name": group.get("group_name"),
+            "word_count": len(word_list),
+            "player_id": player_id,
+            "player_name": player_name
+        })
+    except Exception as e:
+        print(f" api_groups_join error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/groups/<code>", methods=["GET"])
+def api_groups_status(code):
+    """Get group info: name, word count, players (joined/finished)."""
+    try:
+        c = (code or "").strip().upper()
+        group = _load_group(c)
+        if not group:
+            return jsonify({"status": "error", "message": "Group not found"}), 404
+        players = group.get("players", {})
+        word_count = len(group.get("word_list", []))
+        player_list = [
+            {
+                "id": pid,
+                "name": p.get("name"),
+                "joined_at": p.get("joined_at"),
+                "correct": p.get("correct", 0),
+                "total": p.get("total", 0),
+                "score": p.get("score", 0),
+                "completed": p.get("completed", False),
+                "completed_at": p.get("completed_at")
+            }
+            for pid, p in players.items()
+        ]
+        return jsonify({
+            "status": "ok",
+            "code": group.get("group_code", c),
+            "name": group.get("group_name"),
+            "word_count": word_count,
+            "players": player_list,
+            "joined_count": len(players),
+            "finished_count": sum(1 for p in players.values() if p.get("completed"))
+        })
+    except Exception as e:
+        print(f" api_groups_status error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/groups/<code>/export", methods=["GET"])
+def api_groups_export(code):
+    """Export group results as CSV for gradebook."""
+    try:
+        c = (code or "").strip().upper()
+        group = _load_group(c)
+        if not group:
+            return jsonify({"status": "error", "message": "Group not found"}), 404
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["Rank", "Name", "Score", "Correct", "Total", "Accuracy (%)", "Completed", "Completed At"])
+        players = group.get("players", {})
+        word_count = len(group.get("word_list", []))
+        rows = []
+        for pid, p in players.items():
+            correct = p.get("correct", 0)
+            total = p.get("total", 0) or word_count
+            acc = (correct / total * 100) if total else 0
+            rows.append((p.get("name"), p.get("score", 0), correct, total, acc, p.get("completed"), p.get("completed_at")))
+        rows.sort(key=lambda x: (-x[1], x[4]))  # by score desc, then accuracy
+        for i, (name, score, correct, total, acc, completed, completed_at) in enumerate(rows, 1):
+            writer.writerow([i, name, score, correct, total, f"{acc:.1f}", "Yes" if completed else "No", completed_at or ""])
+        output.seek(0)
+        from flask import make_response
+        resp = make_response(output.getvalue())
+        resp.headers["Content-Type"] = "text/csv"
+        resp.headers["Content-Disposition"] = f"attachment; filename=group_{c}_results.csv"
+        return resp
+    except Exception as e:
+        print(f" api_groups_export error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/api/wordbank", methods=["GET"])
 def api_get_wordbank():
@@ -9753,20 +10010,25 @@ def api_answer():
         is_auth = bool(getattr(current_user, "is_authenticated", False))
     except Exception:
         is_auth = False
-    user_obj = current_user if is_auth else get_or_create_guest_user()
-    # If authenticated but db_session_id is missing (observed in prod), create it now.
-    if is_auth and user_obj and not state.get("db_session_id"):
+    roster_sid = session.get("roster_student_id")
+    if roster_sid:
+        user_obj = None  # Roster student: no User account
+    else:
+        user_obj = current_user if is_auth else get_or_create_guest_user()
+    # Create DB session if missing (authenticated or roster student)
+    if (is_auth or roster_sid) and not state.get("db_session_id"):
         try:
             ensure_quiz_db_session(state, len(order))
         except Exception:
             pass
 
-    if user_obj and state.get("db_session_id"):
+    if state.get("db_session_id") and (user_obj or roster_sid):
         try:
             # Save individual word result with detailed points breakdown
             quiz_result = QuizResult(
                 session_id=state["db_session_id"],
-                user_id=user_obj.id,
+                user_id=user_obj.id if user_obj else None,
+                roster_student_id=roster_sid,
                 word=correct_spelling,
                 is_correct=is_correct,
                 user_answer=user_input,
@@ -9790,20 +10052,19 @@ def api_answer():
                 pass
             db.session.add(quiz_result)
             
-            # Update or create WordMastery record (use normalized word for consistency)
-            normalized_word = normalize(correct_spelling)
-            word_mastery = WordMastery.query.filter_by(
-                user_id=user_obj.id,
-                word=normalized_word
-            ).first()
-            
-            if word_mastery:
-                word_mastery.update_stats(is_correct, time_taken=(elapsed_ms / 1000.0) if elapsed_ms else None)
-            else:
-                word_mastery = WordMastery(user_id=user_obj.id, word=normalized_word)
-                # Initialize stats via helper
-                word_mastery.update_stats(is_correct, time_taken=(elapsed_ms / 1000.0) if elapsed_ms else None)
-                db.session.add(word_mastery)
+            # WordMastery only for User-backed sessions (not roster-only)
+            if user_obj:
+                normalized_word = normalize(correct_spelling)
+                word_mastery = WordMastery.query.filter_by(
+                    user_id=user_obj.id,
+                    word=normalized_word
+                ).first()
+                if word_mastery:
+                    word_mastery.update_stats(is_correct, time_taken=(elapsed_ms / 1000.0) if elapsed_ms else None)
+                else:
+                    word_mastery = WordMastery(user_id=user_obj.id, word=normalized_word)
+                    word_mastery.update_stats(is_correct, time_taken=(elapsed_ms / 1000.0) if elapsed_ms else None)
+                    db.session.add(word_mastery)
             
             db.session.commit()
             print(f" Saved QuizResult for word '{correct_spelling}' (correct={is_correct}) to session {state['db_session_id']}")
@@ -9890,6 +10151,16 @@ def api_answer():
 
     session[QUIZ_STATE_KEY] = state
     session.modified = True  # CRITICAL: Ensure session persists
+    
+    # When quiz completes and user is in a group, record result for group export
+    if quiz_complete:
+        gcode = session.get("group_code")
+        gpid = session.get("group_player_id")
+        if gcode and gpid:
+            correct = state.get("correct", 0)
+            total = len(order)
+            score = state.get("session_points", 0) + state.get("extra_points", 0)
+            _update_group_result(gcode, gpid, correct, total, score)
     
     # Finalize database session for logged-in users OR guest accounts
     if quiz_complete:
@@ -14876,6 +15147,13 @@ def api_generate_teacher_key():
         # Generate if missing or rotate on demand
         new_key = _generate_unique_teacher_key(target_user.display_name or 'Teacher')
         target_user.teacher_key = new_key
+        # Keep Class (roster) in sync: one class per teacher with same key
+        try:
+            cls = Class.query.filter_by(teacher_id=target_user.id).first()
+            if cls:
+                cls.teacher_key = new_key
+        except Exception:
+            pass
         db.session.commit()
 
         return jsonify({
@@ -14887,6 +15165,631 @@ def api_generate_teacher_key():
         db.session.rollback()
         app.logger.error(f"teacher key generation error: {e}")
         return jsonify({"success": False, "error": "Could not generate key. Try again."}), 500
+
+
+# ------------------------- Teacher Class & Roster (Managed Students) -------------------------
+
+def _teacher_class_or_404():
+    """Return the Class for current user (teacher/parent/admin). Create default if none. 403 if not allowed."""
+    if current_user.role not in ('teacher', 'parent', 'admin'):
+        return None, 403
+    key = (current_user.teacher_key or '').strip()
+    cls = Class.query.filter_by(teacher_id=current_user.id).first()
+    if not cls and key:
+        cls = Class.query.filter_by(teacher_key=key).first()
+    if not cls:
+        # Create default class with new teacher key
+        if not key:
+            key = _generate_unique_teacher_key(current_user.display_name or 'Teacher')
+            current_user.teacher_key = key
+            db.session.flush()
+        cls = Class(teacher_id=current_user.id, name=(current_user.display_name or "Default") + "'s Class", teacher_key=key)
+        db.session.add(cls)
+        db.session.commit()
+    return cls, None
+
+
+@app.route('/api/teacher/class', methods=['GET'])
+@login_required
+def api_teacher_class():
+    """GET /api/teacher/class - Return class for current teacher; create default if none."""
+    cls, err = _teacher_class_or_404()
+    if err:
+        return jsonify({"status": "error", "message": "Forbidden"}), 403
+    return jsonify({
+        "status": "ok",
+        "class_id": cls.id,
+        "class_uuid": cls.uuid,
+        "name": cls.name,
+        "teacher_key": cls.teacher_key
+    })
+
+
+@app.route('/api/teacher/class/<int:class_id>/students', methods=['GET'])
+@login_required
+def api_teacher_class_students(class_id):
+    """GET /api/teacher/class/:classId/students?status=ACTIVE|ARCHIVED|ALL"""
+    cls, err = _teacher_class_or_404()
+    if err:
+        return jsonify({"status": "error", "message": "Forbidden"}), 403
+    if cls.id != class_id:
+        return jsonify({"status": "error", "message": "Class not found"}), 404
+    status_filter = request.args.get('status', 'ACTIVE').strip().upper()
+    q = RosterStudent.query.filter_by(class_id=class_id)
+    if status_filter == 'ACTIVE':
+        q = q.filter_by(status='ACTIVE')
+    elif status_filter == 'ARCHIVED':
+        q = q.filter_by(status='ARCHIVED')
+    # ALL = no filter
+    students = q.order_by(RosterStudent.display_name).all()
+    return jsonify({
+        "status": "ok",
+        "students": [
+            {
+                "id": s.id,
+                "uuid": s.uuid,
+                "display_name": s.display_name,
+                "external_student_id": s.external_student_id,
+                "grade_level": s.grade_level,
+                "pin_required": s.pin_required,
+                "status": s.status,
+                "username": s.user.username if s.user_id and s.user else None,
+                "has_login": bool(s.user_id),
+                "created_at": s.created_at.isoformat() if s.created_at else None,
+            }
+            for s in students
+        ]
+    })
+
+
+def _create_student_login_for_roster(roster_student: "RosterStudent", class_obj: "Class", teacher_user_id: int) -> tuple:
+    """
+    Create a registered User account for a roster student and link via TeacherStudent.
+    Returns (username, password) so teacher can share with the student. Password is plain only at creation.
+    """
+    import re
+    display_name = roster_student.display_name or "Student"
+    slug = re.sub(r'[^a-z0-9]', '', display_name.lower())[:12] or "stu"
+    password = secrets.token_urlsafe(8)[:10]  # 10-char readable-ish password
+    for _ in range(20):
+        suffix = ''.join(secrets.choice('abcdefghjkmnpqrstuvwxyz23456789') for _ in range(6))
+        username = f"stu_{class_obj.id}_{slug}_{suffix}"[:50]
+        if User.query.filter_by(username=username).first():
+            continue
+        user = User(
+            username=username,
+            display_name=display_name,
+            email=None,
+            role='student',
+            grade_level=roster_student.grade_level,
+        )
+        user.set_password(password)
+        db.session.add(user)
+        db.session.flush()
+        link = TeacherStudent(
+            teacher_key=class_obj.teacher_key,
+            teacher_user_id=teacher_user_id,
+            student_id=user.id,
+        )
+        db.session.add(link)
+        roster_student.user_id = user.id
+        return (username, password)
+    password = secrets.token_urlsafe(10)[:12]
+    username = f"stu_{class_obj.id}_{uuid.uuid4().hex[:8]}"[:50]
+    user = User(username=username, display_name=display_name, email=None, role='student', grade_level=roster_student.grade_level)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.flush()
+    db.session.add(TeacherStudent(teacher_key=class_obj.teacher_key, teacher_user_id=teacher_user_id, student_id=user.id))
+    roster_student.user_id = user.id
+    return (username, password)
+
+
+@app.route('/api/teacher/class/<int:class_id>/students', methods=['POST'])
+@login_required
+def api_teacher_class_students_post(class_id):
+    """POST /api/teacher/class/:classId/students - Add a roster student and auto-create login account."""
+    cls, err = _teacher_class_or_404()
+    if err:
+        return jsonify({"status": "error", "message": "Forbidden"}), 403
+    if cls.id != class_id:
+        return jsonify({"status": "error", "message": "Class not found"}), 404
+    data = request.get_json() or {}
+    display_name = (data.get('display_name') or '').strip()
+    if not display_name:
+        return jsonify({"status": "error", "message": "display_name is required"}), 400
+    external_student_id = (data.get('external_student_id') or '').strip() or None
+    grade_level = (data.get('grade_level') or '').strip() or None
+    pin = (data.get('pin') or '').strip()
+    norm_name = ' '.join(display_name.lower().split())
+    if not external_student_id:
+        existing = RosterStudent.query.filter_by(class_id=class_id, status='ACTIVE').all()
+        for e in existing:
+            if ' '.join((e.display_name or '').lower().split()) == norm_name:
+                return jsonify({"status": "error", "message": "A student with this name already exists"}), 409
+    else:
+        existing = RosterStudent.query.filter_by(class_id=class_id, external_student_id=external_student_id).first()
+        if existing:
+            return jsonify({"status": "error", "message": "external_student_id already in use"}), 409
+    student = RosterStudent(class_id=class_id, display_name=display_name, external_student_id=external_student_id, grade_level=grade_level, status='ACTIVE')
+    if pin and len(pin) == 4 and pin.isdigit():
+        student.set_pin(pin)
+    db.session.add(student)
+    db.session.flush()
+    try:
+        login_username, login_password = _create_student_login_for_roster(student, cls, current_user.id)
+    except Exception as e:
+        db.session.rollback()
+        print(f" create_student_login_for_roster error: {e}")
+        return jsonify({"status": "error", "message": "Could not create login account. Try again."}), 500
+    db.session.commit()
+    return jsonify({
+        "status": "ok",
+        "student": {
+            "id": student.id,
+            "uuid": student.uuid,
+            "display_name": student.display_name,
+            "external_student_id": student.external_student_id,
+            "grade_level": student.grade_level,
+            "pin_required": student.pin_required,
+            "status": student.status,
+            "username": login_username,
+            "password": login_password,
+            "login_message": "Share this username and password with the student. They can log in at the app login screen and are linked to your class.",
+        }
+    }), 201
+
+
+@app.route('/api/teacher/students/<int:student_id>', methods=['PATCH'])
+@login_required
+def api_teacher_student_patch(student_id):
+    """PATCH /api/teacher/students/:studentId - Update roster student."""
+    cls, err = _teacher_class_or_404()
+    if err:
+        return jsonify({"status": "error", "message": "Forbidden"}), 403
+    student = RosterStudent.query.filter_by(id=student_id, class_id=cls.id).first()
+    if not student:
+        return jsonify({"status": "error", "message": "Student not found"}), 404
+    data = request.get_json() or {}
+    if 'display_name' in data:
+        v = (data.get('display_name') or '').strip()
+        if v:
+            student.display_name = v
+    if 'external_student_id' in data:
+        student.external_student_id = (data.get('external_student_id') or '').strip() or None
+    if 'grade_level' in data:
+        student.grade_level = (data.get('grade_level') or '').strip() or None
+    if 'pin' in data:
+        pin = (data.get('pin') or '').strip()
+        if pin == '' or (len(pin) == 4 and pin.isdigit()):
+            if pin:
+                student.set_pin(pin)
+            else:
+                student.pin_hash = None
+    db.session.commit()
+    return jsonify({
+        "status": "ok",
+        "student": {
+            "id": student.id,
+            "uuid": student.uuid,
+            "display_name": student.display_name,
+            "external_student_id": student.external_student_id,
+            "grade_level": student.grade_level,
+            "pin_required": student.pin_required,
+            "status": student.status,
+        }
+    })
+
+
+@app.route('/api/teacher/students/<int:student_id>/archive', methods=['POST'])
+@login_required
+def api_teacher_student_archive(student_id):
+    """Archive a roster student (soft delete)."""
+    cls, err = _teacher_class_or_404()
+    if err:
+        return jsonify({"status": "error", "message": "Forbidden"}), 403
+    student = RosterStudent.query.filter_by(id=student_id, class_id=cls.id).first()
+    if not student:
+        return jsonify({"status": "error", "message": "Student not found"}), 404
+    student.status = 'ARCHIVED'
+    db.session.commit()
+    return jsonify({"status": "ok", "student_id": student.id})
+
+
+@app.route('/api/teacher/students/<int:student_id>/restore', methods=['POST'])
+@login_required
+def api_teacher_student_restore(student_id):
+    """Restore an archived roster student."""
+    cls, err = _teacher_class_or_404()
+    if err:
+        return jsonify({"status": "error", "message": "Forbidden"}), 403
+    student = RosterStudent.query.filter_by(id=student_id, class_id=cls.id).first()
+    if not student:
+        return jsonify({"status": "error", "message": "Student not found"}), 404
+    student.status = 'ACTIVE'
+    db.session.commit()
+    return jsonify({"status": "ok", "student_id": student.id})
+
+
+@app.route('/api/teacher/students/<int:student_id>/reset-password', methods=['POST'])
+@login_required
+def api_teacher_student_reset_password(student_id):
+    """Reset the login password for a roster student who has an account. Returns new password once."""
+    cls, err = _teacher_class_or_404()
+    if err:
+        return jsonify({"status": "error", "message": "Forbidden"}), 403
+    student = RosterStudent.query.filter_by(id=student_id, class_id=cls.id).first()
+    if not student:
+        return jsonify({"status": "error", "message": "Student not found"}), 404
+    if not student.user_id:
+        return jsonify({"status": "error", "message": "This student has no login account yet"}), 400
+    user = User.query.get(student.user_id)
+    if not user:
+        return jsonify({"status": "error", "message": "Account not found"}), 404
+    new_password = secrets.token_urlsafe(10)[:12]
+    user.set_password(new_password)
+    db.session.commit()
+    return jsonify({
+        "status": "ok",
+        "username": user.username,
+        "password": new_password,
+        "message": "Share the new password with the student. It cannot be shown again.",
+    })
+
+
+@app.route('/api/teacher/students/<int:student_id>', methods=['DELETE'])
+@login_required
+def api_teacher_student_delete(student_id):
+    """Hard delete only if student has zero activity. Else 409 archive instead."""
+    cls, err = _teacher_class_or_404()
+    if err:
+        return jsonify({"status": "error", "message": "Forbidden"}), 403
+    student = RosterStudent.query.filter_by(id=student_id, class_id=cls.id).first()
+    if not student:
+        return jsonify({"status": "error", "message": "Student not found"}), 404
+    from models import QuizSession
+    count = QuizSession.query.filter_by(roster_student_id=student_id).count()
+    if count > 0:
+        return jsonify({
+            "status": "error",
+            "message": "Cannot delete student with progress; archive instead.",
+            "code": "HAS_ACTIVITY"
+        }), 409
+    db.session.delete(student)
+    db.session.commit()
+    return jsonify({"status": "ok", "deleted": student_id})
+
+
+# ------------------------- Roster Import (CSV/XLSX) -------------------------
+
+def _parse_import_file(file_storage):
+    """Return (list of dicts with column headers as keys, list of column names)."""
+    filename = (file_storage.filename or '').lower()
+    rows = []
+    columns = []
+    if filename.endswith('.csv'):
+        import csv
+        stream = io.StringIO(file_storage.read().decode('utf-8', errors='replace'))
+        reader = csv.DictReader(stream)
+        columns = reader.fieldnames or []
+        for row in reader:
+            rows.append(dict(row))
+        return rows, columns
+    if filename.endswith('.xlsx'):
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(file_storage, read_only=True, data_only=True)
+            ws = wb.active
+            it = ws.iter_rows(values_only=True)
+            header = next(it, None)
+            if not header:
+                return [], []
+            columns = [str(c or '').strip() for c in header]
+            for r in it:
+                row = [r[i] if i < len(r) else '' for i in range(len(columns))]
+                rows.append(dict(zip(columns, [str(v).strip() if v is not None else '' for v in row])))
+            wb.close()
+            return rows, columns
+        except Exception as e:
+            print(f" XLSX parse error: {e}")
+            return [], []
+    return [], []
+
+
+COMMON_NAME_HEADERS = ['studentname', 'name', 'fullname', 'student name', 'student_name']
+COMMON_ID_HEADERS = ['studentid', 'id', 'sis_id', 'student id', 'external_id']
+COMMON_GRADE_HEADERS = ['grade', 'gradelevel', 'grade level', 'grade_level']
+COMMON_PIN_HEADERS = ['pin', 'pincode', 'pin code']
+
+
+def _suggest_mapping(columns):
+    """Return suggested mapping from column names to display_name, external_student_id, grade_level, pin."""
+    col_lower = [c.lower().strip() for c in columns]
+    mapping = {}
+    for i, c in enumerate(col_lower):
+        if c in COMMON_NAME_HEADERS:
+            mapping['display_name'] = columns[i]
+        elif c in COMMON_ID_HEADERS:
+            mapping['external_student_id'] = columns[i]
+        elif c in COMMON_GRADE_HEADERS:
+            mapping['grade_level'] = columns[i]
+        elif c in COMMON_PIN_HEADERS:
+            mapping['pin'] = columns[i]
+    return mapping
+
+
+# Column headers that auto-map in import (must match COMMON_* in _suggest_mapping)
+ROSTER_TEMPLATE_HEADERS = ['Student Name', 'Student ID', 'Grade', 'PIN']
+
+
+def _roster_import_template_csv():
+    """Return CSV bytes for the roster import template (UTF-8 with BOM for Excel)."""
+    import csv
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(ROSTER_TEMPLATE_HEADERS)
+    writer.writerow(['Example Student One', 'ID001', '3', '1234'])
+    writer.writerow(['Example Student Two', 'ID002', '4', ''])
+    out = buf.getvalue()
+    return (b'\xef\xbb\xbf' + out.encode('utf-8'))  # BOM so Excel opens correctly
+
+
+def _roster_import_template_xlsx():
+    """Return XLSX bytes for the roster import template."""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Roster'
+        for col, header in enumerate(ROSTER_TEMPLATE_HEADERS, 1):
+            ws.cell(row=1, column=col, value=header)
+            ws.cell(row=1, column=col).font = Font(bold=True)
+        ws.cell(row=2, column=1, value='Example Student One')
+        ws.cell(row=2, column=2, value='ID001')
+        ws.cell(row=2, column=3, value='3')
+        ws.cell(row=2, column=4, value='1234')
+        ws.cell(row=3, column=1, value='Example Student Two')
+        ws.cell(row=3, column=2, value='ID002')
+        ws.cell(row=3, column=3, value='4')
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return buf.getvalue()
+    except Exception as e:
+        print(f" roster template XLSX: {e}")
+        return None
+
+
+@app.route('/api/teacher/roster-import-template')
+@login_required
+def api_teacher_roster_import_template():
+    """Download CSV or XLSX template for class roster import. ?format=xlsx for Excel."""
+    cls, err = _teacher_class_or_404()
+    if err:
+        return jsonify({"status": "error", "message": "Forbidden"}), 403
+    fmt = (request.args.get('format') or 'csv').strip().lower()
+    if fmt == 'xlsx':
+        data = _roster_import_template_xlsx()
+        if not data:
+            return jsonify({"status": "error", "message": "XLSX template unavailable"}), 500
+        from flask import Response
+        return Response(data, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                       headers={'Content-Disposition': 'attachment; filename=BeeSmart_roster_import_template.xlsx'})
+    data = _roster_import_template_csv()
+    from flask import Response
+    return Response(data, mimetype='text/csv; charset=utf-8',
+                   headers={'Content-Disposition': 'attachment; filename=BeeSmart_roster_import_template.csv'})
+
+
+@app.route('/api/teacher/class/<int:class_id>/students/import/preview', methods=['POST'])
+@login_required
+def api_teacher_class_students_import_preview(class_id):
+    """Upload CSV/XLSX; return columnsDetected, sampleRows (first 20), rowCount, suggestedMapping."""
+    cls, err = _teacher_class_or_404()
+    if err:
+        return jsonify({"status": "error", "message": "Forbidden"}), 403
+    if cls.id != class_id:
+        return jsonify({"status": "error", "message": "Class not found"}), 404
+    f = request.files.get('file')
+    if not f:
+        return jsonify({"status": "error", "message": "No file uploaded"}), 400
+    fn = (f.filename or '').lower()
+    if not (fn.endswith('.csv') or fn.endswith('.xlsx')):
+        return jsonify({"status": "error", "message": "Only .csv and .xlsx are supported"}), 400
+    rows, columns = _parse_import_file(f)
+    if not columns:
+        return jsonify({"status": "error", "message": "Could not read columns from file"}), 400
+    file_token = secrets.token_urlsafe(16)
+    if 'roster_import_preview' not in session:
+        session['roster_import_preview'] = {}
+    session['roster_import_preview'][file_token] = {'rows': rows, 'class_id': class_id}
+    session.modified = True
+    sample = rows[:20]
+    return jsonify({
+        "status": "ok",
+        "fileToken": file_token,
+        "columnsDetected": columns,
+        "sampleRows": sample,
+        "rowCount": len(rows),
+        "suggestedMapping": _suggest_mapping(columns)
+    })
+
+
+@app.route('/api/teacher/class/<int:class_id>/students/import/commit', methods=['POST'])
+@login_required
+def api_teacher_class_students_import_commit(class_id):
+    """Commit import with mapping and options. Returns added, updated, skipped, errorRows."""
+    cls, err = _teacher_class_or_404()
+    if err:
+        return jsonify({"status": "error", "message": "Forbidden"}), 403
+    if cls.id != class_id:
+        return jsonify({"status": "error", "message": "Class not found"}), 404
+    data = request.get_json() or {}
+    file_token = (data.get('fileToken') or '').strip()
+    mapping = data.get('mapping') or {}
+    options = data.get('options') or {}
+    mode = (options.get('mode') or 'UPSERT').upper()
+    dedupe = (options.get('dedupe') or 'STUDENT_ID_THEN_NAME').upper()
+    auto_generate_pin = bool(options.get('autoGeneratePin'))
+    if not file_token:
+        return jsonify({"status": "error", "message": "fileToken is required"}), 400
+    preview = (session.get('roster_import_preview') or {}).get(file_token)
+    if not preview or preview.get('class_id') != class_id:
+        return jsonify({"status": "error", "message": "Invalid or expired file token; run preview again"}), 400
+    rows = preview.get('rows') or []
+    display_name_col = mapping.get('display_name')
+    if not display_name_col:
+        return jsonify({"status": "error", "message": "Mapping must include display_name"}), 400
+    added, updated, skipped, error_rows = 0, 0, 0, []
+    created_logins = []  # { display_name, username, password } for each new account
+    seen_external = set()
+    seen_name_norm = set()
+
+    for i, row in enumerate(rows):
+        row_num = i + 2  # 1-based + header
+        try:
+            name_val = (row.get(display_name_col) or '').strip()
+            if not name_val:
+                error_rows.append({"row": row_num, "reason": "display_name is empty"})
+                continue
+            ext_id = (row.get(mapping.get('external_student_id') or '') or '').strip() or None
+            grade = (row.get(mapping.get('grade_level') or '') or '').strip() or None
+            pin_val = (row.get(mapping.get('pin') or '') or '').strip()
+            if pin_val and (len(pin_val) != 4 or not pin_val.isdigit()):
+                error_rows.append({"row": row_num, "reason": "PIN must be 4 digits"})
+                continue
+            norm_name = ' '.join(name_val.lower().split())
+            if ext_id:
+                existing = RosterStudent.query.filter_by(class_id=class_id, external_student_id=ext_id).first()
+                if existing:
+                    if dedupe == 'STUDENT_ID_THEN_NAME' and ext_id in seen_external:
+                        skipped += 1
+                        continue
+                    existing.display_name = name_val
+                    existing.grade_level = grade
+                    if pin_val:
+                        existing.set_pin(pin_val)
+                    elif auto_generate_pin and not existing.pin_hash:
+                        existing.set_pin(secrets.choice('0123456789') + secrets.choice('0123456789') + secrets.choice('0123456789') + secrets.choice('0123456789'))
+                    db.session.flush()
+                    updated += 1
+                    seen_external.add(ext_id)
+                    continue
+                if ext_id in seen_external:
+                    skipped += 1
+                    continue
+                s = RosterStudent(class_id=class_id, display_name=name_val, external_student_id=ext_id, grade_level=grade, status='ACTIVE')
+                if pin_val:
+                    s.set_pin(pin_val)
+                elif auto_generate_pin:
+                    s.set_pin(secrets.choice('0123456789') + secrets.choice('0123456789') + secrets.choice('0123456789') + secrets.choice('0123456789'))
+                db.session.add(s)
+                db.session.flush()
+                try:
+                    un, pw = _create_student_login_for_roster(s, cls, current_user.id)
+                    created_logins.append({"display_name": name_val, "username": un, "password": pw})
+                except Exception as e:
+                    print(f" Import create login for {name_val}: {e}")
+                added += 1
+                seen_external.add(ext_id)
+            else:
+                if norm_name in seen_name_norm:
+                    skipped += 1
+                    continue
+                existing = RosterStudent.query.filter_by(class_id=class_id, status='ACTIVE').all()
+                for e in existing:
+                    if ' '.join((e.display_name or '').lower().split()) == norm_name:
+                        skipped += 1
+                        seen_name_norm.add(norm_name)
+                        break
+                else:
+                    s = RosterStudent(class_id=class_id, display_name=name_val, grade_level=grade, status='ACTIVE')
+                    if pin_val:
+                        s.set_pin(pin_val)
+                    elif auto_generate_pin:
+                        s.set_pin(secrets.choice('0123456789') + secrets.choice('0123456789') + secrets.choice('0123456789') + secrets.choice('0123456789'))
+                    db.session.add(s)
+                    db.session.flush()
+                    try:
+                        un, pw = _create_student_login_for_roster(s, cls, current_user.id)
+                        created_logins.append({"display_name": name_val, "username": un, "password": pw})
+                    except Exception as e:
+                        print(f" Import create login for {name_val}: {e}")
+                    added += 1
+                seen_name_norm.add(norm_name)
+        except Exception as e:
+            error_rows.append({"row": row_num, "reason": str(e)})
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    session.get('roster_import_preview', {}).pop(file_token, None)
+    session.modified = True
+    return jsonify({
+        "status": "ok",
+        "added": added,
+        "updated": updated,
+        "skipped": skipped,
+        "errorRows": error_rows,
+        "created_logins": created_logins,
+    })
+
+
+# ------------------------- Student Join by Teacher Key (no registration) -------------------------
+
+@app.route('/api/join/by-teacher-key/<path:teacher_key>', methods=['GET'])
+def api_join_by_teacher_key(teacher_key):
+    """GET /api/join/by-teacher-key/:teacherKey - Returns class and ACTIVE roster for students to pick."""
+    key = (teacher_key or '').strip().upper().replace('%20', ' ')
+    if not key:
+        return jsonify({"status": "error", "message": "Teacher key is required"}), 400
+    # Case-insensitive lookup: teacher_key stored as given; match upper for consistency
+    cls = Class.query.filter(db.func.upper(Class.teacher_key) == key).first()
+    if not cls:
+        return jsonify({"status": "error", "message": "Class not found"}), 404
+    students = RosterStudent.query.filter_by(class_id=cls.id, status='ACTIVE').order_by(RosterStudent.display_name).all()
+    return jsonify({
+        "status": "ok",
+        "class_id": str(cls.uuid),
+        "class_name": cls.name,
+        "students": [
+            {"student_id": str(s.uuid), "display_name": s.display_name, "pin_required": s.pin_required}
+            for s in students
+        ]
+    })
+
+
+@app.route('/api/join/select-student', methods=['POST'])
+def api_join_select_student():
+    """POST /api/join/select-student - Body: { student_id (uuid), pin? }. Returns session token; sets session."""
+    data = request.get_json() or {}
+    student_uuid = (data.get('student_id') or '').strip()
+    pin = (data.get('pin') or '').strip()
+    if not student_uuid:
+        return jsonify({"status": "error", "message": "student_id is required"}), 400
+    student = RosterStudent.query.filter_by(uuid=student_uuid, status='ACTIVE').first()
+    if not student:
+        return jsonify({"status": "error", "message": "Student not found"}), 404
+    if not student.check_pin(pin):
+        return jsonify({"status": "error", "message": "Invalid PIN"}), 403
+    # Store in session so quiz/API can resolve roster student
+    session['roster_student_id'] = student.id
+    session['roster_class_id'] = student.class_id
+    session['roster_student_uuid'] = str(student.uuid)
+    session.modified = True
+    # Return token: for stateless clients we could issue a signed token; here we use session so token is session id
+    import base64
+    token = base64.urlsafe_b64encode(secrets.token_bytes(24)).decode('utf-8').rstrip('=')
+    session['roster_session_token'] = token
+    # In-memory or Redis store for token -> roster_student_id would go here for stateless; for now session is enough
+    return jsonify({
+        "status": "ok",
+        "student_session_token": token,
+        "student_id": str(student.uuid),
+        "display_name": student.display_name
+    })
 
 
 @app.route('/admin/dashboard')

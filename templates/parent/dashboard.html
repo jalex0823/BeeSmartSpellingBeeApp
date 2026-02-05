@@ -35,7 +35,7 @@
                 <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.75rem; font-weight: 600;">Your Parent Key (share with your children)</div>
                 <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
                     <div id="parentKey" style="background: white; color: #333; padding: 0.75rem 1.25rem; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 1rem; font-weight: 700; letter-spacing: 1px; flex: 1; min-width: 200px; max-width: 100%;">{{ current_user.teacher_key }}</div>
-                    <button onclick="copyParentKey()" style="padding: 0.75rem 1.25rem; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; backdrop-filter: blur(10px);">Copy</button>
+                    <button type="button" id="copyParentKeyBtn" onclick="copyParentKey(this)" style="padding: 0.75rem 1.25rem; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; backdrop-filter: blur(10px);">Copy</button>
                     <button onclick="generateParentKey()" style="padding: 0.75rem 1.25rem; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; backdrop-filter: blur(10px);">Generate / Rotate</button>
                 </div>
             </div>
@@ -267,19 +267,43 @@
         }
     });
 
-    // Copy parent key to clipboard
-    function copyParentKey() {
-        const keyText = document.getElementById('parentKey').textContent;
-        navigator.clipboard.writeText(keyText).then(() => {
-            const btn = event.target;
-            const originalText = btn.textContent;
-            btn.textContent = 'Copied!';
-            setTimeout(() => {
-                btn.textContent = originalText;
-            }, 2000);
-        }).catch(err => {
-            alert('Failed to copy: ' + err);
-        });
+    // Copy parent key to clipboard (with fallback for PWA / strict contexts)
+    function copyParentKey(btn) {
+        const keyEl = document.getElementById('parentKey');
+        const keyText = (keyEl && keyEl.textContent) ? keyEl.textContent.trim() : '';
+        if (!keyText) { alert('No parent key to copy.'); return; }
+        const button = btn || document.getElementById('copyParentKeyBtn');
+
+        function showCopied() {
+            if (button) {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                setTimeout(() => { button.textContent = originalText; }, 2000);
+            }
+        }
+
+        function fallbackCopy() {
+            const ta = document.createElement('textarea');
+            ta.value = keyText;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                document.execCommand('copy');
+                showCopied();
+            } catch (e) {
+                alert('Copy failed. Please select and copy the key manually.');
+            }
+            document.body.removeChild(ta);
+        }
+
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            navigator.clipboard.writeText(keyText).then(showCopied).catch(fallbackCopy);
+        } else {
+            fallbackCopy();
+        }
     }
 
     // Generate/Rotate parent key via API

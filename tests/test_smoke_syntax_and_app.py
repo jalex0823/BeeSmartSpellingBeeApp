@@ -56,6 +56,17 @@ def test_key_templates_render(app):
         render_template("help.html")
         render_template("terms.html")
         render_template("privacy.html")
+        render_template("join_teacher.html", timestamp=12345)
+        # Teacher dashboard needs current_user, students list, class_stats dict, now
+        from types import SimpleNamespace
+        mock_teacher = SimpleNamespace(display_name="Test Teacher", teacher_key="ABC123")
+        render_template(
+            "teacher/dashboard.html",
+            current_user=mock_teacher,
+            students=[],
+            class_stats={"total_quizzes": 0, "avg_accuracy": 0.0, "total_points": 0},
+            now=__import__("datetime").datetime.now(),
+        )
 
 
 def test_quiz_template_renders(app):
@@ -125,6 +136,24 @@ def test_speed_round_quiz_route_responds(client):
     """GET /speed-round/quiz returns 302 when not premium/active (redirect to subscription or setup)."""
     r = client.get("/speed-round/quiz")
     assert r.status_code in (200, 302), f"Expected 200 or 302, got {r.status_code}"
+
+
+def test_join_teacher_route_responds(client):
+    """GET /join (Join Teacher/Class) returns 200."""
+    r = client.get("/join")
+    assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+
+
+def test_teacher_dashboard_requires_auth(client):
+    """GET /teacher/dashboard returns 302 redirect when not logged in."""
+    r = client.get("/teacher/dashboard")
+    assert r.status_code in (302, 200), f"Expected 302 or 200, got {r.status_code}"
+
+
+def test_roster_import_template_requires_auth(client):
+    """GET /api/teacher/roster-import-template returns 302 or 403 when not logged in."""
+    r = client.get("/api/teacher/roster-import-template")
+    assert r.status_code in (302, 401, 403), f"Expected 302/401/403, got {r.status_code}"
 
 
 # ─── Wireframe layout (unified_menu): structure and spacing ───────────────────

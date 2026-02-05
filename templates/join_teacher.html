@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Teacher / Class | BeeSmart</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v={{ timestamp }}">
+    <style>
+        .join-container { max-width: 480px; margin: 0 auto; padding: 24px; }
+        .join-header { text-align: center; margin-bottom: 24px; }
+        .join-header h1 { font-size: 1.75rem; color: #5a3a1a; margin-bottom: 8px; }
+        .join-header p { color: #666; font-size: 0.95rem; }
+        .card { background: linear-gradient(135deg, #fff9e6, #ffe0b2); border: 2px solid #ff8f00; border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-weight: 600; color: #5a3a1a; margin-bottom: 6px; }
+        .form-control { width: 100%; padding: 12px; font-size: 1rem; border: 2px solid #ffb74d; border-radius: 10px; box-sizing: border-box; }
+        .form-control:focus { outline: none; border-color: #ff8f00; }
+        .btn { padding: 12px 24px; border-radius: 10px; font-weight: 600; border: none; cursor: pointer; width: 100%; font-size: 1rem; }
+        .btn-primary { background: linear-gradient(135deg, #ff8f00, #e65100); color: #fff; }
+        .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+        .student-list { list-style: none; padding: 0; margin: 0; }
+        .student-list li { margin-bottom: 8px; }
+        .student-list button { width: 100%; padding: 12px; text-align: left; background: #fff; border: 2px solid #e0e0e0; border-radius: 10px; cursor: pointer; font-size: 1rem; }
+        .student-list button:hover { border-color: #ff8f00; background: #fff8e1; }
+        .error-msg { color: #c62828; font-size: 0.9rem; margin-top: 8px; }
+        .success-box { background: #e8f5e9; border: 2px solid #4caf50; border-radius: 16px; padding: 24px; text-align: center; }
+        .success-box a { display: inline-block; margin-top: 16px; padding: 14px 28px; background: #4caf50; color: #fff; border-radius: 12px; font-weight: 600; text-decoration: none; }
+        .success-box a:hover { background: #388e3c; }
+        .back-link { display: inline-block; margin-top: 16px; color: #e65100; font-weight: 600; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="join-container">
+        <div class="join-header">
+            <h1>Join Teacher / Class</h1>
+            <p>Enter the code your teacher gave you, then select your name. No sign-up required.</p>
+        </div>
+
+        <div id="step1" class="card">
+            <div class="form-group">
+                <label for="teacherKey">Teacher Key (Class Code)</label>
+                <input type="text" id="teacherKey" class="form-control" placeholder="e.g. BEE-2026-TEACH-IHBY" style="text-transform: uppercase;">
+            </div>
+            <button type="button" id="btnLookup" class="btn btn-primary">Find my class</button>
+            <div id="step1Error" class="error-msg" style="display: none;"></div>
+        </div>
+
+        <div id="step2" class="card" style="display: none;">
+            <p style="margin: 0 0 12px 0; font-weight: 600;" id="className"></p>
+            <p style="margin: 0 0 16px 0; font-size: 0.9rem; color: #666;">Select your name:</p>
+            <ul class="student-list" id="studentList"></ul>
+            <div id="step2Error" class="error-msg" style="display: none;"></div>
+        </div>
+
+        <div id="stepPin" class="card" style="display: none;">
+            <p style="margin: 0 0 12px 0;">Enter your 4-digit PIN:</p>
+            <input type="text" id="pinInput" class="form-control" maxlength="4" placeholder="0000" style="text-align: center; letter-spacing: 0.5em;">
+            <button type="button" id="btnSubmitPin" class="btn btn-primary" style="margin-top: 12px;">Continue</button>
+            <div id="pinError" class="error-msg" style="display: none;"></div>
+        </div>
+
+        <div id="stepSuccess" class="success-box" style="display: none;">
+            <p style="margin: 0; font-weight: 600;">You're in, <span id="displayName"></span>!</p>
+            <a href="/quiz">Start the quiz</a>
+        </div>
+
+        <a href="/" class="back-link">← Back to home</a>
+    </div>
+    <script>
+(function(){
+    var classData = null;
+    var selectedStudentId = null;
+    var selectedDisplayName = null;
+
+    document.getElementById('teacherKey').addEventListener('input', function(){ this.value = this.value.toUpperCase(); });
+
+    document.getElementById('btnLookup').addEventListener('click', async function(){
+        var key = (document.getElementById('teacherKey').value || '').trim().replace(/\s/g, '');
+        document.getElementById('step1Error').style.display = 'none';
+        if(!key){ document.getElementById('step1Error').textContent = 'Please enter your Teacher Key.'; document.getElementById('step1Error').style.display = 'block'; return; }
+        try {
+            var r = await fetch('/api/join/by-teacher-key/' + encodeURIComponent(key), { credentials: 'same-origin' });
+            var data = await r.json();
+            if(data.status !== 'ok'){ document.getElementById('step1Error').textContent = data.message || 'Class not found.'; document.getElementById('step1Error').style.display = 'block'; return; }
+            classData = data;
+            document.getElementById('className').textContent = data.class_name || 'My Class';
+            var list = document.getElementById('studentList');
+            list.innerHTML = (data.students || []).map(function(s){
+                return '<li><button type="button" data-id="'+s.student_id+'" data-name="'+escapeHtml(s.display_name)+'" data-pin="'+(s.pin_required?'1':'0')+'">'+escapeHtml(s.display_name)+(s.pin_required ? ' 🔒' : '')+'</button></li>';
+            }).join('');
+            if(!data.students || data.students.length === 0){ document.getElementById('step1Error').textContent = 'No students in this class yet. Ask your teacher to add you.'; document.getElementById('step1Error').style.display = 'block'; return; }
+            document.getElementById('step1').style.display = 'none';
+            document.getElementById('step2').style.display = 'block';
+            list.querySelectorAll('button').forEach(function(btn){
+                btn.addEventListener('click', function(){
+                    selectedStudentId = btn.getAttribute('data-id');
+                    selectedDisplayName = btn.getAttribute('data-name');
+                    if(btn.getAttribute('data-pin') === '1'){
+                        document.getElementById('step2').style.display = 'none';
+                        document.getElementById('stepPin').style.display = 'block';
+                        document.getElementById('pinInput').value = '';
+                        document.getElementById('pinError').style.display = 'none';
+                    } else {
+                        submitSelect();
+                    }
+                });
+            });
+        } catch(e){ document.getElementById('step1Error').textContent = 'Network error. Try again.'; document.getElementById('step1Error').style.display = 'block'; }
+    });
+
+    function escapeHtml(t){ var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+    document.getElementById('btnSubmitPin').addEventListener('click', function(){ submitSelect(); });
+
+    async function submitSelect(){
+        var pin = (document.getElementById('pinInput') && document.getElementById('pinInput').value) ? document.getElementById('pinInput').value : '';
+        document.getElementById('pinError').style.display = 'none';
+        document.getElementById('step2Error').style.display = 'none';
+        try {
+            var r = await fetch('/api/join/select-student', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: selectedStudentId, pin: pin }) });
+            var data = await r.json();
+            if(data.status !== 'ok'){
+                if(document.getElementById('pinError')){ document.getElementById('pinError').textContent = data.message || 'Invalid PIN'; document.getElementById('pinError').style.display = 'block'; }
+                else { document.getElementById('step2Error').textContent = data.message || 'Failed'; document.getElementById('step2Error').style.display = 'block'; }
+                return;
+            }
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('stepPin').style.display = 'none';
+            document.getElementById('stepSuccess').style.display = 'block';
+            var dn = document.getElementById('displayName');
+            if(dn) dn.textContent = data.display_name || selectedDisplayName || 'Student';
+        } catch(e){
+            if(document.getElementById('pinError')){ document.getElementById('pinError').textContent = 'Network error.'; document.getElementById('pinError').style.display = 'block'; }
+        }
+    }
+})();
+    </script>
+</body>
+</html>

@@ -5354,6 +5354,22 @@ function showRestoreDialog(title, message, isSuccess) {
                     <div class="option-description">Race against time! Earn bonus points!</div>
                     <div class="kid-tip">{% if _is_auth != 'true' %} Premium Feature!{% elif _is_premium != 'true' %} Subscribe to unlock!{% else %} How fast can you spell?{% endif %}</div>
                 </div>
+
+                <!-- Groups — One Quiz, One Code -->
+                <div id="tileGroups" class="menu-option" style="background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%); border-color: rgba(255, 152, 0, 0.6);" onclick="kidSounds.playRandomEffect(); selectOption('groups', this)" onmouseover="kidSounds.playBuzz()" title=" One quiz, one code — create or join a group so the whole class takes the same quiz!">
+                    <div class="option-icon"></div>
+                    <div class="option-title">Groups</div>
+                    <div class="option-description">One quiz, one code</div>
+                    <div class="kid-tip"> Same words for the whole class!</div>
+                </div>
+
+                <!-- Join Teacher / Class (no registration) -->
+                <div id="tileJoinTeacher" class="menu-option" style="background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%); border-color: rgba(33, 150, 243, 0.6);" onclick="kidSounds.playRandomEffect(); selectOption('join_teacher', this)" onmouseover="kidSounds.playBuzz()" title=" Join your teacher's class with a code — pick your name and start the quiz. No sign-up!">
+                    <div class="option-icon"></div>
+                    <div class="option-title">Join Teacher/Class</div>
+                    <div class="option-description">Enter class code, pick your name</div>
+                    <div class="kid-tip"> No registration needed!</div>
+                </div>
             </section>
 
             <!-- Action buttons -->
@@ -6365,6 +6381,8 @@ function showRestoreDialog(title, message, isSuccess) {
             saved: '.menu-option[onclick*="saved"]',
             random: '.menu-option[onclick*="random"]',
             battle: '.menu-option[onclick*="battle"]',
+            groups: '#tileGroups',
+            join_teacher: '#tileJoinTeacher',
             speed: '.menu-option[onclick*="speed"]'
         };
 
@@ -7309,6 +7327,8 @@ function showRestoreDialog(title, message, isSuccess) {
                     saved: '.menu-option[onclick*="saved"]',
                     random: '.menu-option[onclick*="random"]',
                     battle: '.menu-option[onclick*="battle"]',
+                    groups: '#tileGroups',
+                    join_teacher: '#tileJoinTeacher',
                     speed: '.menu-option[onclick*="speed"]'
                 };
                 const sel = optionSelectorMap[type];
@@ -7351,6 +7371,12 @@ function showRestoreDialog(title, message, isSuccess) {
                     break;
                 case 'battle':
                     showBattleInterface();
+                    break;
+                case 'groups':
+                    window.location.href = '/groups';
+                    break;
+                case 'join_teacher':
+                    window.location.href = '/join';
                     break;
                 case 'speed':
                     showSpeedRoundInterface();

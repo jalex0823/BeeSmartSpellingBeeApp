@@ -904,7 +904,8 @@ class QuizSession(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     uuid = db.Column(db.String(36), unique=True, default=lambda: str(uuid.uuid4()), index=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)  # Null when roster_student_id set
+    roster_student_id = db.Column(db.Integer, db.ForeignKey('roster_students.id'), nullable=True, index=True)  # Managed roster (no User)
     teacher_key = db.Column(db.String(50), index=True)  # Links to teacher for reporting
     session_start = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     session_end = db.Column(db.DateTime)
@@ -934,6 +935,7 @@ class QuizSession(db.Model):
     
     # Relationships
     results = db.relationship('QuizResult', backref='session', lazy=True, cascade='all, delete-orphan')
+    roster_student = db.relationship('RosterStudent', backref=db.backref('quiz_sessions', lazy=True))
     
     def calculate_accuracy(self):
         """Calculate and update accuracy percentage"""
@@ -1022,7 +1024,8 @@ class QuizResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     uuid = db.Column(db.String(36), unique=True, default=lambda: str(uuid.uuid4()), index=True)
     session_id = db.Column(db.Integer, db.ForeignKey('quiz_sessions.id'), nullable=False, index=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)  # Null when roster_student_id set
+    roster_student_id = db.Column(db.Integer, db.ForeignKey('roster_students.id'), nullable=True, index=True)
     word = db.Column(db.String(100), nullable=False, index=True)
     word_length = db.Column(db.Integer)
     word_difficulty = db.Column(db.String(20))  # short, medium, long, very_long
@@ -1144,8 +1147,74 @@ class WordMastery(db.Model):
         return f'<WordMastery {self.word} - {self.mastery_level} ({self.success_rate}%)>'
 
 
+class Class(db.Model):
+    """
+    Class (tenant) for Teacher Key → managed roster.
+    Teacher Key is stored here as the join key; one class per teacher initially.
+    """
+    __tablename__ = 'classes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), unique=True, default=lambda: str(uuid.uuid4()), index=True)
+    teacher_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False, default='Default Class')
+    teacher_key = db.Column(db.String(50), unique=True, nullable=False, index=True)  # Class code (BEE-2026-TEACH-XXXX)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    teacher = db.relationship('User', foreign_keys=[teacher_id], backref=db.backref('classes', lazy=True))
+    roster_students = db.relationship('RosterStudent', backref='class_ref', lazy=True, cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<Class {self.name} ({self.teacher_key})>'
+
+
+class RosterStudent(db.Model):
+    """
+    Managed student profile. Teacher creates these; each can have an auto-created
+    User account (user_id) so the student can log in; linked to teacher via TeacherStudent.
+    """
+    __tablename__ = 'roster_students'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    uuid = db.Column(db.String(36), unique=True, default=lambda: str(uuid.uuid4()), index=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('classes.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)  # Auto-created login account
+    display_name = db.Column(db.String(200), nullable=False)
+    external_student_id = db.Column(db.String(100), nullable=True, index=True)  # From import sheet
+    grade_level = db.Column(db.String(20), nullable=True)
+    pin_hash = db.Column(db.String(255), nullable=True)  # 4-digit PIN hashed
+    status = db.Column(db.String(20), nullable=False, default='ACTIVE', index=True)  # ACTIVE | ARCHIVED
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (db.Index('ix_roster_students_class_status', 'class_id', 'status'),)
+    
+    # Relationship to User when account is auto-created
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('roster_profile', uselist=False))
+    
+    def set_pin(self, pin: str) -> None:
+        """Store hashed 4-digit PIN."""
+        if pin and len(pin) == 4 and pin.isdigit():
+            self.pin_hash = generate_password_hash(pin, method='pbkdf2:sha256', salt_length=8)
+    
+    def check_pin(self, pin: str) -> bool:
+        """Verify 4-digit PIN."""
+        if not self.pin_hash:
+            return True
+        return pin and check_password_hash(self.pin_hash, pin)
+    
+    @property
+    def pin_required(self) -> bool:
+        return bool(self.pin_hash)
+    
+    def __repr__(self):
+        return f'<RosterStudent {self.display_name} ({self.status})>'
+
+
 class TeacherStudent(db.Model):
-    """Links teachers to their students"""
+    """Links teachers to their students (registered User accounts)"""
     __tablename__ = 'teacher_students'
     
     id = db.Column(db.Integer, primary_key=True)

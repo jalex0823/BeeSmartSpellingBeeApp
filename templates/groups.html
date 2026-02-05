@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groups — One Quiz, One Code | BeeSmart</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v={{ timestamp }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-fixes.css') }}?v={{ timestamp }}">
+    <style>
+        .groups-container { max-width: 900px; margin: 0 auto; padding: 24px; }
+        .groups-header { text-align: center; margin-bottom: 32px; }
+        .groups-header h1 { font-size: 2rem; color: #e65100; margin-bottom: 8px; }
+        .groups-header p { color: #5a3a1a; font-size: 1.05rem; }
+        .groups-tabs { display: flex; gap: 12px; justify-content: center; margin-bottom: 28px; }
+        .groups-tab { padding: 12px 24px; border-radius: 12px; border: 2px solid #ffb74d; background: #fff8e1; color: #5a3a1a; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .groups-tab:hover { background: #ffecb3; }
+        .groups-tab.active { background: #ff8f00; color: #fff; border-color: #e65100; }
+        .panel { display: none; background: linear-gradient(135deg, #fff9e6, #ffe0b2); border: 3px solid #ff8f00; border-radius: 20px; padding: 28px; box-shadow: 0 6px 24px rgba(0,0,0,0.1); }
+        .panel.active { display: block; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: 600; color: #5a3a1a; margin-bottom: 8px; }
+        .form-control { width: 100%; padding: 12px 16px; font-size: 1rem; border: 2px solid #ffb74d; border-radius: 12px; box-sizing: border-box; }
+        .form-control:focus { outline: none; border-color: #ff8f00; }
+        textarea.form-control { min-height: 140px; resize: vertical; }
+        .btn { padding: 14px 28px; border-radius: 12px; font-weight: 600; font-size: 1rem; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: linear-gradient(135deg, #ff8f00, #e65100); color: #fff; }
+        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn-secondary { background: #fff; color: #e65100; border: 2px solid #ff8f00; }
+        .btn-secondary:hover { background: #fff3e0; }
+        .group-code-result { margin-top: 24px; padding: 24px; background: #fff; border-radius: 16px; border: 3px solid #4caf50; text-align: center; }
+        .group-code-result .code { font-size: 2.2rem; font-weight: bold; letter-spacing: 0.2em; color: #2e7d32; margin: 12px 0; }
+        .group-code-result .hint { color: #666; font-size: 0.95rem; margin-top: 8px; }
+        .group-code-result a { color: #1976d2; font-weight: 600; }
+        .error-msg { color: #c62828; font-size: 0.9rem; margin-top: 8px; }
+        .back-home { display: inline-block; margin-top: 20px; color: #e65100; font-weight: 600; text-decoration: none; }
+        .back-home:hover { text-decoration: underline; }
+        .join-success { margin-top: 24px; padding: 24px; background: #e8f5e9; border-radius: 16px; border: 2px solid #4caf50; text-align: center; }
+        .join-success .start-quiz { display: inline-block; margin-top: 16px; padding: 14px 28px; background: #4caf50; color: #fff; border-radius: 12px; font-weight: 600; text-decoration: none; }
+        .join-success .start-quiz:hover { background: #388e3c; }
+    </style>
+</head>
+<body>
+    <div class="groups-container">
+        <div class="groups-header">
+            <h1>Groups — One Quiz, One Code</h1>
+            <p>When the whole class takes the same quiz, create a group and share one code. Students join, enter their name, and get the same words in the same order.</p>
+        </div>
+        <div class="groups-tabs">
+            <button type="button" class="groups-tab active" data-panel="create">Create a group</button>
+            <button type="button" class="groups-tab" data-panel="join">Join a group</button>
+        </div>
+
+        <div id="panel-create" class="panel active">
+            <h2 style="margin-top:0; color:#5a3a1a;">Create a group</h2>
+            <p style="color:#666;">Give your group a name and add the words for the quiz. You can type or paste words (one per line), or generate random words.</p>
+            <form id="form-create">
+                <div class="form-group">
+                    <label for="group-name">Group name</label>
+                    <input type="text" id="group-name" class="form-control" placeholder="e.g. Mrs. Smith's Friday Quiz" required>
+                </div>
+                <div class="form-group">
+                    <label for="group-words">Words (one per line)</label>
+                    <textarea id="group-words" class="form-control" placeholder="apple&#10;banana&#10;spelling" required></textarea>
+                    <button type="button" id="btn-random-words" class="btn btn-secondary" style="margin-top:8px;">Generate 10 random words</button>
+                </div>
+                <button type="submit" class="btn btn-primary">Create group & get code</button>
+            </form>
+            <div id="create-result" class="group-code-result" style="display:none;">
+                <p style="margin:0; font-weight:600;">Your group code</p>
+                <p class="code" id="created-code"></p>
+                <p class="hint">Share this code with your class. Students open BeeSmart, tap Groups, enter the code and their name.</p>
+                <p><a href="#" id="link-view-group">View group &amp; who joined</a> · <a href="#" id="link-export-group">Export results (CSV)</a></p>
+            </div>
+            <div id="view-group-status" class="group-code-result" style="display:none; border-color:#2196f3;">
+                <p style="margin:0; font-weight:600;">Group: <span id="view-group-name"></span></p>
+                <p class="code" id="view-group-code"></p>
+                <p class="hint">Joined: <span id="view-joined"></span> · Finished: <span id="view-finished"></span></p>
+                <ul id="view-players-list" style="text-align:left; max-height:200px; overflow:auto;"></ul>
+                <p><a href="#" id="link-export-view">Export results (CSV)</a></p>
+            </div>
+            <div id="create-error" class="error-msg" style="display:none;"></div>
+        </div>
+
+        <div id="panel-join" class="panel">
+            <h2 style="margin-top:0; color:#5a3a1a;">Join a group</h2>
+            <p style="color:#666;">Enter the code your teacher gave you and your name. You’ll get the same quiz as everyone else.</p>
+            <form id="form-join">
+                <div class="form-group">
+                    <label for="join-code">Group code</label>
+                    <input type="text" id="join-code" class="form-control" placeholder="e.g. BEE1A2B" required maxlength="10" style="text-transform:uppercase;">
+                </div>
+                <div class="form-group">
+                    <label for="join-name">Your name</label>
+                    <input type="text" id="join-name" class="form-control" placeholder="Your first name or nickname" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Join group</button>
+            </form>
+            <div id="join-success" class="join-success" style="display:none;">
+                <p style="margin:0; font-weight:600;">You’re in!</p>
+                <p id="join-group-name" style="margin:8px 0;"></p>
+                <a href="/quiz" class="start-quiz">Start the quiz</a>
+            </div>
+            <div id="join-error" class="error-msg" style="display:none;"></div>
+        </div>
+
+        <p style="text-align:center;"><a href="/" class="back-home">← Back to home</a></p>
+    </div>
+
+    <script>
+(function() {
+    var ts = {{ timestamp }};
+
+    document.querySelectorAll('.groups-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            var panelId = tab.getAttribute('data-panel');
+            document.querySelectorAll('.groups-tab').forEach(function(t) { t.classList.remove('active'); });
+            document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+            tab.classList.add('active');
+            var panel = document.getElementById('panel-' + panelId);
+            if (panel) panel.classList.add('active');
+        });
+    });
+
+    document.getElementById('join-code').addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+    });
+
+    document.getElementById('btn-random-words').addEventListener('click', function() {
+        fetch('/api/random-words', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ difficulty: 2, count: 10 })
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            var words = (data.words || data.word_list || []).map(function(w) { return typeof w === 'string' ? w : (w.word || w.text || ''); }).filter(Boolean);
+            var ta = document.getElementById('group-words');
+            var existing = (ta.value || '').trim();
+            var add = words.join('\n');
+            ta.value = existing ? existing + '\n' + add : add;
+        }).catch(function() {
+            var ta = document.getElementById('group-words');
+            var fallback = 'apple\nbanana\nspelling\ncorrect\npractice\nword\nhoney\nbee\nsmart\nquiz';
+            var existing = (ta.value || '').trim();
+            ta.value = existing ? existing + '\n' + fallback : fallback;
+        });
+    });
+
+    document.getElementById('form-create').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var name = document.getElementById('group-name').value.trim();
+        var raw = document.getElementById('group-words').value.trim();
+        var words = raw.split(/\n/).map(function(w) { return w.trim(); }).filter(Boolean);
+        document.getElementById('create-error').style.display = 'none';
+        document.getElementById('create-result').style.display = 'none';
+        if (!name) { document.getElementById('create-error').textContent = 'Please enter a group name.'; document.getElementById('create-error').style.display = 'block'; return; }
+        if (!words.length) { document.getElementById('create-error').textContent = 'Please add at least one word (one per line).'; document.getElementById('create-error').style.display = 'block'; return; }
+        var wordList = words.map(function(w) { return { word: w, sentence: 'The word is _____.', hint: '' }; });
+        fetch('/api/groups/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ name: name, word_list: wordList })
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.status === 'ok') {
+                document.getElementById('created-code').textContent = data.code;
+                document.getElementById('link-view-group').href = '/groups?view=' + encodeURIComponent(data.code);
+                document.getElementById('link-export-group').href = '/api/groups/' + encodeURIComponent(data.code) + '/export';
+                document.getElementById('link-export-group').download = 'group_' + data.code + '_results.csv';
+                document.getElementById('create-result').style.display = 'block';
+            } else {
+                document.getElementById('create-error').textContent = data.message || 'Could not create group.';
+                document.getElementById('create-error').style.display = 'block';
+            }
+        }).catch(function() {
+            document.getElementById('create-error').textContent = 'Network error. Please try again.';
+            document.getElementById('create-error').style.display = 'block';
+        });
+    });
+
+    document.getElementById('form-join').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var code = document.getElementById('join-code').value.trim().toUpperCase();
+        var name = document.getElementById('join-name').value.trim();
+        document.getElementById('join-error').style.display = 'none';
+        document.getElementById('join-success').style.display = 'none';
+        if (!code) { document.getElementById('join-error').textContent = 'Please enter the group code.'; document.getElementById('join-error').style.display = 'block'; return; }
+        if (!name) { document.getElementById('join-error').textContent = 'Please enter your name.'; document.getElementById('join-error').style.display = 'block'; return; }
+        fetch('/api/groups/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ code: code, player_name: name })
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.status === 'ok') {
+                document.getElementById('join-group-name').textContent = 'Group: ' + (data.group_name || code);
+                document.getElementById('join-success').style.display = 'block';
+            } else {
+                document.getElementById('join-error').textContent = data.message || 'Could not join group.';
+                document.getElementById('join-error').style.display = 'block';
+            }
+        }).catch(function() {
+            document.getElementById('join-error').textContent = 'Network error. Please try again.';
+            document.getElementById('join-error').style.display = 'block';
+        });
+    });
+
+    var viewCode = (function() {
+        var m = /[?&]view=([^&]+)/.exec(window.location.search);
+        return m ? decodeURIComponent(m[1]) : null;
+    })();
+    if (viewCode) {
+        document.querySelector('[data-panel="create"]').click();
+        fetch('/api/groups/' + encodeURIComponent(viewCode), { credentials: 'same-origin' }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.status === 'ok') {
+                document.getElementById('view-group-name').textContent = data.name || data.code;
+                document.getElementById('view-group-code').textContent = data.code;
+                document.getElementById('view-joined').textContent = data.joined_count || 0;
+                document.getElementById('view-finished').textContent = data.finished_count || 0;
+                var ul = document.getElementById('view-players-list');
+                ul.innerHTML = '';
+                (data.players || []).forEach(function(p) {
+                    var li = document.createElement('li');
+                    li.textContent = (p.name || 'Unknown') + ' — ' + (p.completed ? 'Done (' + p.correct + '/' + p.total + ', ' + p.score + ' pts)' : 'In progress');
+                    ul.appendChild(li);
+                });
+                document.getElementById('link-export-view').href = '/api/groups/' + encodeURIComponent(data.code) + '/export';
+                document.getElementById('view-group-status').style.display = 'block';
+            }
+        }).catch(function() {});
+    }
+})();
+    </script>
+</body>
+</html>
