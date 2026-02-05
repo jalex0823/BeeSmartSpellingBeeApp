@@ -6127,7 +6127,12 @@ function showRestoreDialog(title, message, isSuccess) {
             constructor() {
                 this.context = null;
                 this.initialized = false;
+                // Default enabled, but respect global button SFX setting if user toggled it previously.
                 this.soundEnabled = true;
+                try {
+                    const v = window.localStorage.getItem('beesmart_sfx_enabled_v1');
+                    if (v === '0') this.soundEnabled = false;
+                } catch (_e) {}
             }
 
             async init() {
@@ -6346,6 +6351,17 @@ function showRestoreDialog(title, message, isSuccess) {
             toggleSound() {
                 const enabled = this.toggle();
                 const btn = document.getElementById('soundToggleBtn');
+
+                // Keep global ButtonPress SFX + quiz keyboard clicks in sync with this toggle.
+                // ButtonPress system uses localStorage key: beesmart_sfx_enabled_v1
+                try {
+                    if (window.BeeSmartButtonSfx && typeof window.BeeSmartButtonSfx.setEnabled === 'function') {
+                        window.BeeSmartButtonSfx.setEnabled(enabled);
+                    } else {
+                        window.localStorage.setItem('beesmart_sfx_enabled_v1', enabled ? '1' : '0');
+                    }
+                } catch (_e) {}
+
                 if (btn) {
                     if (enabled) {
                         btn.innerHTML = ' Sounds ON';
@@ -6370,6 +6386,26 @@ function showRestoreDialog(title, message, isSuccess) {
     // so without this, expressions like `kidSounds.playRandomEffect()` in HTML
     // event attributes can throw "kidSounds is not defined" and prevent clicks.
     window.kidSounds = kidSounds;
+
+    // Sync the Sounds button UI on load (respects persisted SFX preference).
+    (function syncSoundToggleUI(){
+        try {
+            const btn = document.getElementById('soundToggleBtn');
+            if (!btn) return;
+            const enabled = !!kidSounds.soundEnabled;
+            if (enabled) {
+                btn.innerHTML = ' Sounds ON';
+                btn.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45A049 100%)';
+                btn.style.borderColor = 'rgba(76, 175, 80, 0.3)';
+                btn.style.boxShadow = '0 3px 8px rgba(76, 175, 80, 0.3)';
+            } else {
+                btn.innerHTML = ' Sounds OFF';
+                btn.style.background = 'linear-gradient(135deg, #9E9E9E 0%, #757575 100%)';
+                btn.style.borderColor = 'rgba(158, 158, 158, 0.3)';
+                btn.style.boxShadow = '0 3px 8px rgba(158, 158, 158, 0.3)';
+            }
+        } catch (_e) {}
+    })();
 
         // Centralized option selector map for menu tiles (keyboard + programmatic resolution)
         // Exposed globally so legacy calls can resolve elements consistently

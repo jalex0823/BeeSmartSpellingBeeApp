@@ -1969,12 +1969,27 @@ if ('speechSynthesis' in window) {
     .morph-container.mode-timer .voice-visualizer .voice-definition {
         opacity: 1 !important;
         position: relative;
-        z-index: 2; /* sit above faded viz, below the timer */
+        z-index: 2;
+    }
+
+    /* Mobile usability: when the timer is running, do NOT let the jar overlap the sentence/definition.
+       Stack the jar above the definition so the countdown never covers text. */
+    .morph-container.mode-timer .morph-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .morph-container.mode-timer .countdown-container {
+        position: static !important;
+        top: auto !important;
+        left: auto !important;
+        transform: none !important;
+        margin: 0 0 10px 0 !important;
+        pointer-events: auto;
     }
 
     .morph-container.mode-timer .countdown-container {
         opacity: 1;
-        transform: translate(-50%, -50%) scale(1); /* Center and full scale */
         pointer-events: auto;
     }
     
