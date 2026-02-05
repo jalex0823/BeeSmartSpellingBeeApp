@@ -156,7 +156,7 @@ if ('speechSynthesis' in window) {
         --beesmart-cream: #F3F5F5;
     }
 
-    /* B) Option 1: Page does NOT scroll; only .card-scroll scrolls */
+    /* B) Page scroll (preferred): allow full-page scroll to bottom */
     html, body {
         height: 100%;
         margin: 0;
@@ -165,14 +165,14 @@ if ('speechSynthesis' in window) {
         overflow-x: hidden;
     }
 
-    /* D) Quiz-only: body locked – NO position:fixed (causes iOS overlay/layering) */
+    /* D) Quiz-only: allow normal page scrolling (no scroll traps) */
     body.route-quiz {
-        overflow: hidden !important;
+        overflow-y: auto !important;
         position: static !important;
-        overscroll-behavior: none !important; /* Prevent body-level rubber banding */
-        overscroll-behavior-y: none !important;
-        overscroll-behavior-x: none !important;
-        touch-action: none; /* Prevent body-level touch gestures */
+        overscroll-behavior: auto !important;
+        overscroll-behavior-y: auto !important;
+        overscroll-behavior-x: auto !important;
+        touch-action: pan-y;
     }
     /* Prevent html-level rubber banding */
     html.route-quiz,
@@ -181,23 +181,13 @@ if ('speechSynthesis' in window) {
         overscroll-behavior-y: none !important;
         overscroll-behavior-x: none !important;
     }
-    body.route-quiz .card-scroll {
-        overflow-y: auto !important;
-        overflow-x: hidden;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior: none !important; /* Completely prevent rubber banding on iOS */
-        overscroll-behavior-y: none !important;
-        overscroll-behavior-x: none !important;
-        touch-action: pan-y;
-        /* Force hardware acceleration for smooth scrolling */
-        transform: translateZ(0);
-        -webkit-transform: translateZ(0);
-        will-change: scroll-position;
-    }
+    /* Card content is in normal document flow; page scrolls. */
+    body.route-quiz .card-scroll { overflow: visible !important; }
 
     /* .quiz-page = theme background (style guide), flex column */
     .quiz-page {
-        height: 100dvh;
+        min-height: 100dvh;
+        height: auto;
         display: flex;
         flex-direction: column;
         padding-left: max(var(--page-gutter), env(safe-area-inset-left));
@@ -209,9 +199,9 @@ if ('speechSynthesis' in window) {
         margin: 0 auto;
         text-align: center;
         position: relative;
-        overflow: hidden;
-        overscroll-behavior: none !important;
-        touch-action: none;
+        overflow: visible;
+        overscroll-behavior: auto !important;
+        touch-action: pan-y;
         background: var(--beesmart-light-yellow);
     }
 
@@ -224,11 +214,11 @@ if ('speechSynthesis' in window) {
     .quiz-container {
         flex: 1;
         min-height: 0;
-        overflow: hidden;
+        overflow: visible;
         display: flex;
         flex-direction: column;
-        overscroll-behavior: none !important; /* Prevent rubber banding */
-        touch-action: none; /* Prevent container-level touch gestures, allow card-scroll to handle */
+        overscroll-behavior: auto !important;
+        touch-action: pan-y;
     }
 
     .quiz-content {
@@ -358,27 +348,12 @@ if ('speechSynthesis' in window) {
         flex: 1;
         overflow: hidden;
     }
-    /* Single scroll owner: entire card content (timer, viz, answer, keyboard, buttons) */
+    /* Card content should not trap scroll; let the page scroll */
     .card-scroll {
         flex: 1 1 auto;
         min-height: 0;
-        overflow-y: auto !important;
-        overflow-x: hidden;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior: none !important; /* Completely prevent rubber banding on iOS */
-        overscroll-behavior-y: none !important;
-        overscroll-behavior-x: none !important;
-        touch-action: pan-y;
-        /* Force hardware acceleration for smooth scrolling */
-        transform: translateZ(0);
-        -webkit-transform: translateZ(0);
-        will-change: scroll-position;
-        /* Ensure smooth momentum scrolling */
-        -webkit-overflow-scrolling: touch;
-        padding: max(14px, env(safe-area-inset-top)) 12px 20px 12px; /* Increased bottom padding for better spacing */
-        /* Force scrollbar to be visible when content overflows */
-        scrollbar-width: thin; /* Firefox */
-        scrollbar-color: rgba(0, 0, 0, 0.3) transparent; /* Firefox */
+        overflow: visible !important;
+        padding: max(14px, env(safe-area-inset-top)) 12px 28px 12px; /* Extra bottom padding so Exit is never clipped */
     }
     
     /* Webkit scrollbar styling (Chrome, Safari, Edge) - Always visible */
@@ -4575,8 +4550,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input type="text"
                            id="spellingInput"
                            placeholder="Type your answer..."
-                           readonly
-                           inputmode="none"
+                           inputmode="text"
                            autocomplete="off"
                            autocorrect="off"
                            autocapitalize="off"
@@ -6392,13 +6366,20 @@ class QuizManager {
             });
         }
         
-        // iOS Safari rubber-band prevention and smooth scrolling fix:
-        // - .card-scroll = single scroll owner (entire card content)
-        // - Completely prevent overscroll bounce at the top/bottom edges
-        // - Ensure smooth momentum scrolling works properly
+        // iOS Safari rubber-band prevention (ONLY when using inner scroller).
+        // If the page is the scroll owner (preferred), do not install scroll traps.
         try {
             const scroller = document.querySelector('.card-scroll');
-            if (scroller && !scroller.__iosRubberbandGuard) {
+            const usesInnerScroller = (() => {
+                try {
+                    if (!scroller) return false;
+                    const cs = window.getComputedStyle(scroller);
+                    const oy = (cs && cs.overflowY) ? String(cs.overflowY) : '';
+                    return (oy === 'auto' || oy === 'scroll');
+                } catch (e) { return false; }
+            })();
+
+            if (scroller && usesInnerScroller && !scroller.__iosRubberbandGuard) {
                 scroller.__iosRubberbandGuard = true;
                 
                 // Force CSS properties for iOS
@@ -6456,7 +6437,7 @@ class QuizManager {
                     }, 0);
                 }, { passive: true });
 
-                // Block page-level scroll gestures outside the scroller (prevent body rubber banding)
+                // Block page-level scroll gestures outside the scroller (only when scroller is the scroll owner)
                 const preventBodyScroll = (e) => {
                     const target = e.target;
                     if (!target) return;
@@ -6486,6 +6467,8 @@ class QuizManager {
                         }
                     }
                 }, { passive: false, capture: true });
+            } else if (scroller && !usesInnerScroller) {
+                console.log('ℹ️ Page scroll mode: skipping iOS inner-scroller rubber-band guards');
             }
         } catch (err) {
             console.warn('⚠️ iOS scroll fix error:', err);
@@ -9234,14 +9217,12 @@ class QuizManager {
             
             this.updateScoreDisplay(result.progress);
             
-            // 🔄 If answer was INCORRECT (and not "almost right"), STOP and wait for user choice
-            if (!result.correct && !result.almost_right) {
-                console.log('❌ INCORRECT - Halting auto-advance. Waiting for user to click Retry or Show Answer...');
+            // 🔄 If answer was NOT correct, STOP and wait for user to click Next Word (or Retry/Answer choice)
+            // This includes "almost right" so students can see the correct spelling before continuing.
+            if (!result.correct && !result.quiz_complete) {
+                console.log('❌ NOT CORRECT - Halting auto-advance. Waiting for user action (Retry/Answer/Next Word)...');
                 this.isAnswering = false;
                 return;
-            }
-            if (result.almost_right) {
-                console.log('🍯 Almost right - partial credit, advancing to next word.');
             }
             
             // 🏆 Check if quiz is complete and show badges/level-up
@@ -9523,20 +9504,31 @@ class QuizManager {
             // Visual explosion effect!
             this.createExplosion();
         } else if (result.almost_right) {
-            // Almost right: supportive message, partial points, advance to next word (no retry)
+            // Almost right: supportive message + show correct spelling + wait for Next Word (no retry)
             const pointsData = result.points || {};
             const earnedPoints = pointsData.earned || 0;
             const breakdown = pointsData.breakdown || {};
             this.currentStreak = (result.progress && result.progress.streak) || this.currentStreak;
             feedbackArea.className = 'feedback-area feedback-almost';
+            const correctWord = (this.currentWordData && this.currentWordData.word) || result.word || '';
             feedbackArea.innerHTML = `
                 <div style="font-size: 1.1rem; font-weight: 700; color: #E65100;">${randomMessage}</div>
-                <div style="margin-top: 0.4rem; font-size: 0.95rem;">Moving to the next word...</div>
+                <div style="margin-top: 0.5rem; font-size: 0.95rem; color: #666;">
+                    The correct spelling is:
+                </div>
+                <div style="font-size: 1.45rem; font-weight: 900; color: #FFA500; letter-spacing: 0.08em;">
+                    ${correctWord}
+                </div>
+                <div style="margin-top: 0.4rem; font-size: 0.95rem; color: #666;">Click "Next Word" to continue</div>
             `;
             if (earnedPoints > 0) {
                 this.showPointsPopup(earnedPoints, breakdown);
             }
             playThemedSound('incorrect'); // softer than full wrong
+            // Disable input and show Next Word button (no auto-advance)
+            try { document.getElementById('spellingInput').disabled = true; } catch (_) {}
+            try { if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(false); } catch (_) {}
+            this.showNextWordButton();
         } else {
             // Reset streak on incorrect answer
             this.currentStreak = 0;

@@ -95,6 +95,9 @@
             practiceMode = false,
             showSubmitKey = false,
             useHexKeys = USE_HEX_KEYS_DEFAULT,
+            // When true, prevents the OS/system keyboard and forces on-screen keys.
+            // Default: lock only on coarse-pointer (phones/tablets). Desktop/laptops keep physical keyboard typing.
+            lockSystemKeyboard = null,
             spacerTargetEl = null,
             onMounted = null,
             onUnmounted = null,
@@ -114,12 +117,36 @@
         let enabled = true;
         const state = { maxLength: maxLength ?? null };
 
+        const shouldLockSystemKeyboard = (() => {
+            if (lockSystemKeyboard === true || lockSystemKeyboard === false) return !!lockSystemKeyboard;
+            try {
+                // Primary signal: coarse pointer devices (phones/tablets)
+                if (typeof window !== 'undefined' && window.matchMedia) {
+                    return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+                }
+            } catch (_) {}
+            // Fallback: if we can't detect, assume touch device should lock.
+            try {
+                return (typeof navigator !== 'undefined') && (navigator.maxTouchPoints > 0);
+            } catch (_) {}
+            return true;
+        })();
+
         function syncToInput() {
             inputEl.value = currentAnswer;
             try {
                 inputEl.dispatchEvent(new Event('input', { bubbles: true }));
                 inputEl.dispatchEvent(new Event('change', { bubbles: true }));
             } catch (_) {}
+        }
+
+        function syncFromInput() {
+            let v = String(inputEl.value == null ? '' : inputEl.value);
+            if (state.maxLength != null && v.length > state.maxLength) {
+                v = v.slice(0, state.maxLength);
+                inputEl.value = v;
+            }
+            currentAnswer = v;
         }
 
         function handleLetter(letter) {
@@ -247,18 +274,85 @@
             try { onMounted(container); } catch (_) {}
         }
 
-        inputEl.setAttribute('readonly', 'readonly');
-        inputEl.setAttribute('inputmode', 'none');
+        // Keep input and keyboard state in sync (supports physical keyboard typing on desktop).
+        const inputSyncHandler = () => syncFromInput();
+        inputEl.addEventListener('input', inputSyncHandler);
+
+        // Physical keyboard support (desktop + external keyboards):
+        // When the system keyboard is locked (mobile) OR the input isn't focused, capture keystrokes
+        // and route them through the on-screen keyboard handlers.
+        let docKeydownHandler = null;
+        docKeydownHandler = (e) => {
+            try {
+                if (!enabled) return;
+                if (!e || e.defaultPrevented) return;
+
+                const key = e.key;
+                if (!key) return;
+
+                const tgt = e.target;
+                const tag = (tgt && tgt.tagName) ? String(tgt.tagName).toLowerCase() : '';
+                const isEditable = !!(tgt && (tgt.isContentEditable || tag === 'textarea' || (tag === 'input' && tgt !== inputEl)));
+                // If the user is typing into another input/textarea/contenteditable, do not hijack.
+                if (isEditable) return;
+
+                const inputIsFocused = (document.activeElement === inputEl);
+                const inputIsReadOnly = inputEl.hasAttribute('readonly');
+
+                // Always allow Enter to submit (so desktop users can press Enter).
+                if (key === 'Enter') {
+                    e.preventDefault();
+                    handleSubmit();
+                    return;
+                }
+
+                // If the input is focused and writable, let the browser handle typing; we'll sync via input event.
+                if (inputIsFocused && !inputIsReadOnly) {
+                    return;
+                }
+
+                if (key === 'Backspace') {
+                    e.preventDefault();
+                    handleBackspace();
+                    return;
+                }
+
+                if (key === ' ') {
+                    e.preventDefault();
+                    handleSpace();
+                    return;
+                }
+
+                if (key.length === 1 && /[a-z]/i.test(key)) {
+                    e.preventDefault();
+                    handleLetter(key.toUpperCase());
+                    return;
+                }
+            } catch (_) {}
+        };
+        document.addEventListener('keydown', docKeydownHandler, true);
+
+        // Normalize input attributes (always)
         inputEl.setAttribute('autocomplete', 'off');
         inputEl.setAttribute('autocapitalize', 'off');
         inputEl.setAttribute('autocorrect', 'off');
         inputEl.setAttribute('spellcheck', 'false');
         inputEl.setAttribute('data-quiz-keyboard', 'true');
 
-        inputEl.addEventListener('focus', (e) => {
-            e.preventDefault();
-            inputEl.blur();
-        });
+        // Optionally lock system keyboard (mobile) vs allow physical keyboard (desktop)
+        let focusBlurHandler = null;
+        if (shouldLockSystemKeyboard) {
+            inputEl.setAttribute('readonly', 'readonly');
+            inputEl.setAttribute('inputmode', 'none');
+            focusBlurHandler = (e) => {
+                try { e.preventDefault(); } catch (_) {}
+                try { inputEl.blur(); } catch (_) {}
+            };
+            inputEl.addEventListener('focus', focusBlurHandler);
+        } else {
+            inputEl.removeAttribute('readonly');
+            inputEl.setAttribute('inputmode', 'text');
+        }
 
         let mode = practiceMode ? 'practice' : 'test';
 
@@ -316,6 +410,9 @@
                     try { onUnmounted(); } catch (_) {}
                 }
                 if (instance === this) instance = null;
+                try { if (inputSyncHandler) inputEl.removeEventListener('input', inputSyncHandler); } catch (_) {}
+                try { if (focusBlurHandler) inputEl.removeEventListener('focus', focusBlurHandler); } catch (_) {}
+                try { if (docKeydownHandler) document.removeEventListener('keydown', docKeydownHandler, true); } catch (_) {}
                 inputEl.removeAttribute('readonly');
                 inputEl.removeAttribute('inputmode');
                 inputEl.removeAttribute('data-quiz-keyboard');
