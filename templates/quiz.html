@@ -5150,6 +5150,23 @@ function hideTargetWord(text, word) {
     return text.replace(new RegExp(`\\b${esc}\\b`, 'gi'), '_____');
 }
 
+// Global "Sound FX" master switch (shared with menu + button click SFX).
+// Rule: when FX are OFF, everything is silent EXCEPT the announcer voice (speechSynthesis).
+function __beesmartSfxEnabled() {
+    try {
+        if (window.BeeSmartButtonSfx && typeof window.BeeSmartButtonSfx.getEnabled === 'function') {
+            return !!window.BeeSmartButtonSfx.getEnabled();
+        }
+    } catch (_e) {}
+    try {
+        const v = window.localStorage.getItem('beesmart_sfx_enabled_v1');
+        if (v === null) return true; // default ON
+        return v !== '0';
+    } catch (_e) {}
+    return true;
+}
+window.__beesmartSfxEnabled = window.__beesmartSfxEnabled || __beesmartSfxEnabled;
+
 class BeeSoundboard {
     constructor() {
         this.supported = typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined';
@@ -5185,6 +5202,12 @@ class BeeSoundboard {
     }
 
     play(type) {
+        // Respect the master FX toggle: if OFF, suppress all non-voice sounds.
+        try {
+            if (window.__beesmartSfxEnabled && typeof window.__beesmartSfxEnabled === 'function' && !window.__beesmartSfxEnabled()) {
+                return;
+            }
+        } catch (_e) {}
         if (!this.supported || !this.ctx || !this.unlocked) {
             return;
         }
@@ -8552,6 +8575,13 @@ class QuizManager {
 
     // Play background music
     playBackgroundMusic() {
+        // Treat global FX toggle as a master "sounds" switch for quiz: if OFF, keep music silent too.
+        try {
+            if (window.__beesmartSfxEnabled && typeof window.__beesmartSfxEnabled === 'function' && !window.__beesmartSfxEnabled()) {
+                this.stopBackgroundMusic();
+                return;
+            }
+        } catch (_e) {}
         if (!this.backgroundMusic) {
             this.backgroundMusic = new Audio('/static/sounds/we-can-be-bees.mp3');
             this.backgroundMusic.loop = true;
@@ -12683,6 +12713,8 @@ function playThemedSound(soundType) {
     window.__beesmartSoundLastPlayAt = window.__beesmartSoundLastPlayAt || new Map();
 
     try {
+        // Respect the master FX toggle: if OFF, suppress all non-voice sounds.
+        if (window.__beesmartSfxEnabled && typeof window.__beesmartSfxEnabled === 'function' && !window.__beesmartSfxEnabled()) return;
         if (!soundType) return;
         if (window.__beesmartSoundDisabled.has(soundType)) return;
 
