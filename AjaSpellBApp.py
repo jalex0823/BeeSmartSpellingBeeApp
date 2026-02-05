@@ -7876,8 +7876,8 @@ def api_groups_join():
             return jsonify({"status": "error", "message": "Failed to join group"}), 500
         word_list = group.get("word_list", [])
         # Set session wordbank to group word list so quiz uses same words
-        init_quiz_state()
         set_wordbank(word_list, is_user_upload=False)
+        init_quiz_state(len(word_list))
         session["group_code"] = code
         session["group_player_id"] = player_id
         session["group_player_name"] = player_name
