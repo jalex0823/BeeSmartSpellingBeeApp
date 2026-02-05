@@ -15479,6 +15479,115 @@ def api_teacher_class_students(class_id):
         q = q.filter_by(status='ARCHIVED')
     # ALL = no filter
     students = q.order_by(RosterStudent.display_name).all()
+
+    # Aggregate per-roster-student stats (similar to admin dashboard metrics)
+    stats_by_id = {}
+    roster_ids = [s.id for s in students]
+    if roster_ids:
+        # Count completed + in-progress-with-attempts (matches teacher student-detail behavior)
+        attempted = or_(
+            QuizSession.completed == True,
+            and_(
+                QuizSession.completed == False,
+                (QuizSession.correct_count + QuizSession.incorrect_count) > 0
+            )
+        )
+        points_expr = (
+            db.func.coalesce(QuizSession.points_earned, 0)
+            + db.func.coalesce(QuizSession.badge_bonus_points, 0)
+            + db.func.coalesce(QuizSession.extra_points, 0)
+        )
+        agg_rows = db.session.query(
+            QuizSession.roster_student_id.label('rid'),
+            db.func.count(QuizSession.id).label('quiz_count'),
+            db.func.coalesce(db.func.sum(QuizSession.correct_count), 0).label('correct_total'),
+            db.func.coalesce(db.func.sum(QuizSession.incorrect_count), 0).label('incorrect_total'),
+            db.func.coalesce(db.func.avg(QuizSession.accuracy_percentage), 0).label('avg_accuracy'),
+            db.func.coalesce(db.func.max(QuizSession.max_streak), 0).label('best_streak'),
+            db.func.coalesce(db.func.sum(points_expr), 0).label('points_total'),
+            db.func.max(QuizSession.session_end).label('last_end'),
+            db.func.max(QuizSession.session_start).label('last_start'),
+        ).filter(
+            QuizSession.roster_student_id.in_(roster_ids),
+            attempted
+        ).group_by(QuizSession.roster_student_id).all()
+
+        for r in agg_rows:
+            rid = int(r.rid)
+            correct_total = int(r.correct_total or 0)
+            incorrect_total = int(r.incorrect_total or 0)
+            last_active = r.last_end or r.last_start
+            stats_by_id[rid] = {
+                "quizzes": int(r.quiz_count or 0),
+                "words_practiced": correct_total + incorrect_total,
+                "correct": correct_total,
+                "accuracy": float(r.avg_accuracy or 0.0),
+                "best_streak": int(r.best_streak or 0),
+                "points": int(r.points_total or 0),
+                "last_active": (last_active.isoformat() if last_active else None),
+                # Filled below from completed-session GPA calc
+                "gpa": None,
+                "grade": None,
+            }
+
+        # GPA from completed quiz sessions only (align with User.update_gpa_and_accuracy)
+        grade_to_gpa = {
+            'A+': 4.0, 'A': 4.0, 'A-': 3.7,
+            'B+': 3.3, 'B': 3.0, 'B-': 2.7,
+            'C+': 2.3, 'C': 2.0, 'C-': 1.7,
+            'D+': 1.3, 'D': 1.0, 'D-': 0.7,
+            'F': 0.0
+        }
+        def _grade_from_accuracy(acc: float) -> str:
+            acc_val = acc or 0.0
+            if acc_val >= 97: return 'A+'
+            if acc_val >= 93: return 'A'
+            if acc_val >= 90: return 'A-'
+            if acc_val >= 87: return 'B+'
+            if acc_val >= 83: return 'B'
+            if acc_val >= 80: return 'B-'
+            if acc_val >= 77: return 'C+'
+            if acc_val >= 73: return 'C'
+            if acc_val >= 70: return 'C-'
+            if acc_val >= 67: return 'D+'
+            if acc_val >= 63: return 'D'
+            if acc_val >= 60: return 'D-'
+            return 'F'
+
+        completed_rows = db.session.query(
+            QuizSession.roster_student_id,
+            QuizSession.accuracy_percentage,
+            QuizSession.grade,
+        ).filter(
+            QuizSession.roster_student_id.in_(roster_ids),
+            QuizSession.completed == True
+        ).all()
+
+        gpa_sum = {}
+        gpa_cnt = {}
+        best_gpa = {}
+        best_grade = {}
+        for rid, acc, grade in completed_rows:
+            rid = int(rid)
+            letter = (grade or '').strip() or _grade_from_accuracy(float(acc or 0.0))
+            gpa_val = float(grade_to_gpa.get(letter, 0.0))
+            gpa_sum[rid] = float(gpa_sum.get(rid, 0.0)) + gpa_val
+            gpa_cnt[rid] = int(gpa_cnt.get(rid, 0)) + 1
+            if gpa_val >= float(best_gpa.get(rid, -1.0)):
+                best_gpa[rid] = gpa_val
+                best_grade[rid] = letter
+
+        for rid, total in gpa_sum.items():
+            cnt = gpa_cnt.get(rid, 0) or 0
+            if cnt <= 0:
+                continue
+            avg_gpa = round(float(total) / float(cnt), 2)
+            # Only show grade when at least one completed quiz exists
+            if rid not in stats_by_id:
+                stats_by_id[rid] = {"quizzes": 0, "words_practiced": 0, "correct": 0, "accuracy": 0.0, "best_streak": 0, "points": 0, "last_active": None, "gpa": None, "grade": None}
+            stats_by_id[rid]["gpa"] = float(avg_gpa)
+            stats_by_id[rid]["grade"] = best_grade.get(rid) or gpa_to_grade_filter(avg_gpa)
+
     return jsonify({
         "status": "ok",
         "students": [
@@ -15493,6 +15602,17 @@ def api_teacher_class_students(class_id):
                 "username": s.user.username if s.user_id and s.user else None,
                 "has_login": bool(s.user_id),
                 "created_at": s.created_at.isoformat() if s.created_at else None,
+                "stats": stats_by_id.get(s.id) or {
+                    "quizzes": 0,
+                    "words_practiced": 0,
+                    "correct": 0,
+                    "accuracy": 0.0,
+                    "grade": None,
+                    "gpa": None,
+                    "best_streak": 0,
+                    "points": 0,
+                    "last_active": None,
+                },
             }
             for s in students
         ]

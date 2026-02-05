@@ -23,6 +23,55 @@
         border: 1px solid var(--bee-card-border);
         box-sizing: border-box;
     }
+    /* Roster action buttons: compact, professional, theme-aligned */
+    #rosterTable .roster-actions{
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        white-space: nowrap;
+    }
+    #rosterTable .roster-actions .roster-action-btn{
+        padding: 0.45rem 0.9rem;
+        border-radius: 999px;
+        border: 1px solid rgba(0,0,0,0.08);
+        font-weight: 800;
+        font-size: 0.85rem;
+        letter-spacing: 0.1px;
+        cursor: pointer;
+        white-space: nowrap;
+        box-shadow: 0 6px 14px rgba(0,0,0,0.10);
+        transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+    }
+    #rosterTable .roster-actions .roster-action-btn:hover{
+        transform: translateY(-1px);
+        box-shadow: 0 10px 22px rgba(0,0,0,0.14);
+        filter: brightness(1.02);
+    }
+    #rosterTable .roster-actions .roster-action-btn:active{
+        transform: translateY(0px);
+        box-shadow: 0 6px 14px rgba(0,0,0,0.10);
+        filter: brightness(0.99);
+    }
+    #rosterTable .roster-actions .roster-action-btn:focus-visible{
+        outline: 3px solid rgba(245, 158, 11, 0.35);
+        outline-offset: 2px;
+    }
+    #rosterTable .roster-actions .roster-action-btn.archive{
+        background: linear-gradient(135deg, #FBBF24 0%, #F59E0B 55%, #D97706 100%);
+        color: #3b230e;
+        border-color: rgba(217, 119, 6, 0.35);
+    }
+    #rosterTable .roster-actions .roster-action-btn.restore{
+        background: linear-gradient(135deg, #34D399 0%, #22C55E 55%, #16A34A 100%);
+        color: #05331a;
+        border-color: rgba(22, 163, 74, 0.35);
+    }
+    #rosterTable .roster-actions .roster-action-btn.reset{
+        background: linear-gradient(135deg, #FB7185 0%, #EF4444 55%, #DC2626 100%);
+        color: #3b0a0a;
+        border-color: rgba(220, 38, 38, 0.35);
+    }
 </style>
 
 <div style="max-width: 1100px; margin: 2rem auto; padding: 0 1rem; display: flex; flex-direction: column; align-items: center;">
@@ -149,20 +198,28 @@
 
         <div id="managedRosterView">
             <div id="rosterTableWrap" style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse;" id="rosterTable">
+                <table style="width: 100%; border-collapse: collapse; min-width: 1200px;" id="rosterTable">
                     <thead>
                         <tr style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
                             <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Name</th>
                             <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Username</th>
                             <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Student ID</th>
                             <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Grade</th>
+                            <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;">Quizzes</th>
+                            <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;">Words</th>
+                            <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;">Correct</th>
+                            <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;" title="Per-session average across attempts">Accuracy</th>
+                            <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;" title="Average grade across completed quizzes">Grade (GPA)</th>
+                            <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;" title="Longest run of correct answers in any quiz">Best Streak</th>
+                            <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;" title="Total points earned across quizzes">Total Points</th>
+                            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #4a5568;">Last Active</th>
                             <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;">PIN</th>
                             <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;">Status</th>
                             <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #4a5568;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="rosterTableBody">
-                        <tr><td colspan="7" style="padding: 1.5rem; text-align: center; color: #718096;">Loading roster…</td></tr>
+                        <tr><td colspan="15" style="padding: 1.5rem; text-align: center; color: #718096;">Loading roster…</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -303,6 +360,17 @@
 (function(){
     var teacherClassId = null;
     var rosterStatus = 'ACTIVE';
+    function fmtNum(n){
+        try{ return (n||0).toLocaleString(); } catch(e){ return String(n||0); }
+    }
+    function fmtDate(iso){
+        try{
+            if(!iso) return 'Never';
+            var d = new Date(iso);
+            if(isNaN(d.getTime())) return '—';
+            return d.toLocaleDateString(undefined, { month:'short', day:'2-digit', year:'numeric' });
+        } catch(e){ return '—'; }
+    }
     function setFilterActive(btn){
         // Only toggle ACTIVE/ARCHIVED/ALL buttons (not other UI controls)
         document.querySelectorAll('.roster-filter[data-status]').forEach(function(b){ b.classList.remove('active'); });
@@ -334,24 +402,52 @@
         try {
             var cr = await fetch('/api/teacher/class', { credentials: 'same-origin' });
             var cData = await cr.json();
-            if(cData.status !== 'ok' || !cData.class_id){ tbody.innerHTML = '<tr><td colspan="7" style="padding:1rem;color:#718096;">No class. Create a teacher key first.</td></tr>'; return; }
+            if(cData.status !== 'ok' || !cData.class_id){ tbody.innerHTML = '<tr><td colspan="15" style="padding:1rem;color:#718096;">No class. Create a teacher key first.</td></tr>'; return; }
             teacherClassId = cData.class_id;
             var sr = await fetch('/api/teacher/class/' + teacherClassId + '/students?status=' + rosterStatus, { credentials: 'same-origin' });
             var sData = await sr.json();
-            if(sData.status !== 'ok'){ tbody.innerHTML = '<tr><td colspan="7" style="padding:1rem;color:#f56565;">Failed to load roster.</td></tr>'; return; }
+            if(sData.status !== 'ok'){ tbody.innerHTML = '<tr><td colspan="15" style="padding:1rem;color:#f56565;">Failed to load roster.</td></tr>'; return; }
             var list = sData.students || [];
-            if(list.length === 0){ tbody.innerHTML = '<tr><td colspan="7" style="padding:1.5rem;text-align:center;color:#718096;">No students. Add or import.</td></tr>'; return; }
+            if(list.length === 0){ tbody.innerHTML = '<tr><td colspan="15" style="padding:1.5rem;text-align:center;color:#718096;">No students. Add or import.</td></tr>'; return; }
             tbody.innerHTML = list.map(function(s){
                 var actions = [];
-                if(s.status === 'ACTIVE') actions.push('<button type="button" class="roster-archive" data-id="'+s.id+'">Archive</button>');
-                else actions.push('<button type="button" class="roster-restore" data-id="'+s.id+'">Restore</button>');
-                if(s.has_login) actions.push('<button type="button" class="roster-reset-pwd" data-id="'+s.id+'" data-name="'+escapeHtml(s.display_name)+'">Reset password</button>');
-                return '<tr data-roster-id="'+s.id+'"><td style="padding:0.75rem;">'+escapeHtml(s.display_name)+'</td><td style="padding:0.75rem;font-family:monospace;font-size:0.9rem;">'+(s.username||'—')+'</td><td style="padding:0.75rem;">'+(s.external_student_id||'—')+'</td><td style="padding:0.75rem;">'+(s.grade_level||'—')+'</td><td style="padding:0.75rem;text-align:center;">'+(s.pin_required?'••••':'—')+'</td><td style="padding:0.75rem;text-align:center;">'+s.status+'</td><td style="padding:0.75rem;">'+actions.join(' ')+'</td></tr>';
+                if(s.status === 'ACTIVE') actions.push('<button type="button" class="roster-action-btn archive roster-archive" data-id="'+s.id+'">Archive</button>');
+                else actions.push('<button type="button" class="roster-action-btn restore roster-restore" data-id="'+s.id+'">Restore</button>');
+                if(s.has_login) actions.push('<button type="button" class="roster-action-btn reset roster-reset-pwd" data-id="'+s.id+'" data-name="'+escapeHtml(s.display_name)+'">Reset password</button>');
+                var st = s.stats || {};
+                var quizzes = st.quizzes || 0;
+                var words = st.words_practiced || 0;
+                var correct = st.correct || 0;
+                var acc = (st.accuracy == null) ? 0 : Number(st.accuracy);
+                var accTxt = isFinite(acc) ? (Math.round(acc) + '%') : '—';
+                var accColor = (acc >= 80) ? '#48bb78' : (acc >= 60) ? '#ed8936' : '#f56565';
+                var gpa = (st.gpa == null) ? null : Number(st.gpa);
+                var gradeLetter = (quizzes > 0 && st.grade) ? st.grade : null;
+                var gradeCell = (quizzes > 0 && gpa != null)
+                    ? ('<span style="font-weight:800;">'+escapeHtml(String(gradeLetter || '—'))+'</span> <span style="opacity:0.75;">('+(isFinite(gpa)?gpa.toFixed(2):'—')+')</span>')
+                    : ('<span style="color:#999;">—</span>');
+                return '<tr data-roster-id="'+s.id+'">'
+                    + '<td style="padding:0.75rem; font-weight:700; color:#2d3748;">'+escapeHtml(s.display_name)+'</td>'
+                    + '<td style="padding:0.75rem;font-family:monospace;font-size:0.9rem;">'+(s.username?escapeHtml(s.username):'—')+'</td>'
+                    + '<td style="padding:0.75rem;">'+(s.external_student_id?escapeHtml(s.external_student_id):'—')+'</td>'
+                    + '<td style="padding:0.75rem;">'+(s.grade_level?escapeHtml(s.grade_level):'—')+'</td>'
+                    + '<td style="padding:0.75rem;text-align:center;font-weight:800;color:#9f7aea;">'+fmtNum(quizzes)+'</td>'
+                    + '<td style="padding:0.75rem;text-align:center;font-weight:800;color:#667eea;">'+fmtNum(words)+'</td>'
+                    + '<td style="padding:0.75rem;text-align:center;font-weight:800;color:#48bb78;">'+fmtNum(correct)+'</td>'
+                    + '<td style="padding:0.75rem;text-align:center;" title="Per-session average across attempts"><span style="font-weight:800;color:'+accColor+';">'+accTxt+'</span></td>'
+                    + '<td style="padding:0.75rem;text-align:center;">'+gradeCell+'</td>'
+                    + '<td style="padding:0.75rem;text-align:center;font-weight:800;">'+fmtNum(st.best_streak||0)+'</td>'
+                    + '<td style="padding:0.75rem;text-align:center;font-weight:800;">'+fmtNum(st.points||0)+'</td>'
+                    + '<td style="padding:0.75rem; color:#718096;">'+fmtDate(st.last_active)+'</td>'
+                    + '<td style="padding:0.75rem;text-align:center;">'+(s.pin_required?'••••':'—')+'</td>'
+                    + '<td style="padding:0.75rem;text-align:center;">'+escapeHtml(String(s.status||''))+'</td>'
+                    + '<td style="padding:0.75rem;text-align:center;"><div class="roster-actions">'+actions.join('')+'</div></td>'
+                    + '</tr>';
             }).join('');
             tbody.querySelectorAll('.roster-archive').forEach(function(btn){ btn.onclick = function(){ rosterArchive(parseInt(btn.getAttribute('data-id'),10)); }; });
             tbody.querySelectorAll('.roster-restore').forEach(function(btn){ btn.onclick = function(){ rosterRestore(parseInt(btn.getAttribute('data-id'),10)); }; });
             tbody.querySelectorAll('.roster-reset-pwd').forEach(function(btn){ btn.onclick = function(){ rosterResetPassword(parseInt(btn.getAttribute('data-id'),10), btn.getAttribute('data-name')); }; });
-        } catch(e){ tbody.innerHTML = '<tr><td colspan="7" style="padding:1rem;color:#f56565;">Network error.</td></tr>'; }
+        } catch(e){ tbody.innerHTML = '<tr><td colspan="15" style="padding:1rem;color:#f56565;">Network error.</td></tr>'; }
     }
     function escapeHtml(t){ var d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
     async function rosterArchive(id){ try{ await fetch('/api/teacher/students/'+id+'/archive', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } }); loadRoster(); } catch(e){ alert('Failed'); } }
