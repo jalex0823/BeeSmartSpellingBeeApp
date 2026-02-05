@@ -15179,6 +15179,169 @@ def api_generate_teacher_key():
 
 # ------------------------- Teacher Class & Roster (Managed Students) -------------------------
 
+def _ensure_roster_schema() -> bool:
+    """
+    Best-effort schema initializer for the teacher roster system.
+
+    This is intentionally defensive for production deploys where the manual migration
+    may not have been run yet. It creates the minimal tables/columns needed for:
+    - /api/teacher/class
+    - /api/teacher/class/:id/students
+    - roster import
+
+    Returns True if it ran without raising (does not guarantee every ALTER succeeds).
+    """
+    try:
+        dialect = db.engine.dialect.name
+        inspector = inspect(db.engine)
+        tables = set(inspector.get_table_names())
+
+        # Create classes table if missing
+        if 'classes' not in tables:
+            db.session.execute(text("""
+                CREATE TABLE classes (
+                    id SERIAL PRIMARY KEY,
+                    uuid VARCHAR(36) UNIQUE NOT NULL,
+                    teacher_id INTEGER NOT NULL REFERENCES users(id),
+                    name VARCHAR(200) NOT NULL DEFAULT 'Default Class',
+                    teacher_key VARCHAR(50) UNIQUE NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """ if dialect == 'postgresql' else """
+                CREATE TABLE classes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    uuid VARCHAR(36) UNIQUE NOT NULL,
+                    teacher_id INTEGER NOT NULL REFERENCES users(id),
+                    name VARCHAR(200) NOT NULL DEFAULT 'Default Class',
+                    teacher_key VARCHAR(50) UNIQUE NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            db.session.commit()
+            tables.add('classes')
+
+        # Create roster_students table if missing
+        inspector = inspect(db.engine)
+        tables = set(inspector.get_table_names())
+        if 'roster_students' not in tables:
+            db.session.execute(text("""
+                CREATE TABLE roster_students (
+                    id SERIAL PRIMARY KEY,
+                    uuid VARCHAR(36) UNIQUE NOT NULL,
+                    class_id INTEGER NOT NULL REFERENCES classes(id),
+                    display_name VARCHAR(200) NOT NULL,
+                    external_student_id VARCHAR(100),
+                    grade_level VARCHAR(20),
+                    pin_hash VARCHAR(255),
+                    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """ if dialect == 'postgresql' else """
+                CREATE TABLE roster_students (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    uuid VARCHAR(36) UNIQUE NOT NULL,
+                    class_id INTEGER NOT NULL REFERENCES classes(id),
+                    display_name VARCHAR(200) NOT NULL,
+                    external_student_id VARCHAR(100),
+                    grade_level VARCHAR(20),
+                    pin_hash VARCHAR(255),
+                    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            try:
+                db.session.execute(text("CREATE INDEX ix_roster_students_class_status ON roster_students (class_id, status)"))
+            except Exception:
+                pass
+            db.session.commit()
+            tables.add('roster_students')
+
+        # Add user_id column to roster_students if missing (auto-created logins)
+        try:
+            inspector = inspect(db.engine)
+            if 'roster_students' in inspector.get_table_names():
+                rs_cols = [c['name'] for c in inspector.get_columns('roster_students')]
+                if 'user_id' not in rs_cols:
+                    db.session.execute(text("ALTER TABLE roster_students ADD COLUMN user_id INTEGER REFERENCES users(id)"))
+                    db.session.commit()
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
+        # Add roster_student_id columns to quiz tables if missing (best-effort)
+        try:
+            inspector = inspect(db.engine)
+            if 'quiz_sessions' in inspector.get_table_names():
+                qs_cols = [c['name'] for c in inspector.get_columns('quiz_sessions')]
+                if 'roster_student_id' not in qs_cols:
+                    db.session.execute(text("ALTER TABLE quiz_sessions ADD COLUMN roster_student_id INTEGER REFERENCES roster_students(id)"))
+                    db.session.commit()
+                if dialect == 'postgresql':
+                    try:
+                        db.session.execute(text("ALTER TABLE quiz_sessions ALTER COLUMN user_id DROP NOT NULL"))
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+            if 'quiz_results' in inspector.get_table_names():
+                qr_cols = [c['name'] for c in inspector.get_columns('quiz_results')]
+                if 'roster_student_id' not in qr_cols:
+                    db.session.execute(text("ALTER TABLE quiz_results ADD COLUMN roster_student_id INTEGER REFERENCES roster_students(id)"))
+                    db.session.commit()
+                if dialect == 'postgresql':
+                    try:
+                        db.session.execute(text("ALTER TABLE quiz_results ALTER COLUMN user_id DROP NOT NULL"))
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
+        # Ensure each teacher/parent/admin with a teacher_key has a default class row.
+        try:
+            teachers = User.query.filter(
+                User.teacher_key.isnot(None),
+                User.teacher_key != '',
+                User.role.in_(['teacher', 'parent', 'admin'])
+            ).all()
+            for u in teachers:
+                existing = None
+                try:
+                    existing = Class.query.filter_by(teacher_key=u.teacher_key).first()
+                except Exception:
+                    existing = None
+                if not existing:
+                    c = Class(
+                        teacher_id=u.id,
+                        name=(u.display_name and f"{u.display_name}'s Class" or "Default Class"),
+                        teacher_key=u.teacher_key
+                    )
+                    db.session.add(c)
+            db.session.commit()
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
+        return True
+    except Exception as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        print(f" ensure roster schema failed: {e}")
+        return False
+
+
 def _teacher_class_or_404():
     """Return the Class for current user (teacher/parent/admin). Create default if none. 403 if not allowed."""
     if current_user.role not in ('teacher', 'parent', 'admin'):
@@ -15199,13 +15362,33 @@ def _teacher_class_or_404():
             db.session.commit()
         return cls, None
     except (sa_exc.OperationalError, sa_exc.ProgrammingError) as e:
-        # Deployed env may be missing roster/class migrations (classes/roster_students tables).
-        # Do NOT crash the whole dashboard; return 503 so UI can show a setup message.
+        # Self-heal: try to initialize the roster schema, then retry once.
         try:
             db.session.rollback()
         except Exception:
             pass
-        print(f" teacher class unavailable (migrations missing?): {e}")
+        print(f" teacher class unavailable; attempting auto-init roster schema: {e}")
+        if _ensure_roster_schema():
+            try:
+                key = (current_user.teacher_key or '').strip()
+                cls = Class.query.filter_by(teacher_id=current_user.id).first()
+                if not cls and key:
+                    cls = Class.query.filter_by(teacher_key=key).first()
+                if not cls:
+                    if not key:
+                        key = _generate_unique_teacher_key(current_user.display_name or 'Teacher')
+                        current_user.teacher_key = key
+                        db.session.flush()
+                    cls = Class(teacher_id=current_user.id, name=(current_user.display_name or "Default") + "'s Class", teacher_key=key)
+                    db.session.add(cls)
+                    db.session.commit()
+                return cls, None
+            except Exception as _e2:
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+                print(f" teacher class retry after auto-init failed: {_e2}")
         return None, 503
 
 
