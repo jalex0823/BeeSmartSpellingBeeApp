@@ -2,7 +2,7 @@
 // Store builds load from server.url (https://beesmartspelling.app)
 
 module.exports = {
-  appId: 'com.beesmart.spellingbee',
+  appId: 'com.beesmart.spelling',
   appName: 'BeeSmart Spelling',
   webDir: 'www',
   server: {

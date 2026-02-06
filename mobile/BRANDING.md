@@ -4,9 +4,11 @@ Update native icons and splash screens to your BeeSmart branding.
 
 ## Android
 - App name: set in `mobile/android/app/src/main/res/values/strings.xml` (already "BeeSmart Spelling Bee").
-- App icons: replace images in `mobile/android/app/src/main/res/mipmap-*/` with your icon sets.
-  - Prefer to generate via Android Studio: Image Asset Studio → Launcher Icons.
-  - Use a 1024×1024 source PNG (no transparency if following Play guidance).
+- **App icons (single source):** Use the BeeSmart Spelling Bee Application logo (bee with glasses, crest, honeycomb, “BeeSmart SPELLING BEE Application” text). Place a **512×512 PNG** at **`static/BeeSmart_AppIcon_512.png`** (repo root), then run:
+  ```bash
+  python scripts/generate_android_icons_from_source.py
+  ```
+  This updates launcher icons in `android/`, `mobile/android/`, and `mobile-wrapper/android/`.
 - Splash images: replace drawables in `mobile/android/app/src/main/res/drawable*` (files named `splash.png`).
 
 ## iOS
