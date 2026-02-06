@@ -98,12 +98,31 @@ $ver = cmd /c "`"$env:JAVA_HOME\bin\java.exe`" -version 2>&1"
 Write-Host $ver
 
 # --- Optional: sync web assets ---
+# For production wrapper builds that load from server.url, a web build step may not exist/needed.
+# Only run `npm run build` if the script exists; still allow `npx cap sync android` when available.
 $npm = Get-Command npm -ErrorAction SilentlyContinue
 if ($npm) {
-    Write-Host "Syncing web assets (npm run build + cap sync)..." -ForegroundColor Yellow
     Set-Location $mobileDir
-    npm run build 2>&1 | Out-Null
-    npx cap sync android 2>&1 | Out-Null
+    $hasBuildScript = $false
+    try {
+        if (Test-Path (Join-Path $mobileDir "package.json")) {
+            $pkg = Get-Content (Join-Path $mobileDir "package.json") -Raw | ConvertFrom-Json
+            if ($pkg -and $pkg.scripts -and $pkg.scripts.build) { $hasBuildScript = $true }
+        }
+    } catch { $hasBuildScript = $false }
+
+    if ($hasBuildScript) {
+        Write-Host "Syncing web assets (npm run build + cap sync)..." -ForegroundColor Yellow
+        npm run build 2>&1 | Out-Null
+    } else {
+        Write-Host "No npm build script found; skipping web build step." -ForegroundColor Yellow
+    }
+
+    try {
+        npx cap sync android 2>&1 | Out-Null
+    } catch {
+        Write-Host "Skipping cap sync (npx/capacitor not available). Using existing android assets." -ForegroundColor Yellow
+    }
 } else {
     Write-Host "Skipping sync (npm not in PATH). Using existing android assets." -ForegroundColor Yellow
 }
@@ -121,10 +140,21 @@ if (-not (Test-Path $cordovaVars)) {
     exit 1
 }
 
+# --- Windows/OneDrive fix: clear ReadOnly attribute under node_modules ---
+# Some environments mark directories under node_modules as ReadOnly, which can cause Gradle tasks
+# (e.g. processReleaseNavigationResources) to fail when trying to delete generated output dirs.
+try {
+    $capDir = Join-Path $mobileDir "node_modules\@capacitor"
+    if (Test-Path $capDir) {
+        Write-Host "Clearing ReadOnly attributes under node_modules\\@capacitor (Windows fix)..." -ForegroundColor Yellow
+        cmd /c "attrib -R /S /D `"$capDir\*`"" 2>&1 | Out-Null
+    }
+} catch {}
+
 # --- Build AAB ---
 Write-Host "Building AAB (bundleRelease)..." -ForegroundColor Yellow
 Set-Location $androidDir
-& .\gradlew.bat bundleRelease
+& .\gradlew.bat --no-daemon bundleRelease
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $aabPath = Join-Path $androidDir "app\build\outputs\bundle\release\app-release.aab"

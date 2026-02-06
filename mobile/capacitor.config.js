@@ -6,7 +6,7 @@ module.exports = {
   appName: 'BeeSmart Spelling',
   webDir: 'www',
   server: {
-    url: 'https://beesmartspelling.app',
+    url: 'https://beesmartspelling.app/',
     cleartext: false
   },
   plugins: {

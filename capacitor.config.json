@@ -4,7 +4,7 @@
   "webDir": "static",
   "server": {
     "cleartext": false,
-    "url": "https://beesmartspelling.app"
+    "url": "https://beesmartspelling.app/"
   },
   "plugins": {
     "SplashScreen": {

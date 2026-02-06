@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
   // NOTE: If you want a fully-offline/bundled build later, remove server.url.
   webDir: 'www',
   server: {
-    url: 'https://beesmartspelling.app',
+    url: 'https://beesmartspelling.app/',
     cleartext: false
   },
   plugins: {
