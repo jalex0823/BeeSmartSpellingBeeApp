@@ -11431,6 +11431,338 @@ def api_build_dictionary():
 # IAP ROUTES (Apple / Google) — verification + restore
 # ============================================================================
 
+def _load_android_config() -> dict:
+    """Load Android-only config (best-effort).
+
+    This file is intentionally separate from iOS/App Store configuration so Play Store
+    changes don't alter Apple-approved behavior.
+    """
+    try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(base_dir, 'config', 'android.json')
+        if not os.path.exists(path):
+            return {}
+        with open(path, 'r', encoding='utf-8') as f:
+            cfg = json.load(f)
+        return cfg if isinstance(cfg, dict) else {}
+    except Exception:
+        return {}
+
+
+@app.route('/api/android/subscription/verify', methods=['POST'])
+def api_android_subscription_verify():
+    """Verify an Android (Google Play Billing) subscription purchase token.
+
+    Request JSON (flexible casing):
+      { userId?, productId, purchaseToken }
+
+    Response includes Google subscription fields:
+      isActive, expiryTimeMillis, autoRenewing, paymentState, cancelReason
+    """
+    # Subscriptions are account-based; require auth (prevents "unlock premium" by device only).
+    if not current_user.is_authenticated:
+        return jsonify({
+            "success": False,
+            "error": "login_required",
+            "message": "Please sign in to activate your subscription."
+        }), 401
+
+    data = request.get_json(silent=True) or {}
+    # Accept multiple casings to match native/web conventions.
+    product_id = data.get('productId') or data.get('product_id')
+    purchase_token = data.get('purchaseToken') or data.get('purchase_token')
+
+    product_id = (str(product_id).strip() if product_id is not None else '')
+    purchase_token = (str(purchase_token).strip() if purchase_token is not None else '')
+    if not product_id or not purchase_token:
+        return jsonify({
+            "success": False,
+            "error": "missing_fields",
+            "message": "Missing productId or purchaseToken."
+        }), 400
+
+    # Android-only config safety: enforce package name + allowed subscription IDs.
+    cfg = _load_android_config() or {}
+    allowed_pids = set()
+    try:
+        sp = cfg.get('subscriptionProductIds') if isinstance(cfg, dict) else None
+        if isinstance(sp, dict):
+            for _k, _v in sp.items():
+                if _v:
+                    allowed_pids.add(str(_v).strip())
+    except Exception:
+        allowed_pids = set()
+
+    if allowed_pids and product_id not in allowed_pids:
+        return jsonify({
+            "success": False,
+            "error": "product_not_allowed",
+            "message": "This subscription product is not enabled for Android.",
+            "details": {"productId": product_id}
+        }), 400
+
+    try:
+        cfg_pkg = (cfg.get('packageName') if isinstance(cfg, dict) else None)
+        env_pkg = (os.getenv('GOOGLE_PLAY_PACKAGE_NAME') or '').strip()
+        if cfg_pkg and env_pkg and str(cfg_pkg).strip() != env_pkg:
+            return jsonify({
+                "success": False,
+                "error": "package_name_mismatch",
+                "message": "Server Play package name does not match Android build.",
+                "details": {"configPackageName": str(cfg_pkg).strip(), "envPackageName": env_pkg}
+            }), 500
+    except Exception:
+        pass
+
+    # Verify via Google Play Developer API (server-side).
+    try:
+        from iap_verification import verify_google_purchase  # type: ignore
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": "google_verifier_unavailable",
+            "message": f"Google verification helper unavailable: {e}"
+        }), 500
+
+    ok, status_msg, details = verify_google_purchase({
+        "product_id": product_id,
+        "purchase_token": purchase_token,
+        "payload": data
+    })
+
+    if not ok:
+        # Best-effort audit trail
+        try:
+            rec = PurchaseRecord(
+                user_id=current_user.id,
+                platform='google',
+                product_id=product_id,
+                status='failed',
+                transaction_id=None,
+                purchase_token=purchase_token,
+                raw_payload={"verify_status": status_msg, "store_details": details, "source": "android_subscription_verify"}
+            )
+            db.session.add(rec)
+            db.session.commit()
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
+        return jsonify({
+            "success": False,
+            "error": status_msg,
+            "message": "Subscription verification failed."
+        }), 400
+
+    sub = {}
+    try:
+        sub = (details or {}).get('subscription') or {}
+        if not isinstance(sub, dict):
+            sub = {}
+    except Exception:
+        sub = {}
+
+    # Extract required fields (Google returns strings for millis).
+    now_ms = int(time.time() * 1000)
+    expiry_ms = 0
+    try:
+        expiry_ms = int(sub.get('expiryTimeMillis') or 0)
+    except Exception:
+        expiry_ms = 0
+
+    auto_renewing = sub.get('autoRenewing')
+    payment_state = sub.get('paymentState')
+    cancel_reason = sub.get('cancelReason')
+
+    is_active = bool(expiry_ms and expiry_ms > now_ms)
+
+    # Persist (and update user premium flag best-effort).
+    try:
+        rec = PurchaseRecord(
+            user_id=current_user.id,
+            platform='google',
+            product_id=product_id,
+            status='verified',
+            transaction_id=(sub.get('orderId') if isinstance(sub, dict) else None),
+            purchase_token=purchase_token,
+            raw_payload={"verify_status": status_msg, "subscription": sub, "source": "android_subscription_verify"}
+        )
+        db.session.add(rec)
+
+        # Update premium_member based on active subscription (server-driven).
+        try:
+            current_user.premium_member = bool(is_active)
+        except Exception:
+            pass
+
+        # If legacy subscription columns exist, populate them.
+        try:
+            if hasattr(current_user, 'subscription_product_id'):
+                current_user.subscription_product_id = product_id
+            if hasattr(current_user, 'subscription_auto_renew'):
+                current_user.subscription_auto_renew = bool(auto_renewing) if auto_renewing is not None else None
+            if hasattr(current_user, 'subscription_expires_at') and expiry_ms:
+                current_user.subscription_expires_at = datetime.fromtimestamp(expiry_ms / 1000.0)
+            if hasattr(current_user, 'subscription_status'):
+                current_user.subscription_status = 'active' if is_active else 'expired'
+            if hasattr(current_user, 'subscription_type'):
+                current_user.subscription_type = 'monthly' if 'month' in product_id.lower() else 'subscription'
+        except Exception:
+            pass
+
+        db.session.commit()
+    except Exception as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return jsonify({
+            "success": False,
+            "error": "db_write_failed",
+            "message": f"Verified with Google but failed to save subscription: {e}"
+        }), 500
+
+    return jsonify({
+        "success": True,
+        "isActive": bool(is_active),
+        "expiryTimeMillis": str(expiry_ms) if expiry_ms else None,
+        "autoRenewing": auto_renewing,
+        "paymentState": payment_state,
+        "cancelReason": cancel_reason
+    })
+
+
+@app.route('/api/android/rtdn', methods=['POST'])
+def api_android_rtdn():
+    """Google Play Real-time Developer Notifications (Pub/Sub push).
+
+    Expects Pub/Sub push JSON:
+      { message: { data: base64(json), attributes: {...} }, subscription: "..." }
+
+    Security: optionally require a shared token (?token=...) configured in Pub/Sub.
+    """
+    # Optional shared secret gate (recommended).
+    expected = (os.getenv('GOOGLE_PUBSUB_PUSH_TOKEN') or '').strip()
+    if expected:
+        got = (request.args.get('token') or request.headers.get('X-Goog-Channel-Token') or '').strip()
+        if got != expected:
+            return jsonify({"success": False, "error": "unauthorized"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    msg = payload.get('message') if isinstance(payload, dict) else None
+    if not isinstance(msg, dict):
+        return jsonify({"success": False, "error": "bad_request"}), 400
+
+    data_b64 = msg.get('data')
+    if not data_b64:
+        return jsonify({"success": True, "ignored": True, "reason": "no_data"}), 200
+
+    try:
+        import base64 as _b64
+        raw = _b64.b64decode(str(data_b64)).decode('utf-8', errors='replace')
+        decoded = json.loads(raw)
+    except Exception as e:
+        return jsonify({"success": False, "error": "decode_failed", "message": str(e)}), 400
+
+    sub_note = decoded.get('subscriptionNotification') if isinstance(decoded, dict) else None
+    if not isinstance(sub_note, dict):
+        return jsonify({"success": True, "ignored": True, "reason": "not_subscription_notification"}), 200
+
+    subscription_id = (sub_note.get('subscriptionId') or '').strip()
+    purchase_token = (sub_note.get('purchaseToken') or '').strip()
+    notification_type = sub_note.get('notificationType')
+
+    if not subscription_id or not purchase_token:
+        return jsonify({"success": True, "ignored": True, "reason": "missing_ids"}), 200
+
+    # Re-verify current state from Google (authoritative).
+    try:
+        from iap_verification import verify_google_purchase  # type: ignore
+        ok, status_msg, details = verify_google_purchase({
+            "product_id": subscription_id,
+            "purchase_token": purchase_token,
+            "payload": decoded
+        })
+    except Exception as e:
+        ok, status_msg, details = False, f"verifier_error: {e}", {}
+
+    # Best-effort update any matching PurchaseRecord rows.
+    try:
+        rows = (PurchaseRecord.query
+                .filter_by(platform='google', purchase_token=purchase_token)
+                .all())
+    except Exception:
+        rows = []
+
+    updated_users = set()
+    try:
+        now_ms = int(time.time() * 1000)
+        expiry_ms = 0
+        sub = (details or {}).get('subscription') if isinstance(details, dict) else None
+        if isinstance(sub, dict):
+            try:
+                expiry_ms = int(sub.get('expiryTimeMillis') or 0)
+            except Exception:
+                expiry_ms = 0
+        is_active = bool(ok and expiry_ms and expiry_ms > now_ms)
+
+        for r in rows or []:
+            try:
+                r.status = 'verified' if ok else 'failed'
+                r.raw_payload = {
+                    **(r.raw_payload or {}),
+                    "rtdn": decoded,
+                    "rtdn_type": notification_type,
+                    "verify_status": status_msg,
+                    "store_details": details
+                }
+                if r.user_id:
+                    updated_users.add(int(r.user_id))
+            except Exception:
+                continue
+
+        # Update user premium flags (best-effort, only when we can locate a user).
+        for uid in list(updated_users):
+            try:
+                u = User.query.get(uid)
+                if not u:
+                    continue
+                try:
+                    u.premium_member = bool(is_active)
+                except Exception:
+                    pass
+                try:
+                    if hasattr(u, 'subscription_product_id'):
+                        u.subscription_product_id = subscription_id
+                    if hasattr(u, 'subscription_expires_at') and expiry_ms:
+                        u.subscription_expires_at = datetime.fromtimestamp(expiry_ms / 1000.0)
+                    if hasattr(u, 'subscription_status'):
+                        u.subscription_status = 'active' if is_active else 'expired'
+                except Exception:
+                    pass
+            except Exception:
+                continue
+
+        db.session.commit()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
+    return jsonify({
+        "success": True,
+        "handled": True,
+        "subscriptionId": subscription_id,
+        "notificationType": notification_type,
+        "matchedRecords": len(rows or []),
+        "verifyOk": bool(ok),
+        "verifyStatus": status_msg
+    })
+
+
 def _entitlements_summary(user: User) -> dict:
     def _safe_is_premium(u: User) -> bool:
         try:

@@ -122,3 +122,23 @@
         }
     }
 }
+
+/* ========================================
+   FIX 5: Avatar/welcome layout on Android (incl. devices below Android 14)
+   ======================================== */
+html.android #avatarFxHost {
+    /* Reserve space so the welcome/avatar block never collapses or "doesn't load" as blank */
+    min-height: 280px;
+}
+html.android .avatar-stage,
+html.android #avatarControls3D {
+    min-height: 220px;
+    min-width: 220px;
+}
+/* If flex gap is unreliable on very old WebView, margin keeps spacing */
+html.android #avatarFxHost .avatar-stage {
+    margin-bottom: 0.35rem;
+}
+html.android .avatar-stage .stage-glb {
+    min-height: 200px;
+}

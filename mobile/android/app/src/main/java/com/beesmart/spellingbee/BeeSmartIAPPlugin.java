@@ -73,6 +73,8 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
     public void getOwnedProducts(final PluginCall call) {
         connectIfNeeded(() -> {
             final Set<String> productIds = new HashSet<>();
+            final JSArray subsPurchases = new JSArray();
+            final JSArray inappPurchases = new JSArray();
 
             QueryPurchasesParams subsParams = QueryPurchasesParams.newBuilder()
                 .setProductType(BillingClient.ProductType.SUBS)
@@ -86,6 +88,19 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
 
                 for (Purchase p : purchasesList) {
                     productIds.addAll(p.getProducts());
+                    try {
+                        if (p.getProducts() != null) {
+                            for (String pid : p.getProducts()) {
+                                JSObject o = new JSObject();
+                                o.put("productId", pid);
+                                o.put("purchaseToken", p.getPurchaseToken());
+                                o.put("orderId", p.getOrderId());
+                                o.put("acknowledged", p.isAcknowledged());
+                                o.put("purchaseState", p.getPurchaseState());
+                                subsPurchases.put(o);
+                            }
+                        }
+                    } catch (Exception ignored) {}
                 }
 
                 QueryPurchasesParams inappParams = QueryPurchasesParams.newBuilder()
@@ -100,6 +115,19 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
 
                     for (Purchase p : purchasesList2) {
                         productIds.addAll(p.getProducts());
+                        try {
+                            if (p.getProducts() != null) {
+                                for (String pid : p.getProducts()) {
+                                    JSObject o = new JSObject();
+                                    o.put("productId", pid);
+                                    o.put("purchaseToken", p.getPurchaseToken());
+                                    o.put("orderId", p.getOrderId());
+                                    o.put("acknowledged", p.isAcknowledged());
+                                    o.put("purchaseState", p.getPurchaseState());
+                                    inappPurchases.put(o);
+                                }
+                            }
+                        } catch (Exception ignored) {}
                     }
 
                     JSArray arr = new JSArray();
@@ -109,6 +137,8 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
 
                     JSObject out = new JSObject();
                     out.put("productIds", arr);
+                    out.put("subscriptions", subsPurchases);
+                    out.put("inapp", inappPurchases);
                     call.resolve(out);
                 });
             });
@@ -130,6 +160,101 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
         }
 
         connectIfNeeded(() -> queryAndLaunchBillingFlow(call, productId, BillingClient.ProductType.SUBS, true));
+    }
+
+    @PluginMethod
+    public void getProductDetails(final PluginCall call) {
+        final String productId = call.getString("productId");
+        if (productId == null || productId.trim().isEmpty()) {
+            call.reject("missing_productId");
+            return;
+        }
+
+        connectIfNeeded(() -> queryAndReturnProductDetails(call, productId, BillingClient.ProductType.SUBS, true));
+    }
+
+    private void queryAndReturnProductDetails(final PluginCall call, final String productId, final String productType, final boolean allowFallbackToInapp) {
+        List<QueryProductDetailsParams.Product> products = Arrays.asList(
+            QueryProductDetailsParams.Product.newBuilder()
+                .setProductId(productId)
+                .setProductType(productType)
+                .build()
+        );
+
+        QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder()
+            .setProductList(products)
+            .build();
+
+        billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
+            if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                call.reject("query_product_failed: " + billingResult.getDebugMessage());
+                return;
+            }
+
+            if (productDetailsList == null || productDetailsList.isEmpty()) {
+                if (allowFallbackToInapp && BillingClient.ProductType.SUBS.equals(productType)) {
+                    queryAndReturnProductDetails(call, productId, BillingClient.ProductType.INAPP, false);
+                    return;
+                }
+                call.reject("product_not_found");
+                return;
+            }
+
+            ProductDetails details = productDetailsList.get(0);
+
+            JSObject out = new JSObject();
+            out.put("productId", productId);
+            out.put("productType", productType);
+            try { out.put("title", details.getTitle()); } catch (Exception ignored) {}
+            try { out.put("description", details.getDescription()); } catch (Exception ignored) {}
+
+            // Subscription pricing (best-effort: first offer, first phase)
+            if (BillingClient.ProductType.SUBS.equals(productType)) {
+                try {
+                    List<ProductDetails.SubscriptionOfferDetails> offers = details.getSubscriptionOfferDetails();
+                    if (offers != null && !offers.isEmpty() && offers.get(0) != null) {
+                        ProductDetails.SubscriptionOfferDetails offer = offers.get(0);
+                        try { out.put("offerToken", offer.getOfferToken()); } catch (Exception ignored) {}
+
+                        ProductDetails.PricingPhases phases = offer.getPricingPhases();
+                        if (phases != null && phases.getPricingPhaseList() != null && !phases.getPricingPhaseList().isEmpty()) {
+                            // Return all phases so the web UI can show free trial + recurring price.
+                            JSArray phasesArr = new JSArray();
+                            for (ProductDetails.PricingPhase phase : phases.getPricingPhaseList()) {
+                                JSObject ph = new JSObject();
+                                try { ph.put("formattedPrice", phase.getFormattedPrice()); } catch (Exception ignored) {}
+                                try { ph.put("billingPeriod", phase.getBillingPeriod()); } catch (Exception ignored) {}
+                                try { ph.put("priceCurrencyCode", phase.getPriceCurrencyCode()); } catch (Exception ignored) {}
+                                try { ph.put("priceAmountMicros", String.valueOf(phase.getPriceAmountMicros())); } catch (Exception ignored) {}
+                                try { ph.put("recurrenceMode", phase.getRecurrenceMode()); } catch (Exception ignored) {}
+                                phasesArr.put(ph);
+                            }
+                            out.put("pricingPhases", phasesArr);
+
+                            // Convenience: also include the first phase fields for simple callers.
+                            ProductDetails.PricingPhase phase0 = phases.getPricingPhaseList().get(0);
+                            try { out.put("formattedPrice", phase0.getFormattedPrice()); } catch (Exception ignored) {}
+                            try { out.put("billingPeriod", phase0.getBillingPeriod()); } catch (Exception ignored) {}
+                            try { out.put("priceCurrencyCode", phase0.getPriceCurrencyCode()); } catch (Exception ignored) {}
+                            try { out.put("priceAmountMicros", String.valueOf(phase0.getPriceAmountMicros())); } catch (Exception ignored) {}
+                            try { out.put("recurrenceMode", phase0.getRecurrenceMode()); } catch (Exception ignored) {}
+                        }
+                    }
+                } catch (Exception ignored) {}
+            } else {
+                // In-app pricing (one-time)
+                try {
+                    ProductDetails.OneTimePurchaseOfferDetails one = details.getOneTimePurchaseOfferDetails();
+                    if (one != null) {
+                        try { out.put("formattedPrice", one.getFormattedPrice()); } catch (Exception ignored) {}
+                        try { out.put("priceCurrencyCode", one.getPriceCurrencyCode()); } catch (Exception ignored) {}
+                        try { out.put("priceAmountMicros", String.valueOf(one.getPriceAmountMicros())); } catch (Exception ignored) {}
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            call.resolve(out);
+        });
     }
 
     private void queryAndLaunchBillingFlow(final PluginCall call, final String productId, final String productType, final boolean allowFallbackToInapp) {

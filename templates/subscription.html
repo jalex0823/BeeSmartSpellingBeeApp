@@ -482,11 +482,11 @@
                 <div class="pricing">
                     {# Prefer a dynamic server-provided value when available; fall back to $3.99 per user request. #}
                     {% set monthly_price_display = subscription_monthly_usd if subscription_monthly_usd is defined and subscription_monthly_usd else 3.99 %}
-                    <!-- Primary headline (largest text on screen) -->
-                    <div class="price">${{ monthly_price_display | round(2) }} per month</div>
+                    <!-- Primary headline (largest text on screen). Android: updated from Google Play via JS. -->
+                    <div class="price" id="monthlyPriceText">${{ monthly_price_display | round(2) }} per month</div>
 
                     <!-- Secondary line (directly under price, smaller but visible) -->
-                    <div class="price-period">Auto-renewable subscription</div>
+                    <div class="price-period" id="monthlyPricePeriod">Auto-renewable subscription</div>
 
                     {# Free trial line (only if configured/available) #}
                     {% set trial_days = (subscription_trial_days or 0) | int %}
@@ -504,8 +504,8 @@
                     <li>Access to premium modes and rewards</li>
                 </ul>
 
-                <!-- REQUIRED legal disclosure (same screen, before purchase button) -->
-                <div style="
+                <!-- REQUIRED legal disclosure (same screen, before purchase button). Android copy set by JS. -->
+                <div id="billingDisclosure" style="
                     margin-top: 10px;
                     padding: 14px 14px;
                     background: rgba(255,255,255,0.75);
@@ -516,9 +516,9 @@
                     font-weight: 650;
                     line-height: 1.35;
                 ">
-                    <div>Payment will be charged to your Apple ID account.</div>
+                    <div id="billingLine1">Payment will be charged to your Apple ID account.</div>
                     <div>Subscription automatically renews unless canceled at least 24 hours before the end of the current period.</div>
-                    <div>You can manage or cancel your subscription in your Apple ID settings.</div>
+                    <div id="billingLine3">You can manage or cancel your subscription in your Apple ID settings.</div>
                 </div>
 
                 {% if student_cannot_purchase is defined and student_cannot_purchase %}
@@ -619,12 +619,12 @@
 
             <div class="faq-item">
                 <div class="faq-question">Can I cancel anytime?</div>
-                <div class="faq-answer">Yes! You can cancel your subscription anytime from your iPhone settings. No questions asked. If you cancel, you'll keep premium access until the end of your billing period.</div>
+                <div class="faq-answer" id="faqCancelAnswer">Yes! You can cancel your subscription anytime from your iPhone settings. No questions asked. If you cancel, you'll keep premium access until the end of your billing period.</div>
             </div>
 
             <div class="faq-item">
                 <div class="faq-question">Is there a free trial?</div>
-                <div class="faq-answer">If a free trial or introductory offer is available, it will be presented in the App Store purchase sheet before you confirm.</div>
+                <div class="faq-answer" id="faqTrialAnswer">If a free trial or introductory offer is available, it will be presented in the App Store purchase sheet before you confirm.</div>
             </div>
 
             <div class="faq-item">
@@ -639,7 +639,7 @@
 
             <div class="faq-item">
                 <div class="faq-question">Are payments secure?</div>
-                <div class="faq-answer">Absolutely! All payments are processed through Apple's secure payment system. We never see or store your payment information.</div>
+                <div class="faq-answer" id="faqPaymentsSecure">Absolutely! All payments are processed through Apple's secure payment system. We never see or store your payment information.</div>
             </div>
         </div>
 
@@ -662,7 +662,7 @@
                 <a href="/privacy">Privacy Policy</a> • 
                 <a href="/terms">Terms of Service</a>
             </p>
-            <p style="margin-top: 20px; font-size: 0.85rem; opacity: 0.9;">
+            <p id="footerBillingCopy" style="margin-top: 20px; font-size: 0.85rem; opacity: 0.9;">
                 Payment charged to iTunes Account at confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period.
             </p>
         </div>
@@ -680,6 +680,36 @@
         };
         window.__beesmartPurchaseInFlight = window.__beesmartPurchaseInFlight || false;
 
+        // Platform-aware copy for restore/purchase messages (Android vs iOS). Used by dialogs defined below.
+        window.__beesmartStoreCopy = (function () {
+            function platform() {
+                try { if (window.BeeSmartIAP && window.BeeSmartIAP.platform) return String(window.BeeSmartIAP.platform).toLowerCase(); } catch (e) {}
+                var ua = (navigator && navigator.userAgent) ? String(navigator.userAgent) : '';
+                if (/Android/i.test(ua)) return 'google';
+                if (/iPad|iPhone|iPod/i.test(ua)) return 'apple';
+                return 'web';
+            }
+            return {
+                restorePromptNote: function () {
+                    return platform() === 'google'
+                        ? 'If Google Play needs it, it may prompt for your Google account. You can cancel this screen at any time.'
+                        : 'If iOS needs it, it may prompt for your Apple ID. You can cancel this screen at any time.';
+                },
+                storeAccountName: function () { return platform() === 'google' ? 'Google Play account' : 'Apple ID'; },
+                restoreSuccessSuffix: function () {
+                    return platform() === 'google' ? '' : ' If iOS asked you to sign in, that\'s the normal Apple ID restore step.';
+                },
+                pendingConfirm: function () {
+                    return platform() === 'google' ? 'Premium will activate once Google Play confirms.' : 'Premium will activate once Apple confirms.';
+                },
+                purchaseErrorExtra: function () {
+                    return platform() === 'google'
+                        ? 'If you already subscribed with this Google Play account, try Restore Purchases.'
+                        : 'If you already subscribed on this Apple ID, try Restore Purchases.';
+                }
+            };
+        })();
+
         // Lightweight fairy-dust animation (no dependencies)
         (function () {
             const canvas = document.getElementById('fairy-dust');
@@ -687,6 +717,12 @@
 
             const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             if (prefersReduced) {
+                canvas.style.display = 'none';
+                return;
+            }
+            // Android: disable heavy canvas animation to fix "hard to scroll" on Premium page.
+            const isAndroid = /Android/i.test(navigator.userAgent || '');
+            if (isAndroid) {
                 canvas.style.display = 'none';
                 return;
             }
@@ -1283,7 +1319,8 @@
                     const message = appliedCount > 0
                         ? `Successfully restored ${appliedCount} purchase${appliedCount === 1 ? '' : 's'}!`
                         : 'Restore complete. Your purchases are already active.';
-                    await showRestoreDialog('Restore Successful', message + ' If iOS asked you to sign in, that’s the normal Apple ID restore step.', true);
+                    var suffix = (window.__beesmartStoreCopy && window.__beesmartStoreCopy.restoreSuccessSuffix) ? window.__beesmartStoreCopy.restoreSuccessSuffix() : '';
+                    await showRestoreDialog('Restore Successful', message + suffix, true);
 
                     // Celebration AFTER validation modal.
                     try { runRestoreCelebrationBurst({ durationMs: 1200 }); } catch (e) {}
@@ -1306,7 +1343,8 @@
                         }));
                     } catch (e) {}
                 } else if (ok) {
-                    showRestoreDialog('No Purchases Found', 'We couldn\'t find any purchases to restore for the current store account on this device. If you previously bought Premium, make sure you\'re signed into the same Apple ID, then try again.', false);
+                    var accountName = (window.__beesmartStoreCopy && window.__beesmartStoreCopy.storeAccountName) ? window.__beesmartStoreCopy.storeAccountName() : 'Apple ID';
+                    showRestoreDialog('No Purchases Found', 'We couldn\'t find any purchases to restore for the current store account on this device. If you previously bought Premium, make sure you\'re signed into the same ' + accountName + ', then try again.', false);
                 } else {
                     const err = (reconcilePayload && (reconcilePayload.error || reconcilePayload.message))
                         ? String(reconcilePayload.error || reconcilePayload.message)
@@ -1354,11 +1392,13 @@
                 'text-align:center'
             ].join(';');
 
+            var restorePromptMsg = (window.__beesmartStoreCopy && window.__beesmartStoreCopy.restorePromptNote)
+                ? window.__beesmartStoreCopy.restorePromptNote() : 'If iOS needs it, it may prompt for your Apple ID. You can cancel this screen at any time.';
             dialog.innerHTML = `
                 <div style="font-size:2.2rem;margin-bottom:10px;">🔄</div>
                 <div style="font-size:1.15rem;font-weight:900;color:#111827;margin-bottom:8px;">Restoring purchases…</div>
                 <div style="font-size:0.95rem;color:#4B5563;line-height:1.45;margin-bottom:16px;">
-                    If iOS needs it, it may prompt for your Apple ID. You can cancel this screen at any time.
+                    ` + restorePromptMsg.replace(/</g, '&lt;') + `
                 </div>
                 <button type="button" id="restoreProgressCancelBtn" style="
                     width:100%;
@@ -1637,6 +1677,56 @@ function showRestoreDialog(title, message, isSuccess) {
                 if (window.__beesmartSubscriptionIapListenersInstalled) return;
                 window.__beesmartSubscriptionIapListenersInstalled = true;
 
+                // Platform-specific copy: keep iOS text unchanged; rewrite only on Android.
+                function __beesmartPlatform() {
+                    try {
+                        if (window.BeeSmartIAP && window.BeeSmartIAP.platform) return String(window.BeeSmartIAP.platform).toLowerCase();
+                    } catch (e) {}
+                    try {
+                        const ua = (navigator && navigator.userAgent) ? String(navigator.userAgent) : '';
+                        if (/Android/i.test(ua)) return 'google';
+                        if (/iPad|iPhone|iPod/i.test(ua)) return 'apple';
+                    } catch (e) {}
+                    return 'web';
+                }
+
+                function applyPlatformCopy() {
+                    const p = __beesmartPlatform();
+                    if (p !== 'google') return;
+                    try {
+                        const cancelEl = document.getElementById('faqCancelAnswer');
+                        if (cancelEl) cancelEl.textContent = "Yes! You can cancel your subscription anytime from Google Play (Subscriptions). If you cancel, you'll keep premium access until the end of your billing period.";
+                        const trialEl = document.getElementById('faqTrialAnswer');
+                        if (trialEl) trialEl.textContent = "If a free trial or introductory offer is available, it will be shown in the Google Play purchase screen before you confirm.";
+                        const secureEl = document.getElementById('faqPaymentsSecure');
+                        if (secureEl) secureEl.textContent = "Absolutely! All payments are processed through Google Play. We never see or store your payment information.";
+                        const line1 = document.getElementById('billingLine1');
+                        if (line1) line1.textContent = "Payment will be charged to your Google Play account.";
+                        const line3 = document.getElementById('billingLine3');
+                        if (line3) line3.textContent = "You can manage or cancel your subscription in Google Play subscription settings.";
+                        const footer = document.getElementById('footerBillingCopy');
+                        if (footer) footer.textContent = "Payment charged to your Google Play account at confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period.";
+                    } catch (e) {}
+                }
+
+                async function updateAndroidPricing() {
+                    if (__beesmartPlatform() !== 'google') return;
+                    if (!window.BeeSmartIAP || typeof window.BeeSmartIAP.getProductDetails !== 'function') return;
+                    try {
+                        const details = await Promise.resolve(window.BeeSmartIAP.getProductDetails('premium_monthly'));
+                        if (!details || typeof details !== 'object') return;
+                        const priceEl = document.getElementById('monthlyPriceText');
+                        const periodEl = document.getElementById('monthlyPricePeriod');
+                        const btn = document.getElementById('subscribeMonthlyBtn');
+                        const formatted = details.formattedPrice || details.formatted_price;
+                        if (formatted && priceEl) {
+                            priceEl.textContent = formatted + (details.billingPeriod && String(details.billingPeriod).indexOf('P1M') !== -1 ? ' per month' : '');
+                        }
+                        if (periodEl) periodEl.textContent = 'Auto-renewable subscription';
+                        if (btn && formatted) btn.textContent = 'Subscribe for ' + formatted + '/month';
+                    } catch (e) {}
+                }
+
                 let t = null;
                 const schedule = function(reason) {
                     try { if (t) clearTimeout(t); } catch (e) {}
@@ -1652,10 +1742,14 @@ function showRestoreDialog(title, message, isSuccess) {
                 window.addEventListener('beesmart:iap-ready', function(ev) {
                     const platform = ev && ev.detail ? ev.detail.platform : null;
                     console.log('IAP: store initialized' + (platform ? ' platform=' + platform : ''));
+                    try { applyPlatformCopy(); } catch (e) {}
+                    if (platform === 'google') try { updateAndroidPricing(); } catch (e) {}
                     schedule('iap-ready' + (platform ? ':' + platform : ''));
                 });
 
                 // Initial paint: do a quick reconcile so UI is correct even before any clicks.
+                try { applyPlatformCopy(); } catch (e) {}
+                if (__beesmartPlatform() === 'google') setTimeout(function() { try { updateAndroidPricing(); } catch (e) {} }, 800);
                 schedule('initial');
             } catch (e) { /* ignore */ }
         })();
@@ -1664,7 +1758,17 @@ function showRestoreDialog(title, message, isSuccess) {
             // Use server-provided App Store Connect product IDs (source of truth).
             // Fallbacks are intentionally conservative.
             const PRODUCT_IDS = {{ (subscription_product_ids or {}) | tojson }};
-            const productId = (PRODUCT_IDS && PRODUCT_IDS[plan]) ? PRODUCT_IDS[plan] : 'com.beesmart.premium.monthly';
+            const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform) ? String(window.BeeSmartIAP.platform).toLowerCase() : 'web';
+
+            // Hard rule: Android uses Google Play product IDs (never reuse Apple IDs).
+            // Keep iOS behavior unchanged by only overriding on Android.
+            const ANDROID_PRODUCT_IDS = { monthly: 'premium_monthly' };
+
+            const fallbackAppleMonthly = 'com.beesmart.premium.monthly';
+            let productId = (PRODUCT_IDS && PRODUCT_IDS[plan]) ? PRODUCT_IDS[plan] : fallbackAppleMonthly;
+            if (platform === 'google') {
+                productId = (ANDROID_PRODUCT_IDS && ANDROID_PRODUCT_IDS[plan]) ? ANDROID_PRODUCT_IDS[plan] : ANDROID_PRODUCT_IDS.monthly;
+            }
 
             // Synchronous guard: prevent duplicate purchases.
             // This avoids "infinite purchase attempts" when premium is already active.
@@ -1698,7 +1802,7 @@ function showRestoreDialog(title, message, isSuccess) {
             }
 
             window.__beesmartPurchaseInFlight = true;
-            _setPrimaryCtaState({ disabled: true, label: 'Opening App Store…', variant: 'loading' });
+            _setPrimaryCtaState({ disabled: true, label: (platform === 'google' ? 'Opening Google Play…' : 'Opening App Store…'), variant: 'loading' });
             console.log('IAP: product fetched id=' + productId);
             console.log('IAP: purchase started');
 
@@ -1718,7 +1822,8 @@ function showRestoreDialog(title, message, isSuccess) {
                     // Pending transactions may complete later; keep UI usable.
                     window.__beesmartPurchaseInFlight = false;
                     _applyPremiumUiState();
-                    alert('Purchase is pending approval. You can keep using the app; Premium will activate once Apple confirms.');
+                    var pendingMsg = (window.__beesmartStoreCopy && window.__beesmartStoreCopy.pendingConfirm) ? window.__beesmartStoreCopy.pendingConfirm() : 'Premium will activate once Apple confirms.';
+                    alert('Purchase is pending approval. You can keep using the app; ' + pendingMsg);
                     return;
                 }
 
@@ -1763,8 +1868,9 @@ function showRestoreDialog(title, message, isSuccess) {
                 alert('Purchase complete! Premium is active.');
                 try { window.location.href = '/app'; } catch (e) {}
             } catch (e) {
+                var extra = (window.__beesmartStoreCopy && window.__beesmartStoreCopy.purchaseErrorExtra) ? window.__beesmartStoreCopy.purchaseErrorExtra() : 'If you already subscribed on this Apple ID, try Restore Purchases.';
                 const msg = (!window.IS_REAL_AUTH)
-                    ? 'Purchase could not be completed. If you already subscribed on this Apple ID, try Restore Purchases. Registration is optional for cross-device access.'
+                    ? 'Purchase could not be completed. ' + extra + ' Registration is optional for cross-device access.'
                     : 'Purchase could not be completed. Please try again.';
                 alert(msg);
                 _applyPremiumUiState();
@@ -1788,7 +1894,7 @@ function showRestoreDialog(title, message, isSuccess) {
             }
             // Fallback for web - redirect to registration/signup
             else {
-                alert(`Selected ${plan.toUpperCase()} plan!\n\nProduct ID: ${productId}\n\nIn-app purchase will be processed through the App Store.`);
+                alert(`Selected ${plan.toUpperCase()} plan!\n\nProduct ID: ${productId}\n\nIn-app purchase will be processed through ${platform === 'google' ? 'Google Play' : 'the App Store'}.`);
                 // Could redirect to registration page
                 // window.location.href = '/register?plan=' + plan;
             }

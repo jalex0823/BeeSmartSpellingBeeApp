@@ -52,8 +52,10 @@ captures/
 # Comment next line if keeping position of elements in Navigation Editor is relevant for you
 .idea/navEditor.xml
 
-# Keystore files
-# Uncomment the following lines if you do not want to check your keystore files in.
+# Keystore files (do not commit)
+upload-keystore.jks
+keystore.properties
+KEYSTORE_PASSWORD_SAVE_THIS.txt
 #*.jks
 #*.keystore
 

@@ -93,6 +93,14 @@
                 window.__beesmartDisableAnimations = !!reduceMotion;
                 document.documentElement.classList.add('beesmart-no-sweep-overlays');
             } catch (e) { /* no-op */ }
+
+            // Android detection for layout/fallback (e.g. devices below Android 14 / older WebViews).
+            try {
+                var ua = (navigator && navigator.userAgent) ? String(navigator.userAgent) : '';
+                if (/Android/i.test(ua)) {
+                    document.documentElement.classList.add('android');
+                }
+            } catch (e) { /* no-op */ }
         })();
     </script>
     
@@ -747,7 +755,9 @@ function showRestoreDialog(title, message, isSuccess) {
                             title: 'Restore started',
                             message: _looksNative()
                                 ? 'We’re getting things ready. If purchases still look locked, wait a moment and try Restore Purchases again.'
-                                : 'Restore can only pull App Store purchases inside the iOS/Android app wrapper. If you installed from the App Store, open the app there and tap Restore Purchases.',
+                                : ('Restore can only pull purchases inside the iOS/Android app wrapper. If you installed from ' +
+                                   ((/Android/i.test(navigator.userAgent)) ? 'Google Play' : 'the App Store') +
+                                   ', open the app there and tap Restore Purchases.'),
                             // Avoid auto-reloads here; they can look like a logout on some iOS wrappers.
                             autoReloadMs: 0,
                             allowReload: false

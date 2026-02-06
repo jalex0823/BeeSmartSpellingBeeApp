@@ -209,20 +209,65 @@
       }
 
       const install_id = await _getInstallIdForServer();
+      const nativePlugin = getNativePlugin();
       let owned = [];
+      let rawOwned = null;
       try {
-        const r = await window.BeeSmartIAP.getOwnedProducts();
-        if (Array.isArray(r)) owned = r;
+        // Prefer the native plugin response so we can access purchase tokens on Android.
+        rawOwned = nativePlugin ? await Promise.resolve(nativePlugin.getOwnedProducts()) : null;
+        if (rawOwned && Array.isArray(rawOwned.productIds)) {
+          owned = rawOwned.productIds;
+        } else if (Array.isArray(rawOwned)) {
+          owned = rawOwned;
+        } else {
+          const r = await window.BeeSmartIAP.getOwnedProducts();
+          if (Array.isArray(r)) owned = r;
+        }
       } catch (e) {
         owned = [];
       }
 
       const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform) ? window.BeeSmartIAP.platform : 'apple';
+
+      // Android security rule:
+      // Never unlock premium/subscription based on "owned product IDs" alone.
+      // If the native layer provides subscription purchase tokens, verify them server-side.
+      let subscriptionProductIds = new Set();
+      if (platform === 'google' && rawOwned && Array.isArray(rawOwned.subscriptions)) {
+        try {
+          const subs = rawOwned.subscriptions;
+          for (let i = 0; i < subs.length; i++) {
+            const s = subs[i] || {};
+            const pid = s.productId || s.product_id;
+            const token = s.purchaseToken || s.purchase_token;
+            if (pid) subscriptionProductIds.add(String(pid));
+            if (pid && token) {
+              // Best-effort verify; do not throw or block restore if the network is flaky.
+              await _fetchJsonWithTimeout('/api/android/subscription/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ productId: String(pid), purchaseToken: String(token) })
+              }, 15000);
+            }
+            // Avoid long loops on resume.
+            if (i >= 3) break;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      // Filter subscription SKUs out of restore payload (subscriptions require verification).
+      const ownedForRestore = (platform === 'google' && subscriptionProductIds.size)
+        ? (owned || []).filter((pid) => !subscriptionProductIds.has(String(pid)))
+        : (owned || []);
+
       const out = await _fetchJsonWithTimeout('/api/iap/restore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ platform: platform || 'apple', product_ids: owned || [], install_id })
+        body: JSON.stringify({ platform: platform || 'apple', product_ids: ownedForRestore, install_id })
       }, 15000);
       const res = out && out.res;
       let data = out ? out.data : null;
@@ -246,7 +291,7 @@
 
       try {
         window.dispatchEvent(new CustomEvent('beesmart:iap-reconciled', {
-          detail: { ok: !!(data && data.success), status: res.status, reason: reason || 'native_reconcile', data, owned }
+          detail: { ok: !!(data && data.success), status: res.status, reason: reason || 'native_reconcile', data, owned: ownedForRestore }
         }));
       } catch (e) { /* ignore */ }
 
@@ -390,6 +435,19 @@
         return [];
       },
 
+      async getProductDetails(productId) {
+        // Optional helper (Android): query Play Store price/details.
+        // iOS builds may not implement this; callers must treat missing as non-fatal.
+        if (!productId) return null;
+        if (typeof nativePlugin.getProductDetails !== 'function') return null;
+        try {
+          const r = await Promise.resolve(nativePlugin.getProductDetails({ productId }));
+          return r && typeof r === 'object' ? r : null;
+        } catch (e) {
+          return null;
+        }
+      },
+
       async purchase(productId) {
         const r = await Promise.resolve(nativePlugin.purchase({ productId }));
         const out = r && typeof r === 'object' ? r : {};
@@ -399,6 +457,29 @@
         if (out.transactionId && !out.transaction_id) out.transaction_id = out.transactionId;
 
         if (!out.payload) out.payload = out;
+
+        // Android subscriptions MUST be verified server-side using the purchase token.
+        // Never unlock premium purely based on local/native results.
+        try {
+          if (platform === 'google') {
+            const pid = (typeof productId === 'string') ? productId : (out.productId || out.product_id);
+            const token = out.purchase_token || out.purchaseToken || (out.payload && (out.payload.purchaseToken || out.payload.purchase_token));
+            if (pid && token) {
+              await _fetchJsonWithTimeout('/api/android/subscription/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                  productId: pid,
+                  purchaseToken: token
+                })
+              }, 15000);
+            }
+          }
+        } catch (e) {
+          // Non-fatal: UI will still refresh via reconcile, and the subscription page
+          // can show an error if premium isn't active.
+        }
 
         // After purchase, reconcile owned products to server.
         try { await reconcileFromNative('purchase'); } catch (e) { /* ignore */ }
