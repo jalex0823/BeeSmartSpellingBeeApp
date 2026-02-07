@@ -16,7 +16,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace "com.beesmart.spelling"
+    namespace "com.beesmart.spellingbee"
     compileSdkVersion rootProject.ext.compileSdkVersion
 
     signingConfigs {
@@ -31,7 +31,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.beesmart.spelling"
+        applicationId "com.beesmart.spellingbee"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 6

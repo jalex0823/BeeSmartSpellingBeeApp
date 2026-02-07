@@ -5,7 +5,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   // Normalized to match root config for store builds
-  appId: 'com.beesmart.spelling',
+  appId: 'com.beesmart.spellingbee',
   appName: 'BeeSmart Spelling',
   // Production wrapper: load the deployed site (DigitalOcean)
   // NOTE: If you want a fully-offline/bundled build later, remove server.url.
