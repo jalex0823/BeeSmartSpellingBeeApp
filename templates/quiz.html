@@ -7611,7 +7611,7 @@ class QuizManager {
                     console.log('✅ Quiz keyboard mounted (countdown started)');
                 }
                 if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
-                if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
+                // ✅ Do NOT clear input when countdown starts — user may have already started typing during the pause
             }
         } catch (e) {
             console.warn('Quiz keyboard mount failed:', e);
