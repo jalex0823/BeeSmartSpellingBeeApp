@@ -13,6 +13,21 @@ The app **must** point to **https://beesmartspelling.app/** for store builds. No
 
 **Before release:** Confirm no `localhost` or `127.0.0.1` in mobile app config or built assets.
 
+### If home screen shows "Web page not available" / localhost
+
+The app loads from `server.url` in Capacitor config. That config is copied into the Android app during **`npx cap sync android`**. If you build without running sync, the app may load localhost (dev default) and fail with `net::ERR_CLEARTEXT_NOT_PERMITTED`.
+
+**Fix:** Always run before building:
+```bash
+cd mobile
+npx cap sync android
+```
+Then build (`.\build-aab.ps1` or `gradlew bundleRelease`). For mobile-wrapper:
+```bash
+cd mobile-wrapper
+npx cap sync android
+```
+
 ---
 
 ## 2. App Icons (BeeSmart Spelling Bee Application logo)

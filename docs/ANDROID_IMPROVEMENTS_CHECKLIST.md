@@ -104,6 +104,8 @@ See **`docs/ANDROID_PLAYSTORE_SUBSCRIPTIONS.md`** for:
 
 **To build signed AAB again:** From `mobile/android`, set `JAVA_HOME` to your JDK (e.g. Android Studio JBR), then run `.\gradlew.bat bundleRelease`. Or use `mobile/build-aab.ps1` after signing is configured.
 
+**Important:** If the home screen shows "Web page not available" / localhost, run `npx cap sync android` from `mobile/` before building. The app loads from `https://beesmartspelling.app` via Capacitor's `server.url`; that config is copied into the built app only during sync. See `docs/PRODUCTION_URL_AND_ICONS.md`.
+
 ---
 
 ## Quick reference – key files

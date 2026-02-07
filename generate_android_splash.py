@@ -1,6 +1,6 @@
 """
-Generate Android splash screen images with BeeSmart branding
-Replaces any Flutter logos with BeeSmart logo for consistency
+Generate Android splash screen images with BeeSmart branding.
+Updates all three Android projects to match iOS (yellow background + BeeSmart logo).
 """
 
 import os
@@ -11,14 +11,19 @@ from PIL import Image
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
 
+# All Android projects (same structure as icon generator)
+ANDROID_RES_DIRS = [
+    'android/app/src/main/res',
+    'mobile/android/app/src/main/res',
+    'mobile-wrapper/android/app/src/main/res',
+]
+
 def create_android_splash_screens():
-    """Generate Android splash screens with BeeSmart logo"""
+    """Generate Android splash screens with BeeSmart logo (matches iOS splash)"""
     print("Generating Android splash screens with BeeSmart branding...")
     
-    # Paths
     base_dir = os.path.dirname(os.path.abspath(__file__))
     logo_path = os.path.join(base_dir, 'static', 'BeeSmartCrestLogo1.png')
-    android_res_dir = os.path.join(base_dir, 'mobile', 'android', 'app', 'src', 'main', 'res')
     
     # Check if logo exists
     if not os.path.exists(logo_path):
@@ -97,14 +102,18 @@ def create_android_splash_screens():
         else:
             splash.paste(resized_logo, (x, y))
         
-        # Save splash screen
-        filepath = os.path.join(android_res_dir, relative_path)
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        splash.save(filepath, 'PNG', optimize=True)
-        print(f"  [OK] Generated: {relative_path} ({size[0]}x{size[1]})")
+        # Save splash screen to all Android projects
+        for res_rel in ANDROID_RES_DIRS:
+            android_res_dir = os.path.join(base_dir, res_rel)
+            filepath = os.path.join(android_res_dir, relative_path)
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            splash.save(filepath, 'PNG', optimize=True)
     
-    print(f"\n[SUCCESS] Successfully generated {len(splash_sizes)} Android splash screen images!")
-    print(f"Location: {android_res_dir}")
+    for res_rel in ANDROID_RES_DIRS:
+        android_res_dir = os.path.join(base_dir, res_rel)
+        print(f"  [OK] Updated: {android_res_dir}")
+    
+    print(f"\n[SUCCESS] Generated {len(splash_sizes)} splash sizes x {len(ANDROID_RES_DIRS)} projects")
     print("\nNext steps:")
     print("1. Verify the splash screens look correct")
     print("2. Run: npx cap sync (if using Capacitor)")
