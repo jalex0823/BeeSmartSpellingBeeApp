@@ -6190,9 +6190,10 @@ class QuizManager {
 
         // Voice announcer settings
         this.announcerEnabled = localStorage.getItem('announcerEnabled') !== 'false'; // Default ON
-        this.voiceUnlocked = false; // iOS requires user interaction
+        this.voiceUnlocked = false; // iOS/Android require user interaction for autoplay
         this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         this.isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        this.isAndroid = /Android/i.test(navigator.userAgent);
         
         // Background music settings
         // Default OFF: background music should never auto-play on page load.
@@ -6205,6 +6206,7 @@ class QuizManager {
         console.log('   - voiceUnlocked:', this.voiceUnlocked);
         console.log('   - isIOS:', this.isIOS);
         console.log('   - isSafari:', this.isSafari);
+        console.log('   - isAndroid:', this.isAndroid);
         console.log('   - localStorage announcerEnabled:', localStorage.getItem('announcerEnabled'));
         console.log('🎵 Music System Initialization:');
         console.log('   - musicEnabled:', this.musicEnabled);
@@ -6238,7 +6240,7 @@ class QuizManager {
 
         if (this.startMode === 'resume') {
             // Resume: skip combined screen if we already have voice unlock (desktop or returning user)
-            if (!(this.isIOS || this.isSafari) || sessionStorage.getItem('voiceIntroShown')) {
+            if (!(this.isIOS || this.isSafari || this.isAndroid) || sessionStorage.getItem('voiceIntroShown')) {
                 this.voiceUnlocked = true;
                 const feedbackArea = document.getElementById('feedbackArea');
                 if (feedbackArea) feedbackArea.style.display = 'none';
@@ -6627,9 +6629,9 @@ class QuizManager {
             return Promise.resolve(); // Return resolved promise immediately
         }
         
-        // Check if voice is unlocked (important for iOS)
-        if ((this.isIOS || this.isSafari) && !this.voiceUnlocked) {
-            console.log('🔒 Voice not unlocked on iOS - skipping announcement');
+        // Check if voice is unlocked (important for iOS/Android - autoplay requires user gesture)
+        if ((this.isIOS || this.isSafari || this.isAndroid) && !this.voiceUnlocked) {
+            console.log('🔒 Voice not unlocked (mobile) - skipping announcement');
             return Promise.resolve();
         }
         
@@ -6861,12 +6863,12 @@ class QuizManager {
         // Check if mobile device (mobile autoplay policies can block speech)
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
-        // Mobile gets "Tap to Start" button for better control
+        // Mobile gets "Tap to Start" button for better control (iOS and Android both need user gesture for voice)
         if (isMobile) {
-            // Check if iOS device
-            const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const isAndroidDevice = /Android/i.test(navigator.userAgent);
             
-            if (isIOS) {
+            if (isIOSDevice || isAndroidDevice) {
                 // 🍎 iOS-specific intro: If voice was already enabled via first modal, skip second prompt
                 // Only show voice button if user skipped voice in the first modal
                 const voiceWasEnabled = this.voiceUnlocked && this.announcerEnabled;
@@ -7038,7 +7040,7 @@ class QuizManager {
                         }, 900);
                 }
             } else {
-                // Android/other mobile - auto-start without requiring a tap
+                // Other mobile (non-Android, non-iOS) - auto-start without requiring a tap
                 feedbackArea.innerHTML = `
                     <div style="font-size: 1.2rem; font-weight: 700;">
                         �🐝 Welcome to BeeSmart Spelling! 🐝
@@ -8342,23 +8344,14 @@ class QuizManager {
         const startWithVoice = () => {
             sessionStorage.setItem('startGuidanceShown', 'true');
             modal.style.display = 'none';
-            this.showCombinedStartScreen();
-            // Trigger voice start
-            setTimeout(() => {
-                const buzzyPill = document.getElementById('buzzyPill');
-                if (buzzyPill) buzzyPill.click();
-            }, 100);
+            // Speak immediately in same gesture context (no setTimeout) - required for Android/iOS autoplay
+            this.showCombinedStartScreen({ immediateVoiceStart: true });
         };
         
         const startSilent = () => {
             sessionStorage.setItem('startGuidanceShown', 'true');
             modal.style.display = 'none';
-            this.showCombinedStartScreen();
-            // Trigger silent start
-            setTimeout(() => {
-                const startSilentBtn = document.getElementById('startSilentBtn');
-                if (startSilentBtn) startSilentBtn.click();
-            }, 100);
+            this.showCombinedStartScreen({ immediateSilentStart: true });
         };
         
         const voiceBtn = document.getElementById('startGuidanceVoiceBtn');
@@ -8378,7 +8371,8 @@ class QuizManager {
     }
 
     // 7) Start screen: "Start with Buzzy Voice" pill + "Start silent" (no green Ready-to-Spell block)
-    showCombinedStartScreen() {
+    // opts.immediateVoiceStart: when true, skip pills and speak immediately (keeps speech in user gesture context for Android/iOS)
+    showCombinedStartScreen(opts = {}) {
         if (this.quizStarted || this.introInProgress) return;
         this.introInProgress = true;
 
@@ -8394,18 +8388,22 @@ class QuizManager {
 
         const buzzyPill = document.getElementById('buzzyPill');
         const startSilentBtn = document.getElementById('startSilentBtn');
-        if (buzzyPill) buzzyPill.style.display = 'block';
-        if (startSilentBtn) startSilentBtn.style.display = 'block';
+        if (!opts.immediateVoiceStart) {
+            if (buzzyPill) buzzyPill.style.display = 'block';
+            if (startSilentBtn) startSilentBtn.style.display = 'block';
+        }
 
         const showQuizButtons = () => {
             const ab = document.getElementById('quizActionButtons');
             const st = document.querySelector('.stat-toggle-controls');
             const ec = document.querySelector('.exit-button-container');
+            const bp = document.getElementById('buzzyPill');
+            const ss = document.getElementById('startSilentBtn');
             if (ab) ab.style.display = '';
             if (st) st.style.display = '';
             if (ec) ec.style.display = '';
-            if (buzzyPill) buzzyPill.style.display = 'none';
-            if (startSilentBtn) startSilentBtn.style.display = 'none';
+            if (bp) bp.style.display = 'none';
+            if (ss) ss.style.display = 'none';
         };
 
         const startWithVoice = () => {
@@ -8442,6 +8440,16 @@ class QuizManager {
             this.loadNextWordWithIntro();
         };
 
+        if (opts.immediateVoiceStart) {
+            showQuizButtons();
+            startWithVoice();
+            return;
+        }
+        if (opts.immediateSilentStart) {
+            showQuizButtons();
+            startSilent();
+            return;
+        }
         if (buzzyPill) buzzyPill.addEventListener('click', startWithVoice, { once: true });
         if (startSilentBtn) startSilentBtn.addEventListener('click', startSilent, { once: true });
     }
@@ -8504,8 +8512,8 @@ class QuizManager {
         this.announcerEnabled = !this.announcerEnabled;
         localStorage.setItem('announcerEnabled', this.announcerEnabled ? 'true' : 'false');
         
-        // If enabling on iOS and not unlocked, we need user interaction to unlock
-        if (this.announcerEnabled && (this.isIOS || this.isSafari) && !this.voiceUnlocked) {
+        // If enabling on iOS/Android and not unlocked, we need user interaction to unlock
+        if (this.announcerEnabled && (this.isIOS || this.isSafari || this.isAndroid) && !this.voiceUnlocked) {
             // Unlock voice with a test utterance
             const testUtterance = new SpeechSynthesisUtterance('');
             window.speechSynthesis.speak(testUtterance);
