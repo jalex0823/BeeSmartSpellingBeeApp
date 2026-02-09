@@ -1,39 +1,37 @@
-product_id,avatar_id,display_name,price_usd,purchasable,tier,source
-com.beesmart.avatar.al-bee,al-bee,Al Bee Avatar,1.99,True,premium,catalog
-com.beesmart.avatar.anxious-bee,anxious-bee,Anxious Bee Avatar,0.99,True,special,catalog
-com.beesmart.avatar.astro-bee,astro-bee,Astro Bee Avatar,1.99,True,premium,catalog
-com.beesmart.avatar.bee-knight,bee-knight,Bee Knight Avatar,,True,,extra
-com.beesmart.avatar.biker-bee,biker-bee,Biker Bee Avatar,1.99,True,premium,catalog
-com.beesmart.avatar.brother-bee,brother-bee,Brother Bee Avatar,0.0,False,default_free,catalog
-com.beesmart.avatar.buda-bee,buda-bee,Buda Bee Avatar,,True,,extra
-com.beesmart.avatar.builder-bee,builder-bee,Builder Bee Avatar,0.0,False,default_free,catalog
-com.beesmart.avatar.buzz-bee,buzz-bee,Buzz Bee Avatar,0.99,True,earn_or_buy,catalog
-com.beesmart.avatar.cool-bee,cool-bee,Cool Bee Avatar,0.0,False,default_free,catalog
-com.beesmart.avatar.cutie-bee,cutie-bee,Cutie Bee Avatar,,True,,extra
-com.beesmart.avatar.detective-bee,detective-bee,Detective Bee Avatar,0.0,False,default_free,catalog
-com.beesmart.avatar.diva-bee,diva-bee,Diva Bee Avatar,1.99,True,premium,catalog
-com.beesmart.avatar.doc-bee,doc-bee,Doc Bee Avatar,,True,,extra
-com.beesmart.avatar.doctor-bee,doctor-bee,Doctor Bee Avatar,0.99,True,earn_or_buy,catalog
-com.beesmart.avatar.explorer-bee,explorer-bee,Explorer Bee Avatar,0.0,False,default_free,catalog
-com.beesmart.avatar.franken-bee,franken-bee,Franken Bee Avatar,0.99,True,premium,catalog
-com.beesmart.avatar.honey-comb,honey-comb,Honey Comb Avatar,,True,,extra
-com.beesmart.avatar.jrock-bee,jrock-bee,Jrock Bee Avatar,,True,,extra
-com.beesmart.avatar.knight-bee,knight-bee,Knight Bee Avatar,0.99,True,earn_or_buy,catalog
-com.beesmart.avatar.mascot-bee,mascot-bee,Mascot Bee Avatar,0.0,False,mascot,catalog
-com.beesmart.avatar.monster-bee,monster-bee,Monster Bee Avatar,0.99,True,earn_or_buy,catalog
-com.beesmart.avatar.motor-bee,motor-bee,Motor Bee Avatar,,True,,extra
-com.beesmart.avatar.obee,obee,Obee Avatar,,True,,extra
-com.beesmart.avatar.professor-bee,professor-bee,Professor Bee Avatar,0.99,True,premium,catalog
-com.beesmart.avatar.queen-bee,queen-bee,Queen Bee Avatar,1.99,True,premium,catalog
-com.beesmart.avatar.robo-bee,robo-bee,Robo Bee Avatar,1.99,True,premium,catalog
-com.beesmart.avatar.rocker-bee,rocker-bee,Rocker Bee Avatar,0.99,True,earn_or_buy,catalog
-com.beesmart.avatar.sea-bee,sea-bee,Sea Bee Avatar,,True,,extra
-com.beesmart.avatar.seabea,seabea,Seabea Avatar,0.99,True,earn_or_buy,catalog
-com.beesmart.avatar.selfie-bee,selfie-bee,Selfie Bee Avatar,0.99,True,earn_or_buy,catalog
-com.beesmart.avatar.singer-bee,singer-bee,Singer Bee Avatar,,True,,extra
-com.beesmart.avatar.space-bee,space-bee,Space Bee Avatar,,True,,extra
-com.beesmart.avatar.super-bee,super-bee,Super Bee Avatar,,True,,extra
-com.beesmart.avatar.superbee,superbee,Superbee Avatar,1.99,True,premium,catalog
-com.beesmart.avatar.vamp-bee,vamp-bee,Vamp Bee Avatar,0.99,True,premium,catalog
-com.beesmart.avatar.ware-bee,ware-bee,Ware Bee Avatar,1.99,True,premium,catalog
-com.beesmart.avatar.zom-bee,zom-bee,Zom Bee Avatar,1.99,True,premium,catalog
+product_id,purchase_option_id,avatar_id,display_name,price_usd,purchasable,tier,source,description
+beesmart.avatar.al_bee.v3,beesmart-avatar-al-bee-v3,al-bee,Al Bee,1.99,True,premium,catalog,"Genius bee with wild hair! Discovered the theory of Bee-lativity."
+beesmart.avatar.bk_bee.v3,beesmart-avatar-bk-bee-v3,bk-bee,BK Bee,1.99,True,premium,catalog,"Crowned and cool! The royal burger bee of the spelling kingdom."
+beesmart.avatar.buda_bee.v3,beesmart-avatar-buda-bee-v3,buda-bee,Buda Bee,0.99,True,premium,catalog,"A peaceful little bee who loves calm vibes, focus, and mindful spelling moments."
+beesmart.avatar.buzz_bee.v3,beesmart-avatar-buzz-bee-v3,buzz-bee,Buzz Bee,0.99,True,earn_or_buy,catalog,"Always buzzing with energy and enthusiasm!"
+beesmart.avatar.cutie_bee.v3,beesmart-avatar-cutie-bee-v3,cutie-bee,Cutie Bee,0.99,True,earn_or_buy,catalog,"Adorable and sweet — Cutie Bee is guaranteed to make every game session extra fun."
+beesmart.avatar.diva_bee.v3,beesmart-avatar-diva-bee-v3,diva-bee,Diva Bee,1.99,True,premium,catalog,"The Bee-yoncé of the hive! Born to spell, born to shine!"
+beesmart.avatar.doc_bee.v3,beesmart-avatar-doc-bee-v3,doc-bee,Doc Bee,0.99,True,premium,catalog,"Dr. Bee is always here to help! Clipboard ready, cheering you on as you learn new words."
+beesmart.avatar.fairy_bee.v3,beesmart-avatar-fairy-bee-v3,fairy-bee,Fairy Bee,0.99,True,premium,catalog,"Fairy dust and spelling magic! Wings ready for word adventures."
+beesmart.avatar.firefighter_bee.v3,beesmart-avatar-firefighter-bee-v3,firefighter-bee,Firefighter Bee,0.99,True,premium,catalog,"Putting out fires and spelling words! Flame-resistant hero of the hive."
+beesmart.avatar.franken_bee.v3,beesmart-avatar-franken-bee-v3,franken-bee,Franken Bee,0.99,True,premium,catalog,"Created by Dr. Franken-sting! Spells by lightning power."
+beesmart.avatar.gamer_bee.v3,beesmart-avatar-gamer-bee-v3,gamer-bee,Gamer Bee,1.99,True,premium,catalog,"Headset on and controller ready — Gamer Bee is locked in for spelling victory!"
+beesmart.avatar.honey_comb.v3,beesmart-avatar-honey-comb-v3,honey-comb,Honey Comb,0.99,True,premium,catalog,"Sweet, golden, and iconic — Honey Comb Bee represents pure BeeSmart pride."
+beesmart.avatar.inventor_bee.v3,beesmart-avatar-inventor-bee-v3,inventor-bee,Inventor Bee,1.99,True,premium,catalog,"A brilliant spark-powered genius — Inventor Bee creates buzzing new ideas with electricity!"
+beesmart.avatar.j_rock_bee.v3,beesmart-avatar-j-rock-bee-v3,j-rock-bee,J Rock Bee,0.99,True,premium,catalog,"Ready to rock n' roll! Guitar in hand, J Rock Bee brings rhythm to your spelling."
+beesmart.avatar.knight_bee.v3,beesmart-avatar-knight-bee-v3,knight-bee,Knight Bee,0.99,True,earn_or_buy,catalog,"Brave and noble! Defender of the hive."
+beesmart.avatar.lumberjack_bee.v3,beesmart-avatar-lumberjack-bee-v3,lumberjack-bee,Lumberjack Bee,1.99,True,premium,catalog,"Strong, brave, and outdoorsy — Lumberjack Bee chops through tough spelling challenges!"
+beesmart.avatar.motor_bee.v3,beesmart-avatar-motor-bee-v3,motor-bee,Motor Bee,0.99,True,premium,catalog,"Fast and focused, Motor Bee zooms into action and powers up your learning."
+beesmart.avatar.nurse_bee.v3,beesmart-avatar-nurse-bee-v3,nurse-bee,Nurse Bee,1.99,True,premium,catalog,"Caring, kind, and always helpful — Nurse Bee cheers you on to stay healthy and keep spelling strong!"
+beesmart.avatar.o_bee.v3,beesmart-avatar-o-bee-v3,o-bee,O Bee,0.99,True,premium,catalog,"A classic BeeSmart sidekick — O Bee keeps things simple, fun, and full of charm."
+beesmart.avatar.plumber_bee.v3,beesmart-avatar-plumber-bee-v3,plumber-bee,Plumber Bee,1.99,True,premium,catalog,"Fixing leaks and spelling streaks! Plumber Bee is ready to unclog tricky words."
+beesmart.avatar.professor_bee.v3,beesmart-avatar-professor-bee-v3,professor-bee,Professor Bee,0.99,True,premium,catalog,"Wise and knowledgeable! The scholarly bee."
+beesmart.avatar.queen_bee.v3,beesmart-avatar-queen-bee-v3,queen-bee,Queen Bee,1.99,True,premium,catalog,"Royal and majestic! Leader with grace."
+beesmart.avatar.robo_bee.v3,beesmart-avatar-robo-bee-v3,robo-bee,Robo Bee,1.99,True,premium,catalog,"Buzzbot 3000! Honey-powered circuits."
+beesmart.avatar.rocker_bee.v3,beesmart-avatar-rocker-bee-v3,rocker-bee,Rocker Bee,0.99,True,earn_or_buy,catalog,"Rock and roll! Lead singer of The Bee-tles."
+beesmart.avatar.sea_bee.v3,beesmart-avatar-sea-bee-v3,sea-bee,Sea Bee,0.99,True,premium,catalog,"A deep-sea explorer bee who loves ocean adventures and cool blue vibes."
+beesmart.avatar.selfie_bee.v3,beesmart-avatar-selfie-bee-v3,selfie-bee,Selfie Bee,0.99,True,earn_or_buy,catalog,"Say cheese! Always ready for the perfect selfie!"
+beesmart.avatar.singer_bee.v3,beesmart-avatar-singer-bee-v3,singer-bee,Singer Bee,0.99,True,premium,catalog,"Microphone ready — Singer Bee hits every high note as you hit every correct word!"
+beesmart.avatar.space_bee.v3,beesmart-avatar-space-bee-v3,space-bee,Space Bee,0.99,True,premium,catalog,"Out-of-this-world awesome! Space Bee is ready for spelling missions across the galaxy."
+beesmart.avatar.super_bee.v3,beesmart-avatar-super-bee-v3,super-bee,Super Bee,0.99,True,premium,catalog,"Saving the day with bee powers! Cape included."
+beesmart.avatar.techno_bee.v3,beesmart-avatar-techno-bee-v3,techno-bee,Techno Bee,1.99,True,premium,catalog,"Glowing neon armor and futuristic style — Techno Bee is powered by pure brain energy!"
+beesmart.avatar.umpire_bee.v3,beesmart-avatar-umpire-bee-v3,umpire-bee,Umpire Bee,1.99,True,premium,catalog,"You're SAFE! Umpire Bee calls the plays and keeps every spelling game fair and fun."
+beesmart.avatar.vamp_bee.v3,beesmart-avatar-vamp-bee-v3,vamp-bee,Vamp Bee,0.99,True,premium,catalog,"Count Bee-cula! I vant to spell your vords!"
+beesmart.avatar.ware_bee.v3,beesmart-avatar-ware-bee-v3,ware-bee,Ware Bee,1.99,True,premium,catalog,"Were-bee of London! Howls at the full moon."
+beesmart.avatar.xray_bee.v3,beesmart-avatar-xray-bee-v3,xray-bee,Xray Bee,1.99,True,premium,catalog,"Glowing bones and a bright smile — X-Ray Bee lights up the night with learning power!"
+beesmart.avatar.yeti_bee.v3,beesmart-avatar-yeti-bee-v3,yeti-bee,Yeti Bee,1.99,True,premium,catalog,"Chilly, fluffy, and super friendly — Yeti Bee brings cool fun to your spelling adventure!"
+beesmart.avatar.zom_bee.v3,beesmart-avatar-zom-bee-v3,zom-bee,Zom Bee,1.99,True,premium,catalog,"The Walking Buzzed! Craves brainy words."

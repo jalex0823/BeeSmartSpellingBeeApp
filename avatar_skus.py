@@ -125,9 +125,9 @@ def sku_for_slug(avatar_slug: str) -> str:
     canonical = re.sub(r"[^a-z0-9-]+", "-", canonical)
     canonical = re.sub(r"-+", "-", canonical).strip('-')
     safe = canonical.replace('-', '_')
-    # New App Store Connect IDs append .v2
+    # App Store Connect IDs append .v3 (v2 kept for legacy restore)
     if prefix == 'beesmart.avatar':
-        return f"{prefix}.{safe}.v2"
+        return f"{prefix}.{safe}.v3"
     return f"{prefix}.{safe}"
 
 
@@ -213,13 +213,12 @@ def build_product_entitlements(extra_names: Iterable[str] | None = None) -> Dict
                 target_slug = alias
 
         # Accept multiple SKU spellings/prefixes for the same canonical avatar id.
-        # For the current App Store Connect scheme, the canonical product id is:
-        #   beesmart.avatar.<store_slug>.v2
+        # Canonical product id: beesmart.avatar.<store_slug>.v3
         for prefix in prefixes:
             for store_slug in _slug_variants_for_store(target_slug):
                 if prefix == 'beesmart.avatar':
-                    entitlements[f"{prefix}.{store_slug}.v2"] = { 'type': 'avatar', 'avatar_id': target_slug }
-                    # Also accept pre-v2 ids for restores/upgrades from old builds.
+                    entitlements[f"{prefix}.{store_slug}.v3"] = { 'type': 'avatar', 'avatar_id': target_slug }
+                    entitlements[f"{prefix}.{store_slug}.v2"] = { 'type': 'avatar', 'avatar_id': target_slug }  # legacy
                     entitlements[f"{prefix}.{store_slug}"] = { 'type': 'avatar', 'avatar_id': target_slug }
                 else:
                     entitlements[f"{prefix}.{store_slug}"] = { 'type': 'avatar', 'avatar_id': target_slug }
@@ -238,6 +237,35 @@ _PNG_NAMES = [
     'RoboBee.png', 'RockerBee.png', 'SeaBee.png', 'SelfieBee.png', 'SingerBee.png',
     'SpaceBee.png', 'SuperBee.png', 'VampBee.png', 'WareBee.png', 'ZomBee.png'
 ]
+
+def build_product_entitlements_from_catalog() -> Dict[str, dict]:
+    """Return product_id -> entitlement for every avatar in data/avatars.catalog.json.
+    Use this as the canonical source for PRODUCT_MAP so purchase verification matches
+    store product IDs exactly. Also registers Purchase option ID (hyphens format) so
+    backend can verify when Google returns that.
+    """
+    try:
+        base = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(base, 'data', 'avatars.catalog.json')
+        if not os.path.isfile(path):
+            return {}
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except Exception:
+        return {}
+    avatars = data.get('avatars') if isinstance(data, dict) else []
+    out: Dict[str, dict] = {}
+    for a in avatars if isinstance(avatars, list) else []:
+        pid = (a.get('iapProductId') or '').strip()
+        key = (a.get('avatarKey') or '').strip().lower().replace('_', '-')
+        if pid and key:
+            out[pid] = {'type': 'avatar', 'avatar_id': key}
+            # Purchase option ID (step 2) uses hyphens only; register for verification
+            po_id = _ios_to_google_play_purchase_option_id(pid)
+            if po_id and po_id != pid:
+                out[po_id] = {'type': 'avatar', 'avatar_id': key}
+    return out
+
 
 # Single source of truth: data/avatars.catalog.json (avatarKey, iapProductId).
 # Load from file so UI and backend use exact Apple-approved product IDs; fallback to built-in if missing.
@@ -264,42 +292,42 @@ def _load_app_store_ids_from_catalog() -> Dict[str, str]:
 
 # Fallback when data/avatars.catalog.json is missing (e.g. tests).
 _APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG_FALLBACK: Dict[str, str] = {
-    'beesmart.avatar.firefighter_bee': 'firefighter-bee',
-    'beesmart.avatar.bk_bee': 'bk-bee',
-    'beesmart.avatar.franken_bee.v2': 'franken-bee',
-    'beesmart.avatar.yeti_bee.v2': 'yeti-bee',
-    'beesmart.avatar.al_bee.v2': 'al-bee',
-    'beesmart.avatar.knight_bee.v2': 'knight-bee',
-    'beesmart.avatar.inventor_bee.v2': 'inventor-bee',
-    'beesmart.avatar.vamp_bee.v2': 'vamp-bee',
-    'beesmart.avatar.doc_bee.v2': 'doc-bee',
-    'beesmart.avatar.o_bee.v2': 'o-bee',
-    'beesmart.avatar.xray_bee.v2': 'xray-bee',
-    'beesmart.avatar.fairy_bee': 'fairy-bee',
-    'beesmart.avatar.buda_bee.v2': 'buda-bee',
-    'beesmart.avatar.j_rock_bee.v2': 'j-rock-bee',
-    'beesmart.avatar.super_bee.v2': 'super-bee',
-    'beesmart.avatar.nurse_bee.v2': 'nurse-bee',
-    'beesmart.avatar.motor_bee.v2': 'motor-bee',
-    'beesmart.avatar.honey_comb.v2': 'honey-comb',
-    'beesmart.avatar.gamer_bee': 'gamer-bee',
-    'beesmart.avatar.selfie_bee.v2': 'selfie-bee',
-    'beesmart.avatar.umpire_bee.v2': 'umpire-bee',
-    'beesmart.avatar.lumberjack_bee.v2': 'lumberjack-bee',
-    'beesmart.avatar.cutie_bee.v2': 'cutie-bee',
-    'beesmart.avatar.singer_bee.v2': 'singer-bee',
-    'beesmart.avatar.sea_bee.v2': 'sea-bee',
-    'beesmart.avatar.professor_bee.v2': 'professor-bee',
-    'beesmart.avatar.plumber_bee.v2': 'plumber-bee',
-    'beesmart.avatar.space_bee.v2': 'space-bee',
-    'beesmart.avatar.robo_bee.v2': 'robo-bee',
-    'beesmart.avatar.zom_bee.v2': 'zom-bee',
-    'beesmart.avatar.ware_bee.v2': 'ware-bee',
-    'beesmart.avatar.rocker_bee.v2': 'rocker-bee',
-    'beesmart.avatar.diva_bee.v2': 'diva-bee',
-    'beesmart.avatar.techno_bee.v2': 'techno-bee',
-    'beesmart.avatar.queen_bee.v2': 'queen-bee',
-    'beesmart.avatar.buzz_bee.v2': 'buzz-bee',
+    'beesmart.avatar.firefighter_bee.v3': 'firefighter-bee',
+    'beesmart.avatar.bk_bee.v3': 'bk-bee',
+    'beesmart.avatar.franken_bee.v3': 'franken-bee',
+    'beesmart.avatar.yeti_bee.v3': 'yeti-bee',
+    'beesmart.avatar.al_bee.v3': 'al-bee',
+    'beesmart.avatar.knight_bee.v3': 'knight-bee',
+    'beesmart.avatar.inventor_bee.v3': 'inventor-bee',
+    'beesmart.avatar.vamp_bee.v3': 'vamp-bee',
+    'beesmart.avatar.doc_bee.v3': 'doc-bee',
+    'beesmart.avatar.o_bee.v3': 'o-bee',
+    'beesmart.avatar.xray_bee.v3': 'xray-bee',
+    'beesmart.avatar.fairy_bee.v3': 'fairy-bee',
+    'beesmart.avatar.buda_bee.v3': 'buda-bee',
+    'beesmart.avatar.j_rock_bee.v3': 'j-rock-bee',
+    'beesmart.avatar.super_bee.v3': 'super-bee',
+    'beesmart.avatar.nurse_bee.v3': 'nurse-bee',
+    'beesmart.avatar.motor_bee.v3': 'motor-bee',
+    'beesmart.avatar.honey_comb.v3': 'honey-comb',
+    'beesmart.avatar.gamer_bee.v3': 'gamer-bee',
+    'beesmart.avatar.selfie_bee.v3': 'selfie-bee',
+    'beesmart.avatar.umpire_bee.v3': 'umpire-bee',
+    'beesmart.avatar.lumberjack_bee.v3': 'lumberjack-bee',
+    'beesmart.avatar.cutie_bee.v3': 'cutie-bee',
+    'beesmart.avatar.singer_bee.v3': 'singer-bee',
+    'beesmart.avatar.sea_bee.v3': 'sea-bee',
+    'beesmart.avatar.professor_bee.v3': 'professor-bee',
+    'beesmart.avatar.plumber_bee.v3': 'plumber-bee',
+    'beesmart.avatar.space_bee.v3': 'space-bee',
+    'beesmart.avatar.robo_bee.v3': 'robo-bee',
+    'beesmart.avatar.zom_bee.v3': 'zom-bee',
+    'beesmart.avatar.ware_bee.v3': 'ware-bee',
+    'beesmart.avatar.rocker_bee.v3': 'rocker-bee',
+    'beesmart.avatar.diva_bee.v3': 'diva-bee',
+    'beesmart.avatar.techno_bee.v3': 'techno-bee',
+    'beesmart.avatar.queen_bee.v3': 'queen-bee',
+    'beesmart.avatar.buzz_bee.v3': 'buzz-bee',
 }
 
 APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG: Dict[str, str] = _load_app_store_ids_from_catalog()
@@ -314,6 +342,30 @@ def app_store_product_id_for_avatar(avatar_slug: str) -> str | None:
         return None
     slug = (avatar_slug or '').strip().lower().replace('_', '-')
     return AVATAR_SLUG_TO_APP_STORE_PRODUCT_ID.get(slug)
+
+
+def _ios_to_google_play_purchase_option_id(ios_id: str) -> str:
+    """Convert Product ID (periods, underscores) to Purchase option ID format.
+    Purchase option ID allows only: lowercase letters, numbers, hyphens.
+    """
+    if not ios_id:
+        return ''
+    return (ios_id or '').replace('.', '-').replace('_', '-').lower()
+
+
+def google_play_product_id_for_avatar(avatar_slug: str) -> str | None:
+    """Return the Google Play product ID for this avatar slug (step 1).
+    Same as iOS: beesmart.avatar.<slug>.v2 (periods and underscores allowed).
+    """
+    return app_store_product_id_for_avatar(avatar_slug)
+
+
+def google_play_purchase_option_id_for_avatar(avatar_slug: str) -> str | None:
+    """Return the Google Play Purchase option ID (step 2 - hyphens only).
+    Use for Availability and pricing → Purchase option ID field.
+    """
+    ios_id = app_store_product_id_for_avatar(avatar_slug)
+    return _ios_to_google_play_purchase_option_id(ios_id) if ios_id else None
 
 
 # Public: avatars → product IDs (fallback when not in App Store map; prefer app_store_product_id_for_avatar for API).

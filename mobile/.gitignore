@@ -1,3 +1,11 @@
 
 # Ignore deps
 node_modules/
+
+# Keystore password (never commit)
+KEYSTORE_PASSWORD.txt
+
+# Upload signing (never commit)
+android/upload_certificate.pem
+android/upload-keystore.jks
+android/keystore.properties

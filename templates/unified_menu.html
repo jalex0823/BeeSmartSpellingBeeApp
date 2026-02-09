@@ -13665,7 +13665,8 @@ function showRestoreDialog(title, message, isSuccess) {
                             try { await window.userAvatarLoader.loadAvatarCatalog(); } catch(_) {}
                         }
 
-                        const res = await fetch('/api/avatars', {
+                        const avatarsUrl = '/api/avatars' + (/Android/i.test(navigator.userAgent||'') ? '?platform=android' : '');
+                        const res = await fetch(avatarsUrl, {
                             credentials: 'same-origin',
                             headers: { 'Accept': 'application/json' },
                             cache: 'no-store'

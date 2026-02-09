@@ -674,7 +674,7 @@ async function refreshAvatarUnlockStatus() {
     try {
         // Fetch ONLY unlock status (lightweight API call)
         const timestamp = new Date().getTime();
-        const response = await fetch(`/api/avatars?force=1&t=${timestamp}`, {
+        const response = await fetch(getAvatarsApiUrl(`force=1&t=${timestamp}`), {
             method: 'GET',
             credentials: 'same-origin',
             cache: 'no-cache',
@@ -794,7 +794,7 @@ async function loadAvatars() {
         // Add timestamp to bypass stale cache + force=1 for server-side cache bypass
         const timestamp = new Date().getTime();
         // iOS/Safari compatible fetch with explicit headers
-        const response = await fetch(`/api/avatars?force=1&t=${timestamp}`, { 
+        const response = await fetch(getAvatarsApiUrl(`force=1&t=${timestamp}`), { 
             method: 'GET',
             credentials: 'same-origin',
             cache: 'no-cache',
@@ -1287,7 +1287,7 @@ window.preloadAvatarsWithThumbnails = async function(progressCallback) {
         if (progressCallback) progressCallback(5, 'Fetching avatar catalog...');
         
         const timestamp = new Date().getTime();
-        const response = await fetch(`/api/avatars?force=1&t=${timestamp}`, {
+        const response = await fetch(getAvatarsApiUrl(`force=1&t=${timestamp}`), {
             method: 'GET',
             credentials: 'same-origin',
             cache: 'no-cache',
@@ -2467,6 +2467,13 @@ function getIapPlatform() {
     if (/Android/i.test(ua)) return 'google';
     if (/iPhone|iPad|Mac/i.test(ua)) return 'apple';
     return 'web';
+}
+
+/** Build /api/avatars URL with platform param so backend returns correct product IDs for purchase. */
+function getAvatarsApiUrl(baseParams) {
+    const platform = getIapPlatform();
+    const platformParam = (platform === 'google') ? '&platform=android' : '';
+    return `/api/avatars?${baseParams}${platformParam}`;
 }
 
 function isUserAuthenticated() {

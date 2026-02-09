@@ -171,9 +171,16 @@ class UserAvatarLoader {
     /**
      * Verify database connection (quick check)
      */
+    _avatarsUrl(path) {
+        if (/Android/i.test(navigator.userAgent || '')) {
+            return path + (path.includes('?') ? '&' : '?') + 'platform=android';
+        }
+        return path;
+    }
+
     async verifyDatabaseConnection() {
         try {
-            const response = await this._safeFetch('/api/avatars', {}, 1000, 0);
+            const response = await this._safeFetch(this._avatarsUrl('/api/avatars'), {}, 1000, 0);
             if (response.ok) {
                 this.dbConnectionVerified = true;
                 console.log('✅ Database connection verified');
@@ -196,7 +203,7 @@ class UserAvatarLoader {
         console.log('📡 Loading avatar catalog from database...');
         
         try {
-            const response = await this._safeFetch('/api/avatars', {}, 5000, 2);
+            const response = await this._safeFetch(this._avatarsUrl('/api/avatars'), {}, 5000, 2);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);

@@ -75,7 +75,9 @@ from avatar_skus import (
     AVATAR_SKUS,
     APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG,
     app_store_product_id_for_avatar,
+    google_play_product_id_for_avatar,
     build_product_entitlements,
+    build_product_entitlements_from_catalog,
     sku_for_slug,
 )  # Avatar monetization mapping
 try:
@@ -1314,6 +1316,11 @@ def api_avatars():
     scope = (request.args.get('scope') or '').strip().lower()
     registration_scope = scope in ('registration', 'register', 'signup')
 
+    # Platform: when platform=android or platform=google, return Google Play product IDs
+    # (same format as iOS: beesmart.avatar.*.v2) for purchase flow
+    platform_arg = (request.args.get('platform') or '').strip().lower()
+    use_google_play_ids = platform_arg in ('android', 'google')
+
     # Build cache key per user+role (prevents admin cache bleed)
     # NOTE: Guests with DB-backed entitlements must not be lumped into the
     # generic guest cache key, otherwise a restored user could see the mascot-only list.
@@ -1336,6 +1343,8 @@ def api_avatars():
 
     if registration_scope:
         cache_key = f"{cache_key}_scope_registration"
+    if use_google_play_ids:
+        cache_key = f"{cache_key}_platform_android"
 
     now_ts = time.time()
     cached = AVATAR_LIST_CACHE.get(cache_key)
@@ -1477,12 +1486,16 @@ def api_avatars():
         obj_file = entry.get('obj_file') or ''
         # GLB avatars are in glb_files folder, not individual avatar folders
         glb_url = f"/static/assets/avatars/glb_files/{obj_file}" if obj_file else None
-        # 1:1 with App Store Connect: use exact approved product_id for this avatar (picker sends this to Apple).
+        # 1:1 with store: use exact product_id for this avatar (picker sends to Apple/Google).
+        # Android: com.beesmart.avatar.<slug> | iOS: beesmart.avatar.<slug>.v2
         product_id = None
         avatar_id = str(entry.get('id') or '').strip().lower()
         try:
             if avatar_id and not is_unlocked:
-                product_id = app_store_product_id_for_avatar(avatar_id)
+                if use_google_play_ids:
+                    product_id = google_play_product_id_for_avatar(avatar_id)
+                else:
+                    product_id = app_store_product_id_for_avatar(avatar_id)
                 if not product_id:
                     product_id = avatar_sku_lookup.get(avatar_id) or sku_for_slug(avatar_id)
         except Exception:
@@ -1759,14 +1772,17 @@ PRODUCT_MAP = {
     },
 }
 
-# 1:1 App Store Connect approved avatar product IDs → entitlements (verify/restore use these)
-for _pid, _slug in (APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG or {}).items():
-    PRODUCT_MAP[_pid] = {'type': 'avatar', 'avatar_id': _slug}
-# Extend product map with all avatar SKUs → avatar entitlements (back-compat / aliases)
+# Avatar product IDs: catalog is canonical. Register aliases first, then overlay catalog.
 try:
     PRODUCT_MAP.update(build_product_entitlements())
 except Exception as _e:
     print(f"WARN: Failed to load avatar product entitlements: {_e}")
+try:
+    _catalog_entitlements = build_product_entitlements_from_catalog()
+    if _catalog_entitlements:
+        PRODUCT_MAP.update(_catalog_entitlements)
+except Exception as _e:
+    print(f"WARN: Failed to load catalog avatar entitlements: {_e}")
 
 # Extend product map with bundle catalog → bundle entitlements
 try:
