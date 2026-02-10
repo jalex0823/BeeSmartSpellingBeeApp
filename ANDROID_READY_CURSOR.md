@@ -21,7 +21,7 @@ Prepare the project for Android (Google Play) release.
 
 | Requirement | Status | Location |
 |-------------|--------|----------|
-| **Package name** (reverse domain, immutable) | ✅ `com.beesmart.spelling` | `mobile/android/app/build.gradle` → `applicationId`; `mobile/capacitor.config.ts` → `appId` |
+| **Package name** (reverse domain, immutable) | ✅ `com.beesmart.spellingbee` | `mobile/android/app/build.gradle` → `applicationId`; `mobile/capacitor.config.ts` → `appId`; `config/android.json` → `packageName` |
 | **Target SDK** | ✅ Android 14 (API 34) | `mobile/android/variables.gradle` → `targetSdkVersion` |
 | **Compile SDK** | ✅ 34 | `mobile/android/variables.gradle` → `compileSdkVersion` |
 | **64-bit support** | ✅ Default (no abiFilters excluding arm64-v8a) | AGP includes 64-bit; no override in `app/build.gradle` |

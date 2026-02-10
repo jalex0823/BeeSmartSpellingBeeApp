@@ -12,7 +12,8 @@ const config: CapacitorConfig = {
   webDir: 'www',
   server: {
     url: 'https://beesmartspelling.app/',
-    cleartext: false
+    cleartext: false,
+    androidScheme: 'https'
   },
   plugins: {
     SplashScreen: {

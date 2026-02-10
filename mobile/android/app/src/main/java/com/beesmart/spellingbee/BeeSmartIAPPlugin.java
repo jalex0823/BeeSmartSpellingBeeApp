@@ -21,14 +21,19 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
+import android.content.SharedPreferences;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @CapacitorPlugin(name = "BeeSmartIAP")
 public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListener {
+
+    private static final String PREFS_INSTALL_ID = "beesmart_install_id_v1";
 
     private BillingClient billingClient;
     private volatile boolean ready = false;
@@ -67,6 +72,27 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
                 ready = false;
             }
         });
+    }
+
+    @PluginMethod
+    public void getInstallId(final PluginCall call) {
+        SharedPreferences prefs = getContext().getSharedPreferences(PREFS_INSTALL_ID, 0);
+        String installId = prefs.getString("installId", null);
+        if (installId == null || installId.length() < 12) {
+            installId = UUID.randomUUID().toString();
+            prefs.edit().putString("installId", installId).apply();
+        }
+        JSObject out = new JSObject();
+        out.put("installId", installId);
+        call.resolve(out);
+    }
+
+    /** On Android there is no OS-level sync like iOS; resolve so the web layer runs reconcile (getOwnedProducts + server). */
+    @PluginMethod
+    public void restorePurchases(final PluginCall call) {
+        JSObject out = new JSObject();
+        out.put("success", true);
+        call.resolve(out);
     }
 
     @PluginMethod

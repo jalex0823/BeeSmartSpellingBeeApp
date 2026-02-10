@@ -1,9 +1,1 @@
-{
-  "packageName": "com.beesmart.spelling",
-  "subscriptionProductIds": {
-    "monthly": "premium_monthly"
-  },
-  "featureFlags": {
-    "useGooglePlayBilling": true
-  }
-}
+{"packageName":"com.beesmart.spellingbee","subscriptionProductIds":{"monthly":"premium_monthly"},"featureFlags":{"useGooglePlayBilling":true}}
