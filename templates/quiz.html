@@ -1037,6 +1037,12 @@ if ('speechSynthesis' in window) {
         align-items: center;
         gap: 0.5rem;
     }
+    /* Desktop: keep timer number and SECONDS tight to honey jar so they don't separate */
+    @media (min-width: 769px) {
+        .honey-jar-timer {
+            gap: 0.2rem;
+        }
+    }
     /* Space between honeypot timer and sentence below (mobile: sentence rests clearly beneath timer) */
     .countdown-container .honey-jar-timer {
         margin-bottom: 0.65rem;
@@ -4324,6 +4330,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                         drop-shadow(0 0 12px rgba(255,200,0,0.4));
                                     display: block; /* Remove inline spacing */
                                 }
+                    /* Desktop: taller voice visualization so it's not super thin */
+                    @media (min-width: 769px) {
+                        .dotwave-wrapper {
+                            min-height: 140px;
+                        }
+                        .dotwave-wrapper canvas {
+                            height: 120px !important;
+                            max-height: 120px !important;
+                        }
+                    }
                 </style>
 
                 <!-- Optimized Wavy Amber Voice Visualizer -->
