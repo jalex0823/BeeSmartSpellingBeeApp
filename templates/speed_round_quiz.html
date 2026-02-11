@@ -76,6 +76,16 @@ function selectBestFemaleVoiceGlobal(voices) {
     return scoredVoices.length > 0 ? scoredVoices[0].voice : null;
 }
 
+// Single session voice - use everywhere so only one voice is heard
+function getQuizSessionVoice() {
+    if (window.QUIZ_CACHED_VOICE) return window.QUIZ_CACHED_VOICE;
+    if ('speechSynthesis' in window && speechSynthesis.getVoices().length > 0) {
+        window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(speechSynthesis.getVoices());
+        return window.QUIZ_CACHED_VOICE;
+    }
+    return null;
+}
+
 // Initialize voice when voices are loaded
 if ('speechSynthesis' in window) {
     speechSynthesis.addEventListener('voiceschanged', window.initializeGlobalVoice);

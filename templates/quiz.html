@@ -97,7 +97,7 @@ window.initializeGlobalVoice = function() {
     }
 };
 
-// Global function to select best natural female voice
+// Global function to select best natural female voice - British/standard English preferred
 function selectBestFemaleVoiceGlobal(voices) {
     if (!voices || voices.length === 0) return null;
     
@@ -108,19 +108,20 @@ function selectBestFemaleVoiceGlobal(voices) {
             const name = voice.name.toLowerCase();
             const lang = voice.lang.toLowerCase();
             
-            // Prefer US English
-            if (lang.includes('en-us')) score += 50;
-            else if (lang.includes('en-gb')) score += 30;
-            else if (lang.includes('en-au')) score += 25;
+            // Prefer British English first, then standard English (educational standard)
+            if (lang.includes('en-gb') || lang.includes('en-uk')) score += 70;
+            else if (lang.includes('en-us')) score += 50;
+            else if (lang.includes('en-au')) score += 40;
+            else if (lang.includes('en')) score += 30;
             
             // Local voices sound better
             if (voice.localService) score += 30;
             
-            // Premium natural-sounding female voices (kids-friendly)
+            // Premium natural-sounding female voices (British/standard preferred)
             const premiumVoices = {
-                'samantha': 95, 'ava': 92, 'emma': 90, 'joanna': 88, 'karen': 88,
-                'moira': 87, 'salli': 85, 'kendra': 85, 'susan': 75, 'victoria': 82,
-                'nova': 80, 'allison': 78, 'zira': 75
+                'kate': 110, 'serena': 105, 'samantha': 100, 'ava': 95, 'emma': 92,
+                'joanna': 90, 'karen': 88, 'moira': 87, 'salli': 85, 'kendra': 85,
+                'susan': 80, 'victoria': 82, 'nova': 78, 'allison': 76, 'zira': 75
             };
             
             for (const [voiceName, points] of Object.entries(premiumVoices)) {
@@ -135,6 +136,16 @@ function selectBestFemaleVoiceGlobal(voices) {
         .sort((a, b) => b.score - a.score);
     
     return scoredVoices.length > 0 ? scoredVoices[0].voice : null;
+}
+
+// Single session voice - use everywhere so only one voice is heard
+function getQuizSessionVoice() {
+    if (window.QUIZ_CACHED_VOICE) return window.QUIZ_CACHED_VOICE;
+    if ('speechSynthesis' in window && speechSynthesis.getVoices().length > 0) {
+        window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(speechSynthesis.getVoices());
+        return window.QUIZ_CACHED_VOICE;
+    }
+    return null;
 }
 
 // Cross-browser voiceschanged hook (Safari often lacks speechSynthesis.addEventListener)
@@ -1060,7 +1071,14 @@ if ('speechSynthesis' in window) {
         align-items: center;
         gap: 0.5rem;
     }
-    /* Desktop: keep timer number and SECONDS tight to honey jar so they don't separate */
+    /* Wrapper so timer number overlays the jar (centered on jar, not underneath) */
+    .honey-jar-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    /* Desktop: keep timer number and SECONDS tight to honey jar; larger jar */
     @media (min-width: 769px) {
         .honey-jar-timer {
             gap: 0.2rem;
@@ -1076,12 +1094,19 @@ if ('speechSynthesis' in window) {
         }
     }
     
-    /* SVG Jar Styling - compact so not clipped when viz/timer shortened */
+    /* SVG Jar Styling - compact on mobile */
     .jar-svg {
         width: 68px;
         height: 80px;
         filter: drop-shadow(0 6px 16px rgba(255, 193, 7, 0.4));
         transition: all 0.3s ease;
+    }
+    /* Desktop: larger honey jar (was too small) */
+    @media (min-width: 769px) {
+        .jar-svg {
+            width: 130px;
+            height: 155px;
+        }
     }
     
     /* Honey fill animation */
@@ -1137,8 +1162,8 @@ if ('speechSynthesis' in window) {
         }
     }
     
-    /* Timer number - OVERLAY ON JAR (scaled to jar size) */
-    .timer-number {
+    /* Timer number - OVERLAY ON JAR (centered over jar via honey-jar-wrapper) */
+    .honey-jar-wrapper .timer-number {
         position: absolute;
         top: 50%;
         left: 50%;
@@ -1153,6 +1178,12 @@ if ('speechSynthesis' in window) {
         z-index: 10; /* Above jar */
         pointer-events: none;
     }
+    /* Desktop: larger timer number to match jar size */
+    @media (min-width: 769px) {
+        .honey-jar-wrapper .timer-number {
+            font-size: 2.75rem;
+        }
+    }
     
     .timer-label {
         font-size: 0.75rem;
@@ -1161,6 +1192,11 @@ if ('speechSynthesis' in window) {
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
+    @media (min-width: 769px) {
+        .timer-label {
+            font-size: 0.9rem;
+        }
+    }
     
     /* Warning state (5 seconds left) */
     .honey-jar-timer.warning .jar-svg {
@@ -1168,9 +1204,9 @@ if ('speechSynthesis' in window) {
         filter: drop-shadow(0 8px 24px rgba(255, 152, 0, 0.6));
     }
     
-    .honey-jar-timer.warning .timer-number {
+    .honey-jar-timer.warning .honey-jar-wrapper .timer-number {
         color: #FF6F00;
-        transform: scale(1.05);
+        transform: translate(-50%, -50%) scale(1.05);
     }
     
     @keyframes jarPulseWarning {
@@ -1188,9 +1224,9 @@ if ('speechSynthesis' in window) {
         filter: drop-shadow(0 8px 24px rgba(244, 67, 54, 0.8));
     }
     
-    .honey-jar-timer.critical .timer-number {
+    .honey-jar-timer.critical .honey-jar-wrapper .timer-number {
         color: #D32F2F;
-        transform: scale(1.1);
+        transform: translate(-50%, -50%) scale(1.1);
         animation: timerShake 0.4s ease-in-out infinite;
     }
     
@@ -1205,13 +1241,13 @@ if ('speechSynthesis' in window) {
     
     @keyframes timerShake {
         0%, 100% { 
-            transform: scale(1.1) rotate(0deg); 
+            transform: translate(-50%, -50%) scale(1.1) rotate(0deg); 
         }
         25% { 
-            transform: scale(1.1) rotate(-2deg); 
+            transform: translate(-50%, -50%) scale(1.1) rotate(-2deg); 
         }
         75% { 
-            transform: scale(1.1) rotate(2deg); 
+            transform: translate(-50%, -50%) scale(1.1) rotate(2deg); 
         }
     }
     
@@ -1221,7 +1257,7 @@ if ('speechSynthesis' in window) {
         animation: none;
     }
     
-    .honey-jar-timer.expired .timer-number {
+    .honey-jar-timer.expired .honey-jar-wrapper .timer-number {
         color: #999;
     }
     
@@ -1366,8 +1402,8 @@ if ('speechSynthesis' in window) {
             height: 190px;
         }
         
-        /* Enhanced mobile timer visibility */
-        .timer-number {
+        /* Enhanced mobile timer visibility (overlays jar via honey-jar-wrapper) */
+        .honey-jar-wrapper .timer-number {
             font-size: 3.2rem; /* Larger font for mobile */
             font-weight: 900;
             color: #3E2723; /* Darker brown for better contrast */
@@ -1388,7 +1424,7 @@ if ('speechSynthesis' in window) {
         }
         
         /* Enhanced mobile warning states */
-        .honey-jar-timer.warning .timer-number {
+        .honey-jar-timer.warning .honey-jar-wrapper .timer-number {
             color: #E65100; /* Darker orange for mobile contrast */
             background: rgba(255, 193, 7, 0.2);
             border-color: rgba(255, 193, 7, 0.5);
@@ -1398,7 +1434,7 @@ if ('speechSynthesis' in window) {
                 0 1px 3px rgba(0, 0, 0, 0.4);
         }
         
-        .honey-jar-timer.critical .timer-number {
+        .honey-jar-timer.critical .honey-jar-wrapper .timer-number {
             color: #B71C1C; /* Darker red for mobile contrast */
             background: rgba(244, 67, 54, 0.2);
             border-color: rgba(244, 67, 54, 0.6);
@@ -1406,7 +1442,7 @@ if ('speechSynthesis' in window) {
                 0 3px 12px rgba(255, 255, 255, 0.95),
                 0 0 25px rgba(255, 255, 255, 0.8),
                 0 1px 3px rgba(0, 0, 0, 0.5);
-            transform: scale(1.15); /* Slightly bigger when critical */
+            transform: translate(-50%, -50%) scale(1.15); /* Keep centered when critical */
         }
         
         .timer-label {
@@ -4191,6 +4227,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <!-- ⏱️ Countdown Timer - Honey Jar (hidden initially) -->
                 <div class="countdown-container hidden" id="countdownContainer">
                     <div class="honey-jar-timer" id="honeyJarTimer">
+                        <!-- Wrapper so timer number overlays the jar (not underneath) -->
+                        <div class="honey-jar-wrapper">
                         <!-- SVG Honey Jar with realistic glass appearance -->
                         <svg class="jar-svg" viewBox="0 0 120 160" xmlns="http://www.w3.org/2000/svg">
                             <!-- Jar Body (Glass with shine) -->
@@ -4250,8 +4288,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <!-- Jar rim highlight -->
                             <ellipse cx="60" cy="35" rx="35" ry="3" fill="rgba(255,255,255,0.3)"/>
                         </svg>
-                        
                         <div class="timer-number" id="timerNumber">60</div>
+                        </div>
                         <div class="timer-label">SECONDS</div>
                     </div>
                 </div>
@@ -5440,7 +5478,8 @@ class BeeSoundboard {
                 if (safetyTimer) clearTimeout(safetyTimer);
                 if (onEndCallback) onEndCallback();
             };
-            var safetyTimer = isAndroid ? setTimeout(finish, 6000) : null;
+            // 10s for word pronunciation to avoid cutting off long words
+            var safetyTimer = isAndroid ? setTimeout(finish, 10000) : null;
 
             if (onEndCallback) {
                 if (typeof utterance.addEventListener === 'function') {
@@ -5452,21 +5491,10 @@ class BeeSoundboard {
                 }
             }
             
-            // Use enhanced voice selection for natural-sounding female voices
-            if (!this.cachedVoice) {
-                this.cachedVoice = this.selectBestFemaleVoice();
-                
-                if (this.cachedVoice) {
-                    console.log('🎤 speakWord using enhanced voice:', this.cachedVoice.name, this.cachedVoice.lang, 
-                               'Quality:', this.cachedVoice.quality || 'default', 
-                               'Local:', this.cachedVoice.localService);
-                } else {
-                    console.warn('⚠️ speakWord: No suitable voice found, using browser default');
-                }
-            }
-            
-            if (this.cachedVoice) {
-                utterance.voice = this.cachedVoice;
+            // Use single session voice (British/standard English) - same as announcements
+            const sessionVoice = typeof getQuizSessionVoice === 'function' ? getQuizSessionVoice() : null;
+            if (sessionVoice) {
+                utterance.voice = sessionVoice;
             }
             
             // Sync visual display with announcer (per BUG_FIXES_VOICE_VISUALIZER.md: animate during speech)
@@ -6738,21 +6766,10 @@ class QuizManager {
                 utterance.pitch = 1.1;
                 utterance.volume = 0.85;
                 
-                // Cache the selected voice to ensure consistency using enhanced selection
-                if (!this.cachedVoice) {
-                    this.cachedVoice = this.selectBestFemaleVoice();
-                    
-                    if (this.cachedVoice) {
-                        const voiceType = this.cachedVoice.lang === 'en-US' 
-                            ? '🎤 Enhanced US Female' : '🗣️ Enhanced Female English';
-                        console.log(`🎤 Selected enhanced voice for session: ${this.cachedVoice.name} (${this.cachedVoice.lang}) [${voiceType}]`);
-                    } else {
-                        console.warn('⚠️ No suitable enhanced female voice found, using browser default');
-                    }
-                }
-                
-                if (this.cachedVoice) {
-                    utterance.voice = this.cachedVoice;
+                // Use single session voice (British/standard English) - same as word pronunciation
+                const sessionVoice = typeof getQuizSessionVoice === 'function' ? getQuizSessionVoice() : null;
+                if (sessionVoice) {
+                    utterance.voice = sessionVoice;
                 }
                 
                 // Word boundary event - pulse animation on each word with natural pauses
@@ -7416,7 +7433,12 @@ class QuizManager {
                 }
             }
 
+            // Android: pronounce word first (so user hears it), then start timer
+            // Speech has 6s safety timeout so we don't hang if onend never fires
             if (this.isAndroid) {
+                if (this.shouldSpeakWord(data.word, 'pronounce', 1200)) {
+                    await this.pronounceWord({ refresh: true });
+                }
                 if (this.timerEnabled && this.quizStarted) {
                     this.setMorphMode('timer');
                     const cc = document.getElementById('countdownContainer');
@@ -8536,8 +8558,24 @@ class QuizManager {
             startSilent();
             return;
         }
-        if (buzzyPill) buzzyPill.addEventListener('click', startWithVoice, { once: true });
-        if (startSilentBtn) startSilentBtn.addEventListener('click', startSilent, { once: true });
+        if (buzzyPill) {
+            buzzyPill.addEventListener('click', startWithVoice, { once: true });
+            if (this.isAndroid) {
+                buzzyPill.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    startWithVoice();
+                }, { once: true, passive: false });
+            }
+        }
+        if (startSilentBtn) {
+            startSilentBtn.addEventListener('click', startSilent, { once: true });
+            if (this.isAndroid) {
+                startSilentBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    startSilent();
+                }, { once: true, passive: false });
+            }
+        }
     }
 
     // Show voice intro modal for iOS/Safari (legacy; prefer showCombinedStartScreen for fewer taps)
@@ -9240,18 +9278,10 @@ class QuizManager {
                 utterance.pitch = 1.0;
                 utterance.volume = 0.9;
                 
-                // Use the same female voice selection as other speech methods
-                if (this.cachedVoice) {
-                    utterance.voice = this.cachedVoice;
-                    console.log(`Using cached female voice: ${this.cachedVoice.name}`);
-                } else {
-                    // Try to select best female voice if not cached yet
-                    const femaleVoice = this.selectBestFemaleVoice();
-                    if (femaleVoice) {
-                        utterance.voice = femaleVoice;
-                        this.cachedVoice = femaleVoice;
-                        console.log(`Selected female voice: ${femaleVoice.name}`);
-                    }
+                // Use single session voice (British/standard English) - same as announcements
+                const sessionVoice = typeof getQuizSessionVoice === 'function' ? getQuizSessionVoice() : null;
+                if (sessionVoice) {
+                    utterance.voice = sessionVoice;
                 }
                 
                 var done = false;
@@ -9261,7 +9291,8 @@ class QuizManager {
                     if (safetyTimer) clearTimeout(safetyTimer);
                     if (onDone) onDone();
                 };
-                var safetyTimer = this.isAndroid ? setTimeout(finish, 6000) : null;
+                // Longer timeout to avoid cutting off longer phrases (e.g. timer announcements)
+                var safetyTimer = this.isAndroid ? setTimeout(finish, 12000) : null;
 
                 utterance.onend = () => {
                     console.log('Direct speech synthesis completed');
