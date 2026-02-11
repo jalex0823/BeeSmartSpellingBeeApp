@@ -22,6 +22,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/honeycomb-avatar-picker-responsive.css') }}?v={{ timestamp }}">
     <!-- Avatar unlock modal styles (reused across app) -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/avatar-unlock-notification.css') }}?v={{ timestamp }}">
+    <!-- Android performance fixes (prevents flickering/glitching) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v={{ timestamp }}">
     
     <!-- Three.js and Loaders -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -39,6 +41,16 @@
     <script>
         window.avatarUserInfo = {{ user_data | tojson | safe }};
         console.log('🔑 User context loaded:', window.avatarUserInfo);
+    </script>
+    <!-- Android detection (early) - reduces glitches after avatar selection -->
+    <script>
+        (function(){
+            var ua = navigator.userAgent || '';
+            var cap = window.Capacitor;
+            if (/Android/i.test(ua) || (cap && typeof cap.getPlatform === 'function' && cap.getPlatform() === 'android')) {
+                document.documentElement.classList.add('android');
+            }
+        })();
     </script>
 </head>
 <body class="honeycomb-avatar-picker" {% if picker_bg_url %}style="--picker-bg-image: url('{{ picker_bg_url }}')"{% endif %}>

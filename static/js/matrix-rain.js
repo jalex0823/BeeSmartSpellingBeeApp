@@ -56,6 +56,10 @@ class MatrixRain {
         // Set canvas to full window size
         this.resize();
         window.addEventListener('resize', () => this.resize());
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => this.resize());
+            window.visualViewport.addEventListener('scroll', () => this.resize());
+        }
         
         // Initialize drop positions
         this.initDrops();
@@ -70,20 +74,29 @@ class MatrixRain {
         // Get device pixel ratio for crisp rendering
         const dpr = window.devicePixelRatio || 1;
         
+        // Use full viewport - prefer visualViewport on mobile for correct height when chrome shows/hides
+        const vp = window.visualViewport;
+        const w = vp ? vp.width : window.innerWidth;
+        const h = Math.max(
+            vp ? vp.height : window.innerHeight,
+            document.documentElement.clientHeight || window.innerHeight
+        );
+        
         // Set actual canvas size (accounting for high DPI displays)
-        this.canvas.width = window.innerWidth * dpr;
-        this.canvas.height = window.innerHeight * dpr;
+        this.canvas.width = w * dpr;
+        this.canvas.height = h * dpr;
         
         // Scale canvas back to CSS size
-        this.canvas.style.width = window.innerWidth + 'px';
-        this.canvas.style.height = window.innerHeight + 'px';
+        this.canvas.style.width = w + 'px';
+        this.canvas.style.height = h + 'px';
         
         // Scale context to match device pixel ratio
         this.ctx.scale(dpr, dpr);
         
         // Wider column spacing on mobile to prevent overlap
         const columnSpacing = this.isMobile ? this.fontSize * 2 : this.fontSize;
-        this.columns = Math.floor(window.innerWidth / columnSpacing);
+        const w = (window.visualViewport && window.visualViewport.width) || window.innerWidth;
+        this.columns = Math.floor(w / columnSpacing);
         
         this.initDrops();
     }
@@ -99,8 +112,11 @@ class MatrixRain {
     draw() {
         // Slightly more opaque fade on mobile for better trail visibility
         const fadeOpacity = this.isMobile ? 0.04 : 0.02;
+        const vp = window.visualViewport;
+        const w = vp ? vp.width : window.innerWidth;
+        const h = Math.max(vp ? vp.height : window.innerHeight, document.documentElement.clientHeight || window.innerHeight);
         this.ctx.fillStyle = `rgba(0, 0, 0, ${fadeOpacity})`;
-        this.ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+        this.ctx.fillRect(0, 0, w, h);
         
         // Set font with better rendering for mobile
         this.ctx.font = `bold ${this.fontSize}px 'Courier New', monospace`;
@@ -141,8 +157,9 @@ class MatrixRain {
             // Reset shadow for next character
             this.ctx.shadowBlur = 0;
             
-            // Reset drop to top when it reaches bottom (use CSS height, not canvas height)
-            if (y > window.innerHeight && Math.random() > 0.975) {
+            // Reset drop to top when it reaches bottom
+            const h = Math.max((window.visualViewport && window.visualViewport.height) || window.innerHeight, document.documentElement.clientHeight || window.innerHeight);
+            if (y > h && Math.random() > 0.975) {
                 this.drops[i] = 0;
             }
             
@@ -172,7 +189,9 @@ class MatrixRain {
     }
     
     clear() {
-        this.ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+        const w = (window.visualViewport && window.visualViewport.width) || window.innerWidth;
+        const h = Math.max((window.visualViewport && window.visualViewport.height) || window.innerHeight, document.documentElement.clientHeight || window.innerHeight);
+        this.ctx.clearRect(0, 0, w, h);
     }
 }
 

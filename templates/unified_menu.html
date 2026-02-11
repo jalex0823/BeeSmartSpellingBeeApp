@@ -3569,32 +3569,36 @@ function showRestoreDialog(title, message, isSuccess) {
         left: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        background: transparent; /* Let matrix canvas show through - it draws the dark background */
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: flex-start; /* Start at top for mobile visibility */
         overflow-y: auto;
+        overflow-x: hidden;
         padding: 20px 16px 40px; /* Less top padding, more bottom */
         gap: 10px;
         box-sizing: border-box;
         z-index: 10000;
         opacity: 1;
         visibility: visible;
-        will-change: opacity, transform;
-        transform: translateZ(0);
-        transition: opacity 320ms ease, transform 320ms ease, visibility 0s linear 320ms;
+        will-change: opacity;
+        transition: opacity 320ms ease, visibility 0s linear 320ms;
     ">
-        <!-- Matrix Rain Canvas (behind all content) -->
+        <!-- Matrix Rain Canvas - full viewport, behind all content (no transform on parent to avoid clipping) -->
         <canvas id="matrixCanvas" style="
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            right: 0;
+            bottom: 0;
+            width: 100vw;
+            height: 100vh;
+            min-width: 100vw;
             min-height: 100vh;
-            z-index: 1;
+            z-index: 0;
             pointer-events: none;
+            background: #1a1a1a;
         "></canvas> 
         <!-- Welcome Title -->
         <div id="welcomeTitle" style="

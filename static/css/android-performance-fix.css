@@ -142,3 +142,39 @@ html.android #avatarFxHost .avatar-stage {
 html.android .avatar-stage .stage-glb {
     min-height: 200px;
 }
+
+/* ========================================
+   FIX 6: Android Quiz Scroll
+   ======================================== */
+html.android body.route-quiz .card-scroll {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
+
+/* ========================================
+   FIX 7: Android Quiz - Touch & Input
+   ======================================== */
+html.android body.route-quiz input,
+html.android body.route-quiz button,
+html.android body.route-quiz .action-btn {
+    touch-action: manipulation;
+}
+html.android body.route-quiz #spellingInput {
+    font-size: 16px !important;
+}
+html.android body.route-quiz .quiz-keyboard-key {
+    touch-action: manipulation;
+}
+
+/* ========================================
+   FIX 8: Honeycomb Avatar Picker - post-selection glitches
+   ======================================== */
+html.android body.honeycomb-avatar-picker .preview-choose-btn,
+html.android body.honeycomb-avatar-picker .avatar-hex-position {
+    touch-action: manipulation;
+}
+html.android body.honeycomb-avatar-picker .loading-overlay {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}

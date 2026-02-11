@@ -2220,6 +2220,13 @@ function chooseAvatar() {
     
     console.log(`🎯 User chose avatar: ${selectedAvatar.name} (${selectedAvatar.slug})`);
     
+    // Prevent double-submit / glitchy rapid taps (especially on Android)
+    if (window._avatarChooseInProgress) {
+        console.log('⚠️ chooseAvatar already in progress, skipping');
+        return;
+    }
+    window._avatarChooseInProgress = true;
+    
     // Disable button during save
     const btn = document.querySelector('.preview-choose-btn');
     if (btn) {
@@ -2300,7 +2307,9 @@ function chooseAvatar() {
             }
             
             // Update user-avatar-loader if available (force refresh)
-            if (window.userAvatarLoader) {
+            // Skip on Android: we're redirecting anyway; init() can cause aborted fetches and glitches
+            var isAndroid = /Android/i.test(navigator.userAgent || '') || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android') || document.documentElement.classList.contains('android');
+            if (!isAndroid && window.userAvatarLoader) {
                 console.log('🔄 Refreshing user avatar loader...');
                 window.userAvatarLoader.init().then(() => {
                     console.log('✅ User avatar loader refreshed');
@@ -2308,17 +2317,22 @@ function chooseAvatar() {
             }
             
             // Redirect after brief delay to show success
-            setTimeout(() => {
-                const redirectUrl = data.redirect || '/';
-                console.log(`🔀 Redirecting to: ${redirectUrl}`);
-                window.location.href = redirectUrl;
-            }, 1000);
+            // Android: shorter delay to reduce glitch window; use RAF before redirect for smoother transition
+            var delayMs = isAndroid ? 500 : 1000;
+            setTimeout(function() {
+                var redirectUrl = data.redirect || '/';
+                console.log('🔀 Redirecting to: ' + redirectUrl);
+                requestAnimationFrame(function() {
+                    window.location.href = redirectUrl;
+                });
+            }, delayMs);
         } else {
             throw new Error(data.error || 'Unknown error');
         }
     })
     .catch(error => {
         console.error('❌ Error selecting avatar:', error);
+        window._avatarChooseInProgress = false;
 
         // Most errors are already shown via a friendly alert above.
         // This is a safe fallback for unexpected cases.

@@ -21,6 +21,29 @@ window.__disableSwReload = true;
 // 6) Hard disable "Can't hear Buzzy?" orange modal
 window.DISABLE_BUZZY_HELP_MODAL = true;
 
+// Android detection - run immediately and on DOMContentLoaded (Capacitor may load late)
+(function(){
+    function addAndroid(){
+        try {
+            var ua = navigator.userAgent || '';
+            var cap = window.Capacitor;
+            var isA = /Android/i.test(ua) || (cap && typeof cap.getPlatform === 'function' && cap.getPlatform() === 'android');
+            if (isA) {
+                document.documentElement.classList.add('android');
+                var inp = document.getElementById('spellingInput');
+                if (inp && !inp.dataset.androidBlur) {
+                    inp.setAttribute('readonly','readonly');
+                    inp.setAttribute('inputmode','none');
+                    inp.dataset.androidBlur = '1';
+                    inp.addEventListener('focus', function(){ inp.blur(); }, { passive: true });
+                }
+            }
+        } catch(e){}
+    }
+    addAndroid();
+    document.addEventListener('DOMContentLoaded', addAndroid);
+})();
+
 // Dev-only: ?debug=layout shows red (input), blue (keyboard), green (button grid) outlines for iPhone verification
 if (typeof location !== 'undefined' && location.search && location.search.indexOf('debug=layout') !== -1) {
     document.documentElement.addEventListener('DOMContentLoaded', function () { document.body.classList.add('dev-visual-debug'); });
@@ -4588,6 +4611,9 @@ document.addEventListener('DOMContentLoaded', () => {
                            spellcheck="false"
                            style="font-size: 16px;">
                 </div>
+                <script>
+                (function(){ var ua = navigator.userAgent || ''; var cap = window.Capacitor; var isAndroid = /Android/i.test(ua) || (cap && cap.getPlatform && cap.getPlatform() === 'android'); if (isAndroid) { var inp = document.getElementById('spellingInput'); if (inp) { inp.setAttribute('readonly','readonly'); inp.setAttribute('inputmode','none'); } })();
+                </script>
                 <!-- Show keyboard button (visible when keyboard is hidden so user can bring it back) -->
                 <button type="button" id="showKeyboardBtn" class="action-btn secondary quiz-show-keyboard-btn" style="display: none; margin-top: 8px; width: 100%; max-width: 260px;" aria-label="Show keyboard">
                     <span class="bee-icon" aria-hidden="true">&#9650;</span> Show keyboard
@@ -5405,15 +5431,24 @@ class BeeSoundboard {
             const visualizer = document.getElementById('voiceVisualizer');
             const statusEl = document.getElementById('voiceStatus');
             
-            // Add event listeners for voice visualizer
+            // Android: onend/onerror may never fire - add safety timeout so pronounceWord Promise resolves
+            var isAndroid = /Android/i.test(navigator.userAgent) || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
+            var done = false;
+            var finish = () => {
+                if (done) return;
+                done = true;
+                if (safetyTimer) clearTimeout(safetyTimer);
+                if (onEndCallback) onEndCallback();
+            };
+            var safetyTimer = isAndroid ? setTimeout(finish, 6000) : null;
+
             if (onEndCallback) {
-                // Safari/WebKit compatibility: some engines don't support addEventListener on utterances
                 if (typeof utterance.addEventListener === 'function') {
-                    utterance.addEventListener('end', onEndCallback);
-                    utterance.addEventListener('error', onEndCallback);
+                    utterance.addEventListener('end', finish);
+                    utterance.addEventListener('error', finish);
                 } else {
-                    utterance.onend = onEndCallback;
-                    utterance.onerror = onEndCallback;
+                    utterance.onend = finish;
+                    utterance.onerror = finish;
                 }
             }
             
@@ -5487,7 +5522,7 @@ class BeeSoundboard {
                 speechSynthesis.speak(utterance);
             } catch (err) {
                 console.error('speechSynthesis.speak failed:', err);
-                if (onEndCallback) onEndCallback();
+                finish();
             }
         };
         
@@ -6209,7 +6244,9 @@ class QuizManager {
         this.voiceUnlocked = false; // iOS/Android require user interaction for autoplay
         this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         this.isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-        this.isAndroid = /Android/i.test(navigator.userAgent);
+        this.isAndroid = /Android/i.test(navigator.userAgent) ||
+            (typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'android') ||
+            (typeof document !== 'undefined' && document.documentElement && document.documentElement.classList.contains('android'));
         
         // Background music settings
         // Default OFF: background music should never auto-play on page load.
@@ -6760,35 +6797,35 @@ class QuizManager {
                     // ⚠️ NO morphing here - only morph after "timer starts now" announcement
                 };
                 
-                // Add event listeners to resolve promise when speech ends
-                utterance.onend = () => {
-                    console.log('✅ Speech finished');
-                    // Stop visualizer animation
+                // Done helper: resolve once, prevent blocking on Android where onend/onerror may never fire
+                var done = false;
+                var finish = () => {
+                    if (done) return;
+                    done = true;
+                    if (safetyTimer) clearTimeout(safetyTimer);
                     if (visualizer && status) {
-                        console.log('🎤 Stopping voice visualizer for announcement');
                         visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                         status.textContent = '🐝 Ready';
                     }
-                    
-                    // ⚠️ NO morphing here - only morph after "timer starts now" announcement
-                    
                     resolve();
+                };
+                var safetyTimer = this.isAndroid ? setTimeout(finish, 10000) : null;
+
+                utterance.onend = () => {
+                    console.log('✅ Speech finished');
+                    finish();
                 };
                 
                 utterance.onerror = (event) => {
                     console.warn('⚠️ Speech error:', event.error);
-                    // Stop visualizer animation on error
-                    if (visualizer && status) {
-                        visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
-                        status.textContent = '🐝 Ready';
-                    }
-                    
-                    // 🎭 MorphController removed - using CSS transitions instead
-                    
-                    resolve(); // Resolve even on error to prevent blocking
+                    finish();
                 };
                 
-                speechSynthesis.speak(utterance);
+                try {
+                    speechSynthesis.speak(utterance);
+                } catch (err) {
+                    finish();
+                }
             };
             
             // Ensure voices are loaded
@@ -7312,6 +7349,7 @@ class QuizManager {
                         targetEl: keyboardContainer,
                         inputEl: spellingInput,
                         spacerTargetEl: null,
+                        lockSystemKeyboard: this.isAndroid || (document.documentElement && document.documentElement.classList.contains('android')),
                         onSubmit: () => { if (this.submitAnswer) this.submitAnswer(); },
                         allowSpaces: true,
                         autoCaps: true,
@@ -7376,6 +7414,17 @@ class QuizManager {
                     console.log('✅ Quiz keyboard mounted early (always visible)');
                     if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
                 }
+            }
+
+            if (this.isAndroid) {
+                if (this.timerEnabled && this.quizStarted) {
+                    this.setMorphMode('timer');
+                    const cc = document.getElementById('countdownContainer');
+                    if (cc) { cc.classList.remove('hidden'); cc.classList.add('active'); }
+                    var self = this;
+                    requestAnimationFrame(function(){ requestAnimationFrame(function(){ self.startCountdownTimer(); }); });
+                }
+                return;
             }
 
             // If this first question is also the last, announce that explicitly
@@ -7578,6 +7627,7 @@ class QuizManager {
                         targetEl: keyboardContainer,
                         inputEl: spellingInput,
                         spacerTargetEl: null,
+                        lockSystemKeyboard: this.isAndroid || (document.documentElement && document.documentElement.classList.contains('android')),
                         onSubmit: () => { if (this.submitAnswer) this.submitAnswer(); },
                         allowSpaces: true,
                         autoCaps: true,
@@ -7645,9 +7695,10 @@ class QuizManager {
                 setTimeout(() => {
                     spellingInput.focus();
                 }, 150);
-            } else {
+            } else if (!this.isAndroid) {
                 spellingInput.focus();
             }
+            // Android: do NOT focus input - prevents native keyboard; custom keyboard works without focus
         }
     }
     
@@ -8165,11 +8216,9 @@ class QuizManager {
             this.submitAnswer();
         });
         
-        // 🍎 iOS FIX: Add touch event for submit button to prevent iOS double-tap delay
+        // 🍎 iOS / Android: Add touch event for submit button to prevent double-tap delay
         if (submitButton) submitButton.addEventListener('touchend', (e) => {
-            if (this.isIOS || this.isSafari) {
-                // Don't preventDefault(): it can suppress click/navigation on iOS.
-                // Instead, suppress the follow-up click handler for a short window.
+            if (this.isIOS || this.isSafari || this.isAndroid) {
                 this._suppressSubmitClickUntil = Date.now() + 900;
                 try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('submit'); } catch (err) {}
                 this.submitAnswer();
@@ -8183,28 +8232,33 @@ class QuizManager {
         });
 
         if (speakButton) {
-            speakButton.addEventListener('click', () => {
+            var doPronounce = () => {
                 console.log('🔊 Pronounce button clicked');
                 try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('button'); } catch (e) {}
-                // Pronounce should *repeat the spelling-bee ask*, then pronounce the word.
-                // The announce+pronounce sequence is handled inside loadNextWordWithIntro.
-                // Here we do a light-weight version: spoken prompt + pronounce.
                 try {
-                    const w =
-                        (this.currentWordData && this.currentWordData.word) ||
-                        (this.currentWord && this.currentWord.word) ||
-                        '';
-                    if (w) {
-                        this.speakAnnouncement(`Please spell: ${w}`).then(() => {
-                            this.pronounceWord({ refresh: true, rate: 0.7 });
-                        });
-                    } else {
+                    if (this.isAndroid) {
                         this.pronounceWord({ refresh: true, rate: 0.7 });
+                    } else {
+                        const w = (this.currentWordData && this.currentWordData.word) || (this.currentWord && this.currentWord.word) || '';
+                        if (w) {
+                            this.speakAnnouncement(`Please spell: ${w}`).then(() => {
+                                this.pronounceWord({ refresh: true, rate: 0.7 });
+                            });
+                        } else {
+                            this.pronounceWord({ refresh: true, rate: 0.7 });
+                        }
                     }
                 } catch (_e) {
                     this.pronounceWord({ refresh: true, rate: 0.7 });
                 }
+            };
+            speakButton.addEventListener('click', () => {
+                if (this._suppressPronounceClickUntil && Date.now() < this._suppressPronounceClickUntil) return;
+                doPronounce();
             });
+            speakButton.addEventListener('touchend', (e) => {
+                if (this.isAndroid) { this._suppressPronounceClickUntil = Date.now() + 400; doPronounce(); }
+            }, { passive: true });
         }
 
         // Compatibility: If any legacy code still tries to "repeat", treat it as pronounce.
@@ -8336,7 +8390,7 @@ class QuizManager {
             musicToggleBtn.addEventListener('click', () => this.toggleMusic());
         }
 
-        if (spellingInput) spellingInput.focus();
+        if (spellingInput && !this.isAndroid) spellingInput.focus();
     }
 
     // Show green start guidance modal (one-time per session)
@@ -8432,6 +8486,10 @@ class QuizManager {
             this.quizStarted = true;
             this.introInProgress = false;
             showQuizButtons();
+            if (this.isAndroid) {
+                this.loadNextWordWithIntro();
+                return;
+            }
             const msg = (this.studentName ? `Hello ${this.studentName}! ` : '') +
                 "I'm Buzzy! Listen to each word, then spell it. Let's go!";
             speechSynthesis.cancel();
@@ -8814,7 +8872,7 @@ class QuizManager {
                 // If timer is disabled, enable input immediately
                 spellingInput.disabled = false;
                 spellingInput.placeholder = 'Type your answer...';
-                spellingInput.focus();
+                if (!this.isAndroid) spellingInput.focus();
             }
         } catch (error) {
             console.error('Error loading next word:', error);
@@ -9196,17 +9254,30 @@ class QuizManager {
                     }
                 }
                 
+                var done = false;
+                var finish = () => {
+                    if (done) return;
+                    done = true;
+                    if (safetyTimer) clearTimeout(safetyTimer);
+                    if (onDone) onDone();
+                };
+                var safetyTimer = this.isAndroid ? setTimeout(finish, 6000) : null;
+
                 utterance.onend = () => {
                     console.log('Direct speech synthesis completed');
-                    if (onDone) onDone();
+                    finish();
                 };
                 
                 utterance.onerror = (event) => {
                     console.error('Speech synthesis error:', event);
-                    if (onDone) onDone();
+                    finish();
                 };
                 
-                speechSynthesis.speak(utterance);
+                try {
+                    speechSynthesis.speak(utterance);
+                } catch (err) {
+                    finish();
+                }
                 console.log(`Direct speech synthesis started: "${text}" at rate ${rate}`);
             } catch (error) {
                 console.error('Speech synthesis failed:', error);
@@ -9248,7 +9319,7 @@ class QuizManager {
 
         if (!userInput) {
             BeeSmart.showError('Please enter your spelling first!');
-            spellingInput.focus();
+            if (!this.isAndroid) spellingInput.focus();
             return;
         }
 
@@ -9816,7 +9887,7 @@ class QuizManager {
             setTimeout(() => {
                 spellingInput.focus();
             }, 100);
-        } else {
+        } else if (!this.isAndroid) {
             spellingInput.focus();
         }
         // Submit button remains enabled for user to submit anytime
@@ -9868,7 +9939,7 @@ class QuizManager {
                 setTimeout(() => {
                     spellingInput.focus();
                 }, 150);
-            } else {
+            } else if (!this.isAndroid) {
                 spellingInput.focus();
             }
         }
@@ -10022,7 +10093,7 @@ class QuizManager {
             spellingInput.placeholder = 'Retry your spelling...';
             if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
             if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
-            spellingInput.focus();
+            if (!this.isAndroid) spellingInput.focus();
             console.log('   - Input field enabled and focused');
         }
         
@@ -10191,7 +10262,7 @@ class QuizManager {
             spellingInput.placeholder = 'Retry spelling... (33% points)';
             if (window.quizKeyboardInstance && window.quizKeyboardInstance.setValue) window.quizKeyboardInstance.setValue('');
             if (typeof setQuizKeyboardEnabled === 'function') setQuizKeyboardEnabled(true);
-            spellingInput.focus();
+            if (!this.isAndroid) spellingInput.focus();
         }
         
         // Hide feedback area
@@ -11215,12 +11286,13 @@ function confirmBackToMenu(event) {
     });
 }
 
-// 🍎 iOS Audio Unlock - MUST run before any speech synthesis
+// 🍎 iOS / Android Audio Unlock - MUST run before any speech synthesis
 function unlockiOSAudio() {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (!isIOS) return;
+    const isAndroid = /Android/i.test(navigator.userAgent) || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
+    if (!isIOS && !isAndroid) return;
     
-    console.log('🍎 iOS detected - setting up audio unlock');
+    console.log(isIOS ? '🍎 iOS' : '🤖 Android', 'detected - setting up audio unlock');
     
     // Silent utterance to wake up speech synthesis on first user interaction
     const unlock = () => {
@@ -11242,7 +11314,7 @@ function unlockiOSAudio() {
             }
         }
         
-        console.log('✅ iOS audio unlocked');
+        console.log('✅ Mobile audio unlocked');
         
         // Remove listeners after first unlock
         document.removeEventListener('touchstart', unlock);
@@ -11366,6 +11438,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 🍎 SCROLL FIX: Initialize immediately to prevent rubber banding, stuck scrolling, and ensure visible scrollbar
     (function initScrollFix() {
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isAndroid = /Android/i.test(navigator.userAgent) || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
         
         if (isIOS) {
             // Force CSS properties on html and body immediately for iOS
@@ -11393,11 +11466,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 scroller.style.overscrollBehaviorX = 'none';
                 scroller.style.webkitOverflowScrolling = 'touch';
             }
-            scroller.style.transform = 'translateZ(0)';
-            scroller.style.webkitTransform = 'translateZ(0)';
-            scroller.style.willChange = 'scroll-position';
-            
-            // Force scrollbar visibility for ALL browsers
+            if (!isAndroid) {
+                scroller.style.transform = 'translateZ(0)';
+                scroller.style.webkitTransform = 'translateZ(0)';
+                scroller.style.willChange = 'scroll-position';
+            }
             scroller.style.overflowY = 'auto';
             scroller.style.scrollbarWidth = 'thin'; // Firefox
             scroller.style.scrollbarColor = 'rgba(0, 0, 0, 0.4) transparent'; // Firefox

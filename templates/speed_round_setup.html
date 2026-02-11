@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Speed Round Setup - BeeSmart{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}">
+<style>
+    body {
+        background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 50%, #90CAF9 100%);
+        min-height: 100vh;
+    }
+    .setup-container {
+        max-width: 520px;
+        margin: 2rem auto;
+        padding: 1.5rem;
+    }
+    .setup-card {
+        background: linear-gradient(135deg, #FFF9E5 0%, #FFFEF5 100%);
+        border-radius: 24px;
+        padding: 2rem;
+        box-shadow: 0 15px 40px rgba(33, 150, 243, 0.2);
+        border: 3px solid rgba(255, 215, 0, 0.5);
+    }
+    .setup-card h1 {
+        font-size: 1.8rem;
+        color: #1976D2;
+        margin: 0 0 0.5rem 0;
+        text-align: center;
+    }
+    .setup-card .subtitle {
+        color: #666;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        font-size: 1rem;
+    }
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.4rem;
+        font-size: 0.95rem;
+    }
+    .form-group select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid rgba(255, 215, 0, 0.5);
+        border-radius: 12px;
+        font-size: 1rem;
+        background: #fff;
+        -webkit-appearance: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        padding-right: 2.5rem;
+    }
+    .form-group select:focus {
+        outline: none;
+        border-color: #FFB300;
+        box-shadow: 0 0 0 3px rgba(255, 179, 0, 0.2);
+    }
+    .btn-start {
+        width: 100%;
+        padding: 1rem 2rem;
+        font-size: 1.2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: #5A2C15;
+        border: none;
+        border-radius: 999px;
+        cursor: pointer;
+        box-shadow: 0 8px 20px rgba(255, 215, 0, 0.4);
+        transition: all 0.2s;
+        margin-top: 0.5rem;
+    }
+    .btn-start:hover {
+        transform: scale(1.02);
+        box-shadow: 0 10px 25px rgba(255, 215, 0, 0.5);
+    }
+    .btn-start:active {
+        transform: scale(0.98);
+    }
+    .btn-start:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+    .back-link {
+        display: inline-block;
+        margin-top: 1rem;
+        color: #1976D2;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+    .back-link:hover {
+        text-decoration: underline;
+    }
+    .error-msg {
+        color: #d32f2f;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+        display: none;
+    }
+    .error-msg.visible {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="setup-container">
+    <div class="setup-card">
+        <h1>Speed Round Challenge</h1>
+        <p class="subtitle">Race against the clock! Configure your round below.</p>
+
+        <form id="speedRoundSetupForm">
+            <div class="form-group">
+                <label for="difficulty">Difficulty Level</label>
+                <select id="difficulty" name="difficulty">
+                    <option value="grade_1_2">Grades 1–2 (Easiest)</option>
+                    <option value="grade_3_4" selected>Grades 3–4</option>
+                    <option value="grade_5_6">Grades 5–6</option>
+                    <option value="grade_7_8">Grades 7–8</option>
+                    <option value="grade_9_12">Grades 9–12 (Hardest)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="word_count">Number of Words</label>
+                <select id="word_count" name="word_count">
+                    <option value="5">5 words</option>
+                    <option value="10">10 words</option>
+                    <option value="15">15 words</option>
+                    <option value="20" selected>20 words</option>
+                    <option value="25">25 words</option>
+                    <option value="30">30 words</option>
+                    <option value="40">40 words</option>
+                    <option value="50">50 words</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="time_per_word">Seconds Per Word</label>
+                <select id="time_per_word" name="time_per_word">
+                    <option value="5">5 seconds</option>
+                    <option value="8">8 seconds</option>
+                    <option value="10">10 seconds</option>
+                    <option value="12">12 seconds</option>
+                    <option value="15" selected>15 seconds</option>
+                    <option value="20">20 seconds</option>
+                    <option value="25">25 seconds</option>
+                    <option value="30">30 seconds</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="word_source">Word Source</label>
+                <select id="word_source" name="word_source">
+                    <option value="auto" selected>Auto (from dictionary)</option>
+                    <option value="uploaded">My word list</option>
+                    <option value="mixed">Mixed difficulties</option>
+                </select>
+            </div>
+
+            <div class="error-msg" id="errorMsg" role="alert"></div>
+
+            <button type="submit" class="btn-start" id="startBtn">Start Speed Round!</button>
+        </form>
+
+        <a href="/" class="back-link">&larr; Back to Home</a>
+    </div>
+</div>
+
+<script>
+(function() {
+    const form = document.getElementById('speedRoundSetupForm');
+    const startBtn = document.getElementById('startBtn');
+    const errorMsg = document.getElementById('errorMsg');
+
+    function showError(msg) {
+        errorMsg.textContent = msg || '';
+        errorMsg.classList.toggle('visible', !!msg);
+    }
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        showError('');
+        startBtn.disabled = true;
+        startBtn.textContent = 'Starting...';
+
+        const config = {
+            difficulty: document.getElementById('difficulty').value,
+            word_count: parseInt(document.getElementById('word_count').value, 10),
+            time_per_word: parseInt(document.getElementById('time_per_word').value, 10),
+            word_source: document.getElementById('word_source').value
+        };
+
+        try {
+            const res = await fetch('/api/speed-round/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config),
+                credentials: 'same-origin'
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (res.redirected || (res.headers.get('content-type') || '').indexOf('application/json') === -1) {
+                window.location.href = res.url || '/speed-round/quiz';
+                return;
+            }
+
+            if (!res.ok) {
+                showError(data.message || data.error || 'Failed to start. Please try again.');
+                startBtn.disabled = false;
+                startBtn.textContent = 'Start Speed Round!';
+                return;
+            }
+
+            if (data.status === 'success') {
+                window.location.href = '/speed-round/quiz';
+                return;
+            }
+
+            showError(data.message || data.error || 'Something went wrong. Please try again.');
+            startBtn.disabled = false;
+            startBtn.textContent = 'Start Speed Round!';
+        } catch (err) {
+            console.error('Speed round start error:', err);
+            showError('Connection error. Please check your connection and try again.');
+            startBtn.disabled = false;
+            startBtn.textContent = 'Start Speed Round!';
+        }
+    });
+})();
+</script>
+{% endblock %}

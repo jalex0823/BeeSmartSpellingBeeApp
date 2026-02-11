@@ -1081,6 +1081,11 @@ function isIOS() {
     const isIPadOS = (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     return isAppleMobile || isIPadOS;
 }
+function isAndroid() {
+    const ua = navigator.userAgent || '';
+    const cap = window.Capacitor;
+    return /Android/i.test(ua) || (cap && typeof cap.getPlatform === 'function' && cap.getPlatform() === 'android') || document.documentElement.classList.contains('android');
+}
 function selectBestFemaleVoice() {
     const voices = speechSynthesis.getVoices();
     console.log('🎤 Speed Round: Analyzing', voices.length, 'available voices for best female selection');
@@ -1396,6 +1401,13 @@ function announceSpeedRoundIntro() {
     // iOS Safari (and iPadOS-in-desktop-mode) often blocks speech without a direct
     // user gesture; if we try anyway, the intro can stall and the round never starts.
     if (isIOS()) {
+        status.textContent = '🐝 Starting...';
+        setTimeout(() => loadNextWord(), 150);
+        return;
+    }
+
+    // Android: TTS onend/onerror can hang; skip intro speech and go straight to first word.
+    if (isAndroid()) {
         status.textContent = '🐝 Starting...';
         setTimeout(() => loadNextWord(), 150);
         return;

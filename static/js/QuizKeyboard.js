@@ -120,12 +120,13 @@
         const shouldLockSystemKeyboard = (() => {
             if (lockSystemKeyboard === true || lockSystemKeyboard === false) return !!lockSystemKeyboard;
             try {
-                // Primary signal: coarse pointer devices (phones/tablets)
+                if (typeof document !== 'undefined' && document.documentElement && document.documentElement.classList.contains('android')) return true;
+                if (typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)) return true;
+                if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android') return true;
                 if (typeof window !== 'undefined' && window.matchMedia) {
                     return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
                 }
             } catch (_) {}
-            // Fallback: if we can't detect, assume touch device should lock.
             try {
                 return (typeof navigator !== 'undefined') && (navigator.maxTouchPoints > 0);
             } catch (_) {}
