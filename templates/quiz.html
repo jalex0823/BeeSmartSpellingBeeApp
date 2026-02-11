@@ -8438,9 +8438,21 @@ class QuizManager {
             const u = new SpeechSynthesisUtterance(msg);
             u.rate = 0.95;
             u.volume = 0.9;
-            u.onend = () => { this.loadNextWordWithIntro(); };
-            u.onerror = () => { this.loadNextWordWithIntro(); };
-            speechSynthesis.speak(u);
+            var introDone = false;
+            var done = () => {
+                if (introDone) return;
+                introDone = true;
+                if (safetyTimer) clearTimeout(safetyTimer);
+                this.loadNextWordWithIntro();
+            };
+            u.onend = done;
+            u.onerror = done;
+            var safetyTimer = setTimeout(done, 5000);
+            try {
+                speechSynthesis.speak(u);
+            } catch (err) {
+                if (!introDone) done();
+            }
         };
 
         const startSilent = () => {
