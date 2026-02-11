@@ -142,7 +142,16 @@ function selectBestFemaleVoiceGlobal(voices) {
 function getQuizSessionVoice() {
     if (window.QUIZ_CACHED_VOICE) return window.QUIZ_CACHED_VOICE;
     if ('speechSynthesis' in window && speechSynthesis.getVoices().length > 0) {
-        window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(speechSynthesis.getVoices());
+        const isAndroid = /Android/i.test(navigator.userAgent) || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
+        const voices = speechSynthesis.getVoices();
+        // Android: STRONGLY prefer LOCAL (on-device) voices - remote voices often fail silently, no sound
+        if (isAndroid) {
+            const localEn = voices.filter(v => v.localService && v.lang && String(v.lang).toLowerCase().indexOf('en') === 0);
+            window.QUIZ_CACHED_VOICE = localEn.length > 0 ? localEn[0] : null;
+            // If no local voice, leave null - browser default often works better than remote
+        } else {
+            window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(voices);
+        }
         return window.QUIZ_CACHED_VOICE;
     }
     return null;
@@ -5496,6 +5505,11 @@ class BeeSoundboard {
             if (sessionVoice) {
                 utterance.voice = sessionVoice;
             }
+            if (isAndroid) {
+                utterance.volume = 1.0; // Explicit full volume on Android
+                utterance.lang = utterance.lang || 'en-US';
+                try { speechSynthesis.resume && speechSynthesis.resume(); } catch (_) {}
+            }
             
             // Sync visual display with announcer (per BUG_FIXES_VOICE_VISUALIZER.md: animate during speech)
             utterance.onstart = () => {
@@ -6770,6 +6784,11 @@ class QuizManager {
                 const sessionVoice = typeof getQuizSessionVoice === 'function' ? getQuizSessionVoice() : null;
                 if (sessionVoice) {
                     utterance.voice = sessionVoice;
+                }
+                if (this.isAndroid) {
+                    utterance.volume = 1.0;
+                    utterance.lang = utterance.lang || 'en-US';
+                    try { speechSynthesis.resume && speechSynthesis.resume(); } catch (_) {}
                 }
                 
                 // Word boundary event - pulse animation on each word with natural pauses
@@ -8518,6 +8537,11 @@ class QuizManager {
             u.volume = 0.9;
             const sessionVoice = typeof getQuizSessionVoice === 'function' ? getQuizSessionVoice() : null;
             if (sessionVoice) u.voice = sessionVoice;
+            if (this.isAndroid) {
+                u.volume = 1.0;
+                u.lang = u.lang || 'en-US';
+                try { speechSynthesis.resume && speechSynthesis.resume(); } catch (_) {}
+            }
             var introDone = false;
             var done = () => {
                 if (introDone) return;
@@ -9282,6 +9306,11 @@ class QuizManager {
                 const sessionVoice = typeof getQuizSessionVoice === 'function' ? getQuizSessionVoice() : null;
                 if (sessionVoice) {
                     utterance.voice = sessionVoice;
+                }
+                if (this.isAndroid) {
+                    utterance.volume = 1.0;
+                    utterance.lang = utterance.lang || 'en-US';
+                    try { speechSynthesis.resume && speechSynthesis.resume(); } catch (_) {}
                 }
                 
                 var done = false;
