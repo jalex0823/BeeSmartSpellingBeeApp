@@ -8508,16 +8508,16 @@ class QuizManager {
             this.quizStarted = true;
             this.introInProgress = false;
             showQuizButtons();
-            if (this.isAndroid) {
-                this.loadNextWordWithIntro();
-                return;
-            }
+            // CRITICAL: Speak IMMEDIATELY in tap handler to unlock speech on Android (Chrome blocks speech without user gesture).
+            // Short warm-up on Android to establish unlock, then load word; full intro on desktop.
             const msg = (this.studentName ? `Hello ${this.studentName}! ` : '') +
                 "I'm Buzzy! Listen to each word, then spell it. Let's go!";
             speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(msg);
             u.rate = 0.95;
             u.volume = 0.9;
+            const sessionVoice = typeof getQuizSessionVoice === 'function' ? getQuizSessionVoice() : null;
+            if (sessionVoice) u.voice = sessionVoice;
             var introDone = false;
             var done = () => {
                 if (introDone) return;
@@ -8527,7 +8527,7 @@ class QuizManager {
             };
             u.onend = done;
             u.onerror = done;
-            var safetyTimer = setTimeout(done, 5000);
+            var safetyTimer = this.isAndroid ? setTimeout(done, 8000) : setTimeout(done, 5000);
             try {
                 speechSynthesis.speak(u);
             } catch (err) {
