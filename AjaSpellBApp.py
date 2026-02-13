@@ -17691,7 +17691,7 @@ def api_speed_round_start():
         if premium_block is not None:
             return premium_block
 
-        data = request.get_json()
+        data = request.get_json() or {}
         
         # Extract configuration
         time_per_word = data.get('time_per_word', 15)
@@ -17810,11 +17810,9 @@ def api_speed_round_start():
         
         print(f" Speed Round started: {len(words)} words, {difficulty}, {time_per_word}s/word")
         
-        return jsonify({
-            'status': 'success',
-            'word_count': len(words),
-            'first_word': words[0] if words else None
-        })
+        # Return redirect so session cookie is set in same response cycle; avoids
+        # race where client navigates before cookie is saved (speed round not proceeding).
+        return redirect(url_for('speed_round_quiz'), code=302)
         
     except Exception as e:
         print(f" Error starting speed round: {e}")

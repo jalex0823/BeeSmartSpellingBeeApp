@@ -14,7 +14,7 @@ It will:
 from __future__ import annotations
 import os, random, time, json, requests
 
-BASE_URL = os.environ.get("BEE_BASE", "http://127.0.0.1:5000")
+BASE_URL = os.environ.get("BEE_BASE", "http://127.0.0.1:5051")
 SESSION = requests.Session()
 SESSION.headers.update({"Content-Type": "application/json"})
 
@@ -36,11 +36,20 @@ def start_round(source="auto", word_count=8):
         "word_count": word_count,
         "word_source": source
     }
-    r = SESSION.post(f"{BASE_URL}/api/speed-round/start", json=payload)
-    print(f"[START] source={source} status={r.status_code} body={r.text[:200]}")
-    r.raise_for_status()
-    data = r.json()
-    assert data.get("status") == "success", "Speed round failed to start"
+    r = SESSION.post(f"{BASE_URL}/api/speed-round/start", json=payload, allow_redirects=True)
+    print(f"[START] source={source} status={r.status_code} url={r.url[:70]}...")
+    if r.status_code >= 400:
+        r.raise_for_status()
+    # Success: API returns 302 redirect to /speed-round/quiz; session follows and gets 200
+    if "/speed-round/quiz" in r.url:
+        return
+    try:
+        data = r.json()
+        if data.get("error") in ("auth_required", "premium_required"):
+            raise RuntimeError(f"Speed round requires auth+premium: {data.get('error')}")
+    except ValueError:
+        pass
+    raise RuntimeError(f"Expected redirect to quiz, got status={r.status_code} url={r.url}")
 
 
 def get_next():
