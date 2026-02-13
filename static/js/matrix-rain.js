@@ -93,9 +93,8 @@ class MatrixRain {
         // Scale context to match device pixel ratio
         this.ctx.scale(dpr, dpr);
         
-        // Wider column spacing on mobile to prevent overlap
+        // Wider column spacing on mobile to prevent overlap (per MATRIX_RAIN_MOBILE_FIX.md)
         const columnSpacing = this.isMobile ? this.fontSize * 2 : this.fontSize;
-        const w = (window.visualViewport && window.visualViewport.width) || window.innerWidth;
         this.columns = Math.floor(w / columnSpacing);
         
         this.initDrops();
