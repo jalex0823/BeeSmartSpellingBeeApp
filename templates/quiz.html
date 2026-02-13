@@ -2831,14 +2831,18 @@ if ('speechSynthesis' in window) {
         }
     }
 
-    /* Exit area should be a single full-width button (like reference) */
+    /* Exit area: center the Exit Quiz button within the card */
     .exit-button-container {
-        display: block !important;
+        display: flex !important;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 1rem;
         width: 100%;
         margin-top: 0.25rem;
     }
     .exit-button-container .action-btn {
-        width: 100%;
+        min-width: 160px;
+        max-width: 280px;
     }
 
     /* Enhanced Magical Sparkles */
