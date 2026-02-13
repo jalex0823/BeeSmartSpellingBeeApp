@@ -174,7 +174,7 @@
             <a href="/" class="btn-back" style="text-decoration:none; padding:10px 16px; min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:linear-gradient(135deg, #3b3b3b, #1f1f1f); color:#ffd700; border:1px solid rgba(255,215,0,0.3); box-shadow:0 2px 6px rgba(0,0,0,0.3); font-weight:600;">
                 ⬅ Back to Home
             </a>
-            {% if current_user.is_authenticated %}
+            {% if current_user.is_authenticated and redeem_enabled %}
             <button type="button" id="btn-redeem-code" aria-label="Redeem a code" style="padding:10px 16px; min-height:44px; border-radius:8px; background:linear-gradient(135deg, #2d5016, #1a3009); color:#b8e986; border:1px solid rgba(184,233,134,0.4); box-shadow:0 2px 6px rgba(0,0,0,0.2); font-weight:600; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
                 🎁 Redeem code
             </button>
@@ -192,7 +192,7 @@
         <div style="background:linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 100%); border-radius:16px; padding:24px; max-width:380px; width:100%; border:3px solid rgba(255,215,0,0.5); box-shadow:0 12px 40px rgba(0,0,0,0.25);">
             <h2 id="redeem-modal-title" style="margin:0 0 12px 0; color:#5A2C15; font-size:1.25rem;">Redeem a code</h2>
             <p style="color:#6B4423; font-size:0.9rem; margin-bottom:16px;">Have a promo or BeeKey? Enter it below to unlock avatars.</p>
-            <input type="text" id="redeem-code-input" placeholder="{{ ('e.g. ' ~ redeem_code_placeholder) if redeem_code_placeholder else '' }}" maxlength="80" autocomplete="off" style="width:100%; padding:12px 14px; border:2px solid rgba(255,215,0,0.6); border-radius:10px; font-size:1rem; margin-bottom:12px; box-sizing:border-box;">
+            <input type="text" id="redeem-code-input" placeholder="Enter your code" maxlength="80" autocomplete="off" style="width:100%; padding:12px 14px; border:2px solid rgba(255,215,0,0.6); border-radius:10px; font-size:1rem; margin-bottom:12px; box-sizing:border-box;">
             <p id="redeem-code-message" style="min-height:20px; font-size:0.9rem; margin-bottom:12px;"></p>
             <div style="display:flex; gap:10px; justify-content:flex-end;">
                 <button type="button" id="redeem-code-cancel" style="padding:10px 18px; border-radius:10px; background:#ddd; color:#333; border:none; font-weight:600; cursor:pointer;">Cancel</button>
@@ -457,7 +457,16 @@
                 credentials: 'same-origin',
                 body: JSON.stringify({ key: key })
             })
-            .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+            .then(function(r) {
+                var ct = (r.headers.get('Content-Type') || '');
+                if (r.status === 404) {
+                    return { ok: false, data: { error: 'Redeem feature is not available on this server.' } };
+                }
+                if (ct.indexOf('application/json') === -1) {
+                    return { ok: false, data: { error: r.status >= 500 ? 'Server error. Try again later.' : 'Unable to redeem. Please try again.' } };
+                }
+                return r.json().then(function(d) { return { ok: r.ok, data: d }; });
+            })
             .then(function(result) {
                 submit.disabled = false;
                 if (result.ok && result.data.success) {

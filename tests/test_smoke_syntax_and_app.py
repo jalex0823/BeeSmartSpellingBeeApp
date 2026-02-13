@@ -162,15 +162,13 @@ def test_honeycomb_picker_route_returns_ok(client):
     assert r.status_code == 200, f"Expected 200, got {r.status_code}"
 
 
-def test_honeycomb_picker_redeem_placeholder_from_config(client, app):
-    """Picker page includes redeem code input; placeholder shows REDEEM_CODE_PLACEHOLDER when set."""
+def test_honeycomb_picker_redeem_input_no_actual_key(client):
+    """Picker redeem input uses generic placeholder; actual key is never displayed."""
     r = client.get("/honeycomb-picker", follow_redirects=False)
     assert r.status_code == 200
     html = r.get_data(as_text=True)
     assert "redeem-code-input" in html, "Redeem code input should be present"
-    placeholder = app.config.get("REDEEM_CODE_PLACEHOLDER", "")
-    if placeholder:
-        assert placeholder in html, f"Configured REDEEM_CODE_PLACEHOLDER ({placeholder}) should appear in picker"
+    assert 'placeholder="Enter your code"' in html, "Input should use generic placeholder, not actual key"
 
 
 # ─── Wireframe layout (unified_menu): structure and spacing ───────────────────

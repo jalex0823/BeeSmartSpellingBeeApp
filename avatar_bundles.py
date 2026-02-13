@@ -49,9 +49,11 @@ BUNDLE_CATALOG: Dict[str, dict] = {
 }
 
 # Default dev/demo keys (case-insensitive; spaces ignored on server)
+# Launch promo: BEESPECIAL2026 unlocks launch_pack_2025 (BK Bee, Gamer Bee, Super Bee, Techno Bee, Knight Bee)
 _DEFAULT_KEYS: Dict[str, str] = {
     "BEE-CLASS-STARTER-1": "classroom_starter_pack",
     "BEE-FAMILY-FUN-1": "family_fun_pack",
+    "BEESPECIAL2026": "launch_pack_2025",
 }
 
 # Allow runtime override via environment JSON (optional)

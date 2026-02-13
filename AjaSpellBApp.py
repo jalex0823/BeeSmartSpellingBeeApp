@@ -12876,28 +12876,18 @@ def api_bundles_list():
 # ----------------------------------------------------------------------------
 @app.route('/api/bundles/redeem', methods=['POST'])
 def api_bundles_redeem():
-    """Redeem a special bundle key to unlock a set of avatars.
+    """Redeem a promotional bundle key to unlock a set of avatars.
     Request JSON: { key: string }
     Response: { success, bundle_id, bundle_name, unlocked_count, entitlements }
     Notes:
-      - Idempotent: re-redeeming an already applied bundle won't duplicate unlocks
+      - Promotional keys; no App Store validation required
+      - Each user can redeem a given code only once; repeat attempts return error
       - Keys are matched case-insensitively and with whitespace trimmed
     """
-    # App Store compliance: digital content unlocks must use IAP.
-    # Kill switch: in App Store builds, always hide key redemption regardless of other flags.
-    if os.environ.get('APP_STORE_BUILD', '0').strip() == '1':
-        return ("Not Found", 404)
-    # Otherwise, keep key redemption only for explicit dev/teacher environments.
-    if os.environ.get('ALLOW_KEY_REDEMPTION', '0').strip() != '1':
-        return ("Not Found", 404)
-
     data = request.get_json(silent=True) or {}
     raw_key = (data.get('key') or '').strip()
     if not raw_key:
         return jsonify({"success": False, "error": "Missing key"}), 400
-
-    if not isinstance(REDEEMABLE_KEYS, dict) or not REDEEMABLE_KEYS:
-        return jsonify({"success": False, "error": "Redemption unavailable"}), 503
 
     norm_key = re.sub(r"\s+", "", raw_key).upper()
     bundle_id = None
@@ -12919,7 +12909,9 @@ def api_bundles_redeem():
             return jsonify({"success": False, "error": reason}), 400
         bundle_id = bundle_key_row.bundle_id
     else:
-        # 2) Fallback to legacy in-memory map
+        # 2) Fallback to legacy in-memory map (REDEEMABLE_KEYS required only for legacy)
+        if not isinstance(REDEEMABLE_KEYS, dict) or not REDEEMABLE_KEYS:
+            return jsonify({"success": False, "error": "Redemption unavailable"}), 503
         bundle_id = REDEEMABLE_KEYS.get(norm_key)
         if not bundle_id:
             return jsonify({"success": False, "error": "Invalid key"}), 400
@@ -12965,6 +12957,20 @@ def api_bundles_redeem():
     product_id = f"bundle:{bundle_id}"
     if product_id not in PRODUCT_MAP:
         PRODUCT_MAP[product_id] = { 'type': 'bundle', 'bundle_id': bundle_id, 'avatars': avatars }
+
+    # Block repeat redemption by same user
+    if bundle_key_row:
+        existing = BundleKeyRedemption.query.filter_by(
+            bundle_key_id=bundle_key_row.id, user_id=current_user.id
+        ).first()
+        if existing:
+            return jsonify({"success": False, "error": "You have already redeemed this code."}), 400
+    else:
+        existing = PurchaseRecord.query.filter_by(
+            user_id=current_user.id, product_id=product_id, platform='web'
+        ).first()
+        if existing:
+            return jsonify({"success": False, "error": "You have already redeemed this code."}), 400
 
     res = _apply_entitlement(current_user, product_id)
 
@@ -13015,8 +13021,8 @@ def api_bundles_redeem():
             "bundle_id": bundle_id,
             "bundle_name": bundle_name,
             "source": source,
-            "unlocked_count": unlocked_count,
-            "entitlements": entitlements,
+            "unlocked_count": int((res or {}).get('details', {}).get('unlocked_count') or 0),
+            "entitlements": _entitlements_summary(current_user),
             "warning": "Bundle redeemed but not saved to database. Please try again.",
             "error": f"db_commit_failed: {e}"
         }), 200
@@ -14643,12 +14649,14 @@ def honeycomb_avatar_picker():
             pass
 
     redeem_code_placeholder = current_app.config.get('REDEEM_CODE_PLACEHOLDER', '')
+    redeem_enabled = True  # Promotional keys; always available
     return render_template(
         'honeycomb_avatar_picker_responsive.html',
         timestamp=timestamp,
         picker_bg_url=picker_bg_url,
         user_data=user_data,
-        redeem_code_placeholder=redeem_code_placeholder
+        redeem_code_placeholder=redeem_code_placeholder,
+        redeem_enabled=redeem_enabled
     )
 
 @app.route('/honeycomb-picker-old')
