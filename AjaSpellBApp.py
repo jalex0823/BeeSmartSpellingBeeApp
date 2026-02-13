@@ -38,7 +38,7 @@ import hashlib
 from typing import List, Dict, Optional
 from functools import wraps
 
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, send_file, Response, send_from_directory
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, send_file, Response, send_from_directory, current_app
 from werkzeug.utils import secure_filename
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 
@@ -13428,7 +13428,17 @@ def api_admin_bundle_keys_create():
         max_uses = 1
     if bundle_id not in (BUNDLE_CATALOG or {}):
         return jsonify({"success": False, "error": "unknown_bundle"}), 400
-    key_raw, key_norm = BundleKey.generate(bundle_id)
+    custom_key = (data.get('key_raw') or '').strip()
+    if custom_key:
+        key_raw = custom_key
+        key_norm = BundleKey.normalize(key_raw)
+        if not key_norm:
+            return jsonify({"success": False, "error": "key_raw_empty"}), 400
+        existing = BundleKey.query.filter_by(key_norm=key_norm).first()
+        if existing:
+            return jsonify({"success": False, "error": "key_already_exists"}), 400
+    else:
+        key_raw, key_norm = BundleKey.generate(bundle_id)
     expires_at = None
     if expires_days > 0:
         try:
@@ -14632,11 +14642,13 @@ def honeycomb_avatar_picker():
             # Fallback if any attribute access fails
             pass
 
+    redeem_code_placeholder = current_app.config.get('REDEEM_CODE_PLACEHOLDER', 'BEESPECIAL2026')
     return render_template(
         'honeycomb_avatar_picker_responsive.html',
         timestamp=timestamp,
         picker_bg_url=picker_bg_url,
-        user_data=user_data
+        user_data=user_data,
+        redeem_code_placeholder=redeem_code_placeholder
     )
 
 @app.route('/honeycomb-picker-old')

@@ -156,6 +156,22 @@ def test_roster_import_template_requires_auth(client):
     assert r.status_code in (302, 401, 403), f"Expected 302/401/403, got {r.status_code}"
 
 
+def test_honeycomb_picker_route_returns_ok(client):
+    """GET /honeycomb-picker returns 200 (picker is browsable by guests)."""
+    r = client.get("/honeycomb-picker", follow_redirects=False)
+    assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+
+
+def test_honeycomb_picker_redeem_placeholder_from_config(client, app):
+    """Picker page includes redeem code input with placeholder from REDEEM_CODE_PLACEHOLDER."""
+    r = client.get("/honeycomb-picker", follow_redirects=False)
+    assert r.status_code == 200
+    html = r.get_data(as_text=True)
+    assert "redeem-code-input" in html, "Redeem code input should be present"
+    placeholder = app.config.get("REDEEM_CODE_PLACEHOLDER", "BEESPECIAL2026")
+    assert placeholder in html, f"Configured REDEEM_CODE_PLACEHOLDER ({placeholder}) should appear in picker (e.g. in input placeholder)"
+
+
 # ─── Wireframe layout (unified_menu): structure and spacing ───────────────────
 
 def test_unified_menu_has_wireframe_layout_classes():

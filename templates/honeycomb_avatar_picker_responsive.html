@@ -174,11 +174,58 @@
             <a href="/" class="btn-back" style="text-decoration:none; padding:10px 16px; min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:linear-gradient(135deg, #3b3b3b, #1f1f1f); color:#ffd700; border:1px solid rgba(255,215,0,0.3); box-shadow:0 2px 6px rgba(0,0,0,0.3); font-weight:600;">
                 ⬅ Back to Home
             </a>
+            {% if current_user.is_authenticated %}
+            <button type="button" id="btn-redeem-code" aria-label="Redeem a code" style="padding:10px 16px; min-height:44px; border-radius:8px; background:linear-gradient(135deg, #2d5016, #1a3009); color:#b8e986; border:1px solid rgba(184,233,134,0.4); box-shadow:0 2px 6px rgba(0,0,0,0.2); font-weight:600; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
+                🎁 Redeem code
+            </button>
+            {% endif %}
             {% if current_user.is_authenticated and current_user.role == 'admin' %}
             <a href="/admin/dashboard" class="btn-admin" style="text-decoration:none; padding:10px 16px; min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:linear-gradient(135deg, #3b3b3b, #1f1f1f); color:#ffd700; border:1px solid rgba(255,215,0,0.3); box-shadow:0 2px 6px rgba(0,0,0,0.3); font-weight:600;">
                 🧭 Admin Portal
             </a>
             {% endif %}
+        </div>
+    </div>
+
+    <!-- Redeem code modal (shown when user taps "Redeem code") -->
+    <div id="redeem-code-modal" role="dialog" aria-labelledby="redeem-modal-title" aria-modal="true" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; padding:16px;">
+        <div style="background:linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 100%); border-radius:16px; padding:24px; max-width:380px; width:100%; border:3px solid rgba(255,215,0,0.5); box-shadow:0 12px 40px rgba(0,0,0,0.25);">
+            <h2 id="redeem-modal-title" style="margin:0 0 12px 0; color:#5A2C15; font-size:1.25rem;">Redeem a code</h2>
+            <p style="color:#6B4423; font-size:0.9rem; margin-bottom:16px;">Have a promo or BeeKey? Enter it below to unlock avatars.</p>
+            <input type="text" id="redeem-code-input" placeholder="e.g. {{ redeem_code_placeholder }}" maxlength="80" autocomplete="off" style="width:100%; padding:12px 14px; border:2px solid rgba(255,215,0,0.6); border-radius:10px; font-size:1rem; margin-bottom:12px; box-sizing:border-box;">
+            <p id="redeem-code-message" style="min-height:20px; font-size:0.9rem; margin-bottom:12px;"></p>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" id="redeem-code-cancel" style="padding:10px 18px; border-radius:10px; background:#ddd; color:#333; border:none; font-weight:600; cursor:pointer;">Cancel</button>
+                <button type="button" id="redeem-code-submit" style="padding:10px 18px; border-radius:10px; background:linear-gradient(135deg, #2d5016, #1a3009); color:#b8e986; border:none; font-weight:600; cursor:pointer;">Redeem</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Glitter / sparkle overlay (shown briefly on successful redeem) -->
+    <div id="redeem-glitter-overlay" style="display:none; position:fixed; inset:0; z-index:10000; pointer-events:none; overflow:hidden;"></div>
+    <style>
+        .redeem-sparkle { position: absolute; width: 14px; height: 14px; border-radius: 50%; animation: redeemSparkleBurst 1.4s ease-out forwards; pointer-events: none; }
+        .redeem-sparkle.star { font-size: 18px; width: auto; height: auto; }
+        @keyframes redeemSparkleBurst {
+            0% { transform: translate(0, 0) scale(0); opacity: 1; }
+            40% { transform: translate(var(--dx), var(--dy)) scale(1.2); opacity: 1; }
+            100% { transform: translate(var(--dx), var(--dy)) scale(0.8); opacity: 0; }
+        }
+        .redeem-confetti { position: absolute; width: 8px; height: 8px; animation: redeemConfettiFall 1.8s ease-out forwards; pointer-events: none; }
+        @keyframes redeemConfettiFall {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+            100% { transform: translate(var(--cx), 100vh) rotate(720deg); opacity: 0; }
+        }
+    </style>
+
+    <!-- Success modal: key used, cannot be used again by this account -->
+    <div id="redeem-success-modal" role="dialog" aria-labelledby="redeem-success-title" aria-modal="true" style="display:none; position:fixed; inset:0; z-index:10001; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; padding:16px;">
+        <div style="background:linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 100%); border-radius:16px; padding:24px; max-width:400px; width:100%; border:3px solid rgba(255,215,0,0.6); box-shadow:0 16px 48px rgba(0,0,0,0.3); text-align:center;">
+            <div style="font-size:3rem; margin-bottom:8px;">🎉</div>
+            <h2 id="redeem-success-title" style="margin:0 0 12px 0; color:#5A2C15; font-size:1.3rem;">Code redeemed!</h2>
+            <p style="color:#6B4423; font-size:0.95rem; margin-bottom:8px;">You unlocked new avatars. Check the grid below!</p>
+            <p style="color:#8B6914; font-size:0.9rem; margin-bottom:20px; font-weight:600;">This code has been used and cannot be used again by this account.</p>
+            <button type="button" id="redeem-success-ok" style="padding:12px 24px; border-radius:10px; background:linear-gradient(135deg, #FFD700, #FFA500); color:#3b2a00; border:none; font-weight:700; cursor:pointer; font-size:1rem;">OK</button>
         </div>
     </div>
 
@@ -304,5 +351,135 @@
     <!-- Unlock notification logic -->
     <script src="{{ url_for('static', filename='js/avatar-unlock-notification.js') }}?v={{ timestamp }}"></script>
     <script src="{{ url_for('static', filename='js/honeycomb-avatar-picker-responsive.js') }}?v={{ timestamp }}"></script>
+    <!-- Redeem code modal logic + success glitter and one-time modal -->
+    <script>
+    (function() {
+        var modal = document.getElementById('redeem-code-modal');
+        var btn = document.getElementById('btn-redeem-code');
+        var input = document.getElementById('redeem-code-input');
+        var msg = document.getElementById('redeem-code-message');
+        var cancel = document.getElementById('redeem-code-cancel');
+        var submit = document.getElementById('redeem-code-submit');
+        var glitterOverlay = document.getElementById('redeem-glitter-overlay');
+        var successModal = document.getElementById('redeem-success-modal');
+        var successOk = document.getElementById('redeem-success-ok');
+        if (!modal || !btn) return;
+
+        var colors = ['#FFD700', '#FFA500', '#FFE082', '#FFEB3B', '#FFF59D', '#FF8C00', '#FFB74D', '#b8e986', '#81C784'];
+
+        function showModal() {
+            modal.style.display = 'flex';
+            input.value = '';
+            msg.textContent = '';
+            input.focus();
+        }
+        function hideModal() {
+            modal.style.display = 'none';
+        }
+
+        function runGlitterAndShowSuccess(unlockedCount) {
+            if (!glitterOverlay) {
+                showSuccessModal(unlockedCount);
+                return;
+            }
+            glitterOverlay.style.display = 'block';
+            glitterOverlay.innerHTML = '';
+            var centerX = window.innerWidth / 2;
+            var centerY = window.innerHeight / 2;
+            for (var i = 0; i < 32; i++) {
+                var angle = (i / 32) * Math.PI * 2 + Math.random() * 0.5;
+                var dist = 80 + Math.random() * 120;
+                var dx = Math.cos(angle) * dist + (Math.random() * 40 - 20);
+                var dy = Math.sin(angle) * dist + (Math.random() * 40 - 20);
+                var el = document.createElement('div');
+                el.className = 'redeem-sparkle';
+                el.style.left = centerX + 'px';
+                el.style.top = centerY + 'px';
+                el.style.background = colors[i % colors.length];
+                el.style.setProperty('--dx', dx + 'px');
+                el.style.setProperty('--dy', dy + 'px');
+                el.style.animationDelay = (i * 0.02) + 's';
+                glitterOverlay.appendChild(el);
+            }
+            for (var j = 0; j < 24; j++) {
+                var el2 = document.createElement('div');
+                el2.className = 'redeem-confetti';
+                el2.style.left = (Math.random() * 100) + '%';
+                el2.style.top = '-10px';
+                el2.style.background = colors[j % colors.length];
+                el2.style.setProperty('--cx', (Math.random() * 200 - 100) + 'px');
+                el2.style.animationDelay = (j * 0.04) + 's';
+                glitterOverlay.appendChild(el2);
+            }
+            setTimeout(function() {
+                glitterOverlay.style.display = 'none';
+                glitterOverlay.innerHTML = '';
+                showSuccessModal(unlockedCount);
+            }, 1500);
+        }
+
+        function showSuccessModal(unlockedCount) {
+            if (successModal) {
+                successModal.style.display = 'flex';
+                if (typeof refreshAvatarUnlockStatus === 'function') {
+                    refreshAvatarUnlockStatus();
+                }
+            }
+        }
+
+        function hideSuccessModal() {
+            if (successModal) successModal.style.display = 'none';
+        }
+
+        btn.addEventListener('click', showModal);
+        cancel.addEventListener('click', hideModal);
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) hideModal();
+        });
+        if (successOk) successOk.addEventListener('click', hideSuccessModal);
+        if (successModal) successModal.addEventListener('click', function(e) {
+            if (e.target === successModal) hideSuccessModal();
+        });
+
+        submit.addEventListener('click', function() {
+            var key = (input.value || '').trim();
+            if (!key) {
+                msg.textContent = 'Please enter a code.';
+                msg.style.color = '#b8860b';
+                return;
+            }
+            msg.textContent = 'Redeeming...';
+            msg.style.color = '#5A2C15';
+            submit.disabled = true;
+            fetch('/api/bundles/redeem', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ key: key })
+            })
+            .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+            .then(function(result) {
+                submit.disabled = false;
+                if (result.ok && result.data.success) {
+                    hideModal();
+                    var count = result.data.unlocked_count || 0;
+                    runGlitterAndShowSuccess(count);
+                } else {
+                    var err = (result.data && result.data.error) ? result.data.error : 'Invalid or expired code.';
+                    msg.textContent = err;
+                    msg.style.color = '#b22222';
+                }
+            })
+            .catch(function() {
+                submit.disabled = false;
+                msg.textContent = 'Network error. Try again.';
+                msg.style.color = '#b22222';
+            });
+        });
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') submit.click();
+        });
+    })();
+    </script>
 </body>
 </html>

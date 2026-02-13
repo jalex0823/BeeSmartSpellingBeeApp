@@ -36,6 +36,16 @@ BUNDLE_CATALOG: Dict[str, dict] = {
             "biker-bee",   # alias of motor-bee
         ],
     },
+    "launch_pack_2025": {
+        "name": "Launch Pack",
+        "avatars": [
+            "bk-bee",
+            "gamer-bee",
+            "super-bee",
+            "techno-bee",
+            "knight-bee",
+        ],
+    },
 }
 
 # Default dev/demo keys (case-insensitive; spaces ignored on server)
