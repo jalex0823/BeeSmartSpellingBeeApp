@@ -14642,7 +14642,7 @@ def honeycomb_avatar_picker():
             # Fallback if any attribute access fails
             pass
 
-    redeem_code_placeholder = current_app.config.get('REDEEM_CODE_PLACEHOLDER', 'BEESPECIAL2026')
+    redeem_code_placeholder = current_app.config.get('REDEEM_CODE_PLACEHOLDER', '')
     return render_template(
         'honeycomb_avatar_picker_responsive.html',
         timestamp=timestamp,

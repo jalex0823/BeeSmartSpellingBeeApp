@@ -140,8 +140,8 @@ class Config:
     # Application settings
     APP_NAME = 'BeeSmart Spelling Bee'
     APP_VERSION = '22'
-    # Redeem code placeholder shown in avatar picker (e.g. BEESPECIAL2026). Change here or set REDEEM_CODE_PLACEHOLDER in .env.
-    REDEEM_CODE_PLACEHOLDER = os.environ.get('REDEEM_CODE_PLACEHOLDER') or 'BEESPECIAL2026'
+    # Redeem code placeholder shown in avatar picker. Leave blank to not reveal the code; set in .env to show a hint.
+    REDEEM_CODE_PLACEHOLDER = os.environ.get('REDEEM_CODE_PLACEHOLDER', '')
     
     # Pagination
     STUDENTS_PER_PAGE = 25

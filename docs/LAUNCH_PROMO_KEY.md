@@ -6,7 +6,7 @@ One shared code for social distribution. Valid 90 days; each account can redeem 
 
 **To change the promo code in one place:**
 
-1. **Config:** Set `REDEEM_CODE_PLACEHOLDER` in `config.py` (default: `BEESPECIAL2026`), or set the env var `REDEEM_CODE_PLACEHOLDER` in `.env`.
+1. **Config:** Set `REDEEM_CODE_PLACEHOLDER` in `config.py` (default: blank - leave empty to not reveal the code), or set the env var `REDEEM_CODE_PLACEHOLDER` in `.env` to show a hint (e.g. `BEESPECIAL2026`).
 2. **UI:** The avatar picker “Redeem code” input placeholder uses this value automatically.
 3. **Admin key:** When creating the bundle key (below), use the same value for `key_raw`.
 4. **Social copy:** Use that same code in posts and bios.

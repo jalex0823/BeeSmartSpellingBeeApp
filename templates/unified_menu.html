@@ -17526,9 +17526,9 @@ function showRestoreDialog(title, message, isSuccess) {
                         const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
                         if (reduceMotion) {
                             // Still show something subtle, but don't animate continuously.
-                            overlay.textContent = '0101010101010101';
+                            overlay.textContent = 'BEE SMART';
                             overlay.style.fontFamily = 'monospace';
-                            overlay.style.color = '#00ff00';
+                            overlay.style.color = '#FFD700';
                             overlay.style.fontSize = '12px';
                             overlay.style.display = 'flex';
                             overlay.style.alignItems = 'center';
@@ -17542,14 +17542,15 @@ function showRestoreDialog(title, message, isSuccess) {
                                 if (typeof createMatrixRain === 'function') {
                                     createMatrixRain(overlay);
                                 } else {
+                                    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
                                     const el = document.createElement('div');
-                                    el.textContent = Math.random() > 0.5 ? '1' : '0';
+                                    el.textContent = chars[Math.floor(Math.random() * chars.length)];
                                     el.style.cssText = `
                                         position:absolute;
                                         left:${Math.random() * 100}%;
                                         top:-20px;
                                         font-family:monospace;
-                                        color:#00ff00;
+                                        color:#FFD700;
                                         font-size:14px;
                                         opacity:0.8;
                                         animation: beesmart-matrix-fall 1.1s linear;
@@ -19034,15 +19035,16 @@ function showRestoreDialog(title, message, isSuccess) {
             }
             
             function createMatrixRain(container) {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
                 for (let i = 0; i < 8; i++) {
                     const rain = document.createElement('div');
-                    rain.textContent = Math.random() > 0.5 ? '1' : '0';
+                    rain.textContent = chars[Math.floor(Math.random() * chars.length)];
                     rain.style.cssText = `
                         position: absolute;
                         left: ${i * 12}%;
                         top: -20px;
                         font-family: monospace;
-                        color: #00ff00;
+                        color: #FFD700;
                         font-size: 14px;
                         animation: matrix-fall ${0.8 + Math.random() * 0.4}s linear ${i * 0.1}s;
                     `;

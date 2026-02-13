@@ -163,13 +163,14 @@ def test_honeycomb_picker_route_returns_ok(client):
 
 
 def test_honeycomb_picker_redeem_placeholder_from_config(client, app):
-    """Picker page includes redeem code input with placeholder from REDEEM_CODE_PLACEHOLDER."""
+    """Picker page includes redeem code input; placeholder shows REDEEM_CODE_PLACEHOLDER when set."""
     r = client.get("/honeycomb-picker", follow_redirects=False)
     assert r.status_code == 200
     html = r.get_data(as_text=True)
     assert "redeem-code-input" in html, "Redeem code input should be present"
-    placeholder = app.config.get("REDEEM_CODE_PLACEHOLDER", "BEESPECIAL2026")
-    assert placeholder in html, f"Configured REDEEM_CODE_PLACEHOLDER ({placeholder}) should appear in picker (e.g. in input placeholder)"
+    placeholder = app.config.get("REDEEM_CODE_PLACEHOLDER", "")
+    if placeholder:
+        assert placeholder in html, f"Configured REDEEM_CODE_PLACEHOLDER ({placeholder}) should appear in picker"
 
 
 # ─── Wireframe layout (unified_menu): structure and spacing ───────────────────
