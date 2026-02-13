@@ -419,12 +419,7 @@
         }
 
         function showSuccessModal(unlockedCount) {
-            if (successModal) {
-                successModal.style.display = 'flex';
-                if (typeof refreshAvatarUnlockStatus === 'function') {
-                    refreshAvatarUnlockStatus();
-                }
-            }
+            if (successModal) successModal.style.display = 'flex';
         }
 
         function hideSuccessModal() {
@@ -473,6 +468,10 @@
                     hideModal();
                     var count = result.data.unlocked_count || 0;
                     runGlitterAndShowSuccess(count);
+                    // Auto-refresh picker grid so newly unlocked avatars appear immediately
+                    if (typeof refreshAvatarUnlockStatus === 'function') {
+                        refreshAvatarUnlockStatus().catch(function() {});
+                    }
                 } else {
                     var err = (result.data && result.data.error) ? result.data.error : 'Invalid or expired code.';
                     msg.textContent = err;
