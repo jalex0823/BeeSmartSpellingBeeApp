@@ -138,6 +138,26 @@ function selectBestFemaleVoiceGlobal(voices) {
     return scoredVoices.length > 0 ? scoredVoices[0].voice : null;
 }
 
+// Android: Try native Capacitor TTS when Web Speech API fails (WebView often has no sound)
+window.BeeSmartTryNativeTTS = async function(text, opts) {
+    if (!text || !/Android/i.test(navigator.userAgent)) return false;
+    try {
+        var TTS = (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.TextToSpeech);
+        if (!TTS || typeof TTS.speak !== 'function') return false;
+        await TTS.speak({
+            text: String(text),
+            lang: 'en',
+            rate: (opts && opts.rate) || 0.95,
+            pitch: (opts && opts.pitch) || 1.0,
+            volume: 1.0
+        });
+        return true;
+    } catch (e) {
+        console.warn('Native TTS failed:', e);
+        return false;
+    }
+};
+
 // Single session voice - use everywhere so only one voice is heard
 function getQuizSessionVoice() {
     if (window.QUIZ_CACHED_VOICE) return window.QUIZ_CACHED_VOICE;
@@ -5464,13 +5484,37 @@ class BeeSoundboard {
     }
 
     speakWord(word, onEndCallback = null, rate = 0.92) {
-        if (!word || !('speechSynthesis' in window)) {
+        if (!word) {
             if (onEndCallback) onEndCallback();
             return;
         }
-        
+        var isAndroid = /Android/i.test(navigator.userAgent) || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
+        var finish = () => { if (onEndCallback) onEndCallback(); };
+        var visualizer = document.getElementById('voiceVisualizer');
+        var statusEl = document.getElementById('voiceStatus');
+        var showSpeaking = () => { if (visualizer) visualizer.classList.add('speaking'); if (statusEl) { statusEl.textContent = '🔊 Speaking...'; statusEl.style.display = ''; } };
+        var showReady = () => { if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing'); if (statusEl) { statusEl.textContent = '🐝 Ready'; statusEl.style.display = ''; } };
+        if (isAndroid && typeof window.BeeSmartTryNativeTTS === 'function') {
+            window.BeeSmartTryNativeTTS(word, { rate: rate }).then(function(ok) {
+                if (ok) {
+                    showSpeaking();
+                    showReady();
+                    finish();
+                } else {
+                    this._speakWordWeb(word, onEndCallback, rate);
+                }
+            }.bind(this)).catch(function() { this._speakWordWeb(word, onEndCallback, rate); }.bind(this));
+            return;
+        }
+        this._speakWordWeb(word, onEndCallback, rate);
+    }
+    _speakWordWeb(word, onEndCallback, rate) {
+        if (!('speechSynthesis' in window)) {
+            if (onEndCallback) onEndCallback();
+            return;
+        }
         speechSynthesis.cancel();
-        
+        var finish = () => { if (onEndCallback) onEndCallback(); };
         const speak = () => {
             const utterance = new SpeechSynthesisUtterance(word);
             utterance.pitch = 1.35;
@@ -5511,7 +5555,8 @@ class BeeSoundboard {
             }
             if (isAndroid) {
                 utterance.volume = 1.0; // Explicit full volume on Android
-                utterance.lang = utterance.lang || 'en-US';
+                // Android: use 'en' not 'en-US' - some devices reject en-US (Not supported on this device)
+                utterance.lang = utterance.lang || 'en';
                 try { speechSynthesis.resume && speechSynthesis.resume(); } catch (_) {}
             }
             
@@ -6791,7 +6836,7 @@ class QuizManager {
                 }
                 if (this.isAndroid) {
                     utterance.volume = 1.0;
-                    utterance.lang = utterance.lang || 'en-US';
+                    utterance.lang = utterance.lang || 'en';
                     try { speechSynthesis.resume && speechSynthesis.resume(); } catch (_) {}
                 }
                 
@@ -8543,7 +8588,7 @@ class QuizManager {
             if (sessionVoice) u.voice = sessionVoice;
             if (this.isAndroid) {
                 u.volume = 1.0;
-                u.lang = u.lang || 'en-US';
+                u.lang = u.lang || 'en';
                 try { speechSynthesis.resume && speechSynthesis.resume(); } catch (_) {}
             }
             var introDone = false;
@@ -9313,7 +9358,7 @@ class QuizManager {
                 }
                 if (this.isAndroid) {
                     utterance.volume = 1.0;
-                    utterance.lang = utterance.lang || 'en-US';
+                    utterance.lang = utterance.lang || 'en';
                     try { speechSynthesis.resume && speechSynthesis.resume(); } catch (_) {}
                 }
                 
@@ -11400,9 +11445,18 @@ function safeParseJSON(txt, label = 'payload') {
     }
 }
 
-// 🛡️ Global error handler for syntax errors
+// 🛡️ Global error handler for syntax errors - prevent reload loops on Android
 window.addEventListener('error', (event) => {
     if (event.error && event.error.message && event.error.message.includes('Unexpected token')) {
+        try {
+            var lastReload = parseInt(sessionStorage.getItem('__quizErrorReloadTs') || '0', 10);
+            var now = Date.now();
+            if (now - lastReload < 60000) {
+                console.warn('🚫 Skipping reload - already reloaded in last 60s (prevent loop)');
+                return true;
+            }
+            sessionStorage.setItem('__quizErrorReloadTs', String(now));
+        } catch (_) {}
         console.error('🚨 JavaScript syntax error detected:', {
             message: event.error.message,
             filename: event.filename,
@@ -11410,14 +11464,13 @@ window.addEventListener('error', (event) => {
             colno: event.colno,
             stack: event.error.stack
         });
-        // Show user-friendly error message
         if (typeof BeeSmart !== 'undefined' && BeeSmart.showError) {
             BeeSmart.showError('Page loading error detected. Refreshing...');
         } else {
             alert('Page loading error. Refreshing...');
         }
         setTimeout(() => window.location.reload(), 2000);
-        return true; // Prevent default error handling
+        return true;
     }
 });
 

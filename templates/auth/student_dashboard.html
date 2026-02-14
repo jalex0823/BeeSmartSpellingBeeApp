@@ -677,8 +677,12 @@
             }
         }
     </style>
+    /* Android: reduce animations to prevent glitch after avatar change */
+    html.android .stat-highlight::before { animation: none; }
+    html.android .floating-bee { animation-duration: 12s; }
 </head>
 <body>
+    <script>if(/Android/i.test(navigator.userAgent||''))document.documentElement.classList.add('android');</script>
     <!-- Floating background bees -->
     <div class="floating-bee" style="top: 10%; left: 5%; animation-delay: 0s;">🐝</div>
     <div class="floating-bee" style="top: 20%; right: 10%; animation-delay: 2s;">🐝</div>
@@ -1170,22 +1174,25 @@
             });
         });
 
-        // Add animation when elements come into view
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
-                }
-            });
-        }, { threshold: 0.1 });
+        // Add animation when elements come into view (skip on Android to avoid glitch after avatar change)
+        const isAndroidDash = /Android/i.test(navigator.userAgent || '');
+        if (!isAndroidDash) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, { threshold: 0.1 });
 
-        document.querySelectorAll('.stat-card, .content-section').forEach(el => {
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(20px)';
-            el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-            observer.observe(el);
-        });
+            document.querySelectorAll('.stat-card, .content-section').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                observer.observe(el);
+            });
+        }
     </script>
 </body>
 </html>

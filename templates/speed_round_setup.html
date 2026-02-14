@@ -180,6 +180,8 @@
     const form = document.getElementById('speedRoundSetupForm');
     const startBtn = document.getElementById('startBtn');
     const errorMsg = document.getElementById('errorMsg');
+    var isAndroid = /Android/i.test(navigator.userAgent || '') ||
+        (typeof window.Capacitor !== 'undefined' && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
 
     function showError(msg) {
         errorMsg.textContent = msg || '';
@@ -200,12 +202,22 @@
         };
 
         try {
-            const res = await fetch('/api/speed-round/start', {
+            var fetchOpts = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(config),
                 credentials: 'same-origin'
-            });
+            };
+            if (isAndroid) {
+                fetchOpts.redirect = 'manual';
+            }
+            const res = await fetch('/api/speed-round/start', fetchOpts);
+
+            if (isAndroid && (res.type === 'opaqueredirect' || res.status === 302 || res.status === 301)) {
+                var loc = res.headers && res.headers.get ? res.headers.get('Location') : null;
+                window.location.href = (loc && loc.indexOf('/') === 0) ? loc : '/speed-round/quiz';
+                return;
+            }
 
             const data = await res.json().catch(() => ({}));
 
