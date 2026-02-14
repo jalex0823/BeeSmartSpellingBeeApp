@@ -8553,6 +8553,12 @@ function showRestoreDialog(title, message, isSuccess) {
             // Submit button
             const randomPlaySubmitBtn = document.getElementById('randomPlaySubmit');
             let randomPlaySubmitLastTouchAt = 0;
+            const getDifficultyLevel = () => {
+                const s = document.getElementById('difficultySlider');
+                if (!s || s.value === undefined) return 3;
+                const n = parseInt(s.value, 10);
+                return (n >= 1 && n <= 5) ? n : 3;
+            };
 
             // Click handler for desktop (suppressed if just handled by touch)
             randomPlaySubmitBtn.addEventListener('click', (e) => {
@@ -8562,7 +8568,7 @@ function showRestoreDialog(title, message, isSuccess) {
                 }
                 e.preventDefault();
                 e.stopPropagation();
-                const level = parseInt(slider.value);
+                const level = getDifficultyLevel();
                 console.log(' Submit button clicked! Level:', level);
                 modal.remove();
                 generateRandomWords(level);
@@ -8572,7 +8578,7 @@ function showRestoreDialog(title, message, isSuccess) {
             randomPlaySubmitBtn.addEventListener('touchend', (e) => {
                 randomPlaySubmitLastTouchAt = Date.now();
                 try { e.stopPropagation(); } catch (_e) {}
-                const level = parseInt(slider.value);
+                const level = getDifficultyLevel();
                 console.log(' Submit button touched (iOS)! Level:', level);
                 modal.remove();
                 generateRandomWords(level);
@@ -8657,34 +8663,48 @@ function showRestoreDialog(title, message, isSuccess) {
                     count: 10
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    return response.text().then(text => {
+                        throw new Error(response.status === 401 ? 'Please sign in to use Random Play.' : (response.status >= 400 ? `Server error (${response.status}). Try again.` : 'Invalid response.'));
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
-                if (data.status === 'success') {
-                    console.log('Random words generated:', data);
-                    
-                    if (window.loadingSystem && typeof window.loadingSystem.updateProgress === 'function') {
-                        try {
-                            window.loadingSystem.updateProgress(50, ' Bees picking perfect words...');
-                        } catch (e) {
-                            console.warn('Loading system update failed:', e);
-                        }
+                if (!data || data.status !== 'success') {
+                    throw new Error((data && data.message) || 'Failed to generate random words');
+                }
+                const count = (data.count != null) ? Number(data.count) : 10;
+                const diffLevel = (data.difficulty != null) ? Number(data.difficulty) : difficulty;
+                console.log('Random words generated:', data);
+                
+                if (window.loadingSystem && typeof window.loadingSystem.updateProgress === 'function') {
+                    try {
+                        window.loadingSystem.updateProgress(50, ' Bees picking perfect words...');
+                    } catch (e) {
+                        console.warn('Loading system update failed:', e);
                     }
+                }
 
-                        // Wait a bit to show progress
-                        setTimeout(async () => {
-                            if (window.loadingSystem && typeof window.loadingSystem.updateProgress === 'function') {
-                                try {
-                                    window.loadingSystem.updateProgress(100, ` ${data.count} words ready!`);
-                                } catch (e) {
-                                    console.warn('Loading system update failed:', e);
-                                }
+                // Wait a bit to show progress
+                setTimeout(async () => {
+                    try {
+                        if (window.loadingSystem && typeof window.loadingSystem.updateProgress === 'function') {
+                            try {
+                                window.loadingSystem.updateProgress(100, ` ${count} words ready!`);
+                            } catch (e) {
+                                console.warn('Loading system update failed:', e);
                             }
+                        }
 
-                            //  Update word count badge AND start quiz button using centralized manager
+                        if (typeof WordBankManager !== 'undefined' && WordBankManager && typeof WordBankManager.updateAllDisplays === 'function') {
                             await WordBankManager.updateAllDisplays(true);
-                            
-                            // Show quiz-ready notification (async, uses WordBankManager)
+                        }
+                        if (typeof showQuizReadyNotification === 'function') {
                             showQuizReadyNotification();
+                        }
 
                             // Auto-start: after Random Play finishes, start the quiz immediately (especially important on iOS where Start Quiz may be off-screen)
                             // Keep a safety fallback modal only if auto-start can't trigger.
@@ -8710,16 +8730,15 @@ function showRestoreDialog(title, message, isSuccess) {
                                 }
                             };
 
-                            // First attempt: right away (after displays update)
-                            const didStartImmediately = tryAutoStartQuiz();
+                        // First attempt: right away (after displays update)
+                        const didStartImmediately = tryAutoStartQuiz();
 
-                            // Second attempt: after a short tick (iOS layout timing)
-                            if (!didStartImmediately) {
-                                setTimeout(() => { tryAutoStartQuiz(); }, 180);
-                            }
+                        // Second attempt: after a short tick (iOS layout timing)
+                        if (!didStartImmediately) {
+                            setTimeout(() => { tryAutoStartQuiz(); }, 180);
+                        }
 
                         // If we successfully auto-started, don't interrupt the flow with a modal at all.
-                        // If we didn't, show a simple fallback message.
                         setTimeout(() => {
                             if (window.loadingSystem && typeof window.loadingSystem.hide === 'function') {
                                 try {
@@ -8729,26 +8748,33 @@ function showRestoreDialog(title, message, isSuccess) {
                                 }
                             }
 
-                            // If auto-start fired, we're done—let the quiz UI take over.
                             if (_randomPlayAutoStartFired) {
                                 return;
                             }
 
-                            // Only show a modal if we weren't able to auto-start.
-                            // This keeps the flow 1-tap (difficulty -> quiz) instead of requiring another tap.
                             const stillNotStarted = !tryAutoStartQuiz();
-                            if (stillNotStarted) {
+                            if (stillNotStarted && typeof openFriendlyInfoModal === 'function') {
                                 openFriendlyInfoModal({
-                                    title: ` ${data.count} Random Words Ready!`,
-                                    message: `We picked <strong>${data.count}</strong> words at difficulty <strong>${difficulty}</strong>. Tap <strong>Start Quiz</strong> to begin!`,
+                                    title: ` ${count} Random Words Ready!`,
+                                    message: `We picked <strong>${count}</strong> words at difficulty <strong>${diffLevel}</strong>. Tap <strong>Start Quiz</strong> to begin!`,
                                     buttonText: "OK"
                                 });
                             }
                         }, 500);
-                    }, 800);
-                } else {
-                    throw new Error(data.message || 'Failed to generate random words');
-                }
+                    } catch (err) {
+                        console.error('Random Play success path error:', err);
+                        if (window.loadingSystem && typeof window.loadingSystem.hide === 'function') {
+                            try { window.loadingSystem.hide(); } catch (_) {}
+                        }
+                        if (typeof openFriendlyInfoModal === 'function') {
+                            openFriendlyInfoModal({
+                                title: ' Something went wrong',
+                                message: 'Words were loaded but something failed. Try tapping Start Quiz, or try again.',
+                                buttonText: 'OK'
+                            });
+                        }
+                    }
+                }, 800);
             })
             .catch(error => {
                 console.error('Error generating random words:', error);
@@ -8761,11 +8787,16 @@ function showRestoreDialog(title, message, isSuccess) {
                     }
                 }
 
-                openFriendlyInfoModal({
-                    title: ' Oops!',
-                    message: `Something went wrong: ${error.message}. Please try again!`,
-                    buttonText: 'OK'
-                });
+                const msg = (error && error.message) ? String(error.message) : 'Something went wrong. Please try again!';
+                if (typeof openFriendlyInfoModal === 'function') {
+                    openFriendlyInfoModal({
+                        title: ' Oops!',
+                        message: msg,
+                        buttonText: 'OK'
+                    });
+                } else {
+                    try { alert('Random Play: ' + msg); } catch (_) {}
+                }
             });
         }
 

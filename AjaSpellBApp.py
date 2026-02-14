@@ -7105,18 +7105,32 @@ def api_random_words():
     Expects JSON: {"difficulty": 1-5, "count": 10}
     """
     try:
-        data = request.get_json()
-        difficulty = data.get("difficulty", 3)
-        count = data.get("count", 10)
-        
-        # Validate inputs
-        if not isinstance(difficulty, int) or difficulty < 1 or difficulty > 5:
+        data = request.get_json(silent=True)
+        if not data or not isinstance(data, dict):
+            return jsonify({
+                "status": "error",
+                "message": "Invalid or missing JSON body. Send {\"difficulty\": 1-5, \"count\": 10}"
+            }), 400
+        try:
+            difficulty = data.get("difficulty", 3)
+            count = data.get("count", 10)
+            if difficulty is not None and not isinstance(difficulty, int):
+                difficulty = int(difficulty)
+            if count is not None and not isinstance(count, int):
+                count = int(count)
+        except (TypeError, ValueError):
+            return jsonify({
+                "status": "error",
+                "message": "difficulty and count must be numbers (1-5 and 1-50)"
+            }), 400
+        difficulty = difficulty if difficulty is not None else 3
+        count = count if count is not None else 10
+        if difficulty < 1 or difficulty > 5:
             return jsonify({
                 "status": "error",
                 "message": "Difficulty must be between 1 and 5"
             }), 400
-        
-        if not isinstance(count, int) or count < 1 or count > 50:
+        if count < 1 or count > 50:
             return jsonify({
                 "status": "error",
                 "message": "Count must be between 1 and 50"

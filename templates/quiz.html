@@ -4690,8 +4690,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="bee-icon" aria-hidden="true">&#9650;</span> Show keyboard
                 </button>
 
-                <!-- Start with Buzzy Voice pill - Yellow CTA -->
-                <button type="button" id="buzzyPill" class="buzzy-pill" aria-label="Start with Buzzy voice" style="display: none;">
+                <!-- Start with Buzzy Voice pill - Forces announcer ON; Buzzy speaks intro and all quiz feedback -->
+                <button type="button" id="buzzyPill" class="buzzy-pill" aria-label="Start with Buzzy voice - announcer will speak" style="display: none;">
                     <span>▶</span> Start with Buzzy Voice
                 </button>
                 <button type="button" id="startSilentBtn" class="action-btn secondary" style="margin-top: 4px; display: block;" aria-label="Start silent">
@@ -6332,12 +6332,16 @@ class QuizManager {
 
         // Voice announcer settings
         this.announcerEnabled = localStorage.getItem('announcerEnabled') !== 'false'; // Default ON
-        this.voiceUnlocked = false; // iOS/Android require user interaction for autoplay
+        // Android: force voiceUnlocked so no old guard blocks announcer (native TTS doesn't need user gesture)
+        this.voiceUnlocked = false; // iOS/Safari require user interaction for autoplay
         this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         this.isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         this.isAndroid = /Android/i.test(navigator.userAgent) ||
             (typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'android') ||
             (typeof document !== 'undefined' && document.documentElement && document.documentElement.classList.contains('android'));
+        if (this.isAndroid && this.announcerEnabled) {
+            this.voiceUnlocked = true; // Force unlock on Android so announcer is never blocked by old guards
+        }
         
         // Background music settings
         // Default OFF: background music should never auto-play on page load.
@@ -6773,8 +6777,9 @@ class QuizManager {
             return Promise.resolve(); // Return resolved promise immediately
         }
         
-        // Check if voice is unlocked (important for iOS/Android - autoplay requires user gesture)
-        if ((this.isIOS || this.isSafari || this.isAndroid) && !this.voiceUnlocked) {
+        // Android: never block announcer on voiceUnlocked (native TTS doesn't need user gesture; old guard blocked sound)
+        // iOS/Safari: still require voiceUnlocked for Web Speech autoplay policy
+        if (!this.isAndroid && (this.isIOS || this.isSafari) && !this.voiceUnlocked) {
             console.log('🔒 Voice not unlocked (mobile) - skipping announcement');
             return Promise.resolve();
         }
@@ -6809,16 +6814,40 @@ class QuizManager {
             status.textContent = '🗣️ Speaking...';
         }
         
+        // Android: WebView speechSynthesis is often silent; use Capacitor native TTS for announcer
+        if (this.isAndroid && cleanText && typeof window.BeeSmartTryNativeTTS === 'function') {
+            const rate = this.announcerRate || 0.94;
+            return Promise.resolve()
+                .then(() => window.BeeSmartTryNativeTTS(cleanText, { rate: rate, pitch: 1.1 }))
+                .then((ok) => {
+                    if (visualizer && status) {
+                        visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
+                        status.textContent = '🐝 Ready';
+                    }
+                    if (!ok) return this._speakAnnouncementWeb(cleanText, visualizer, status);
+                })
+                .catch(() => {
+                    if (visualizer && status) {
+                        visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
+                        status.textContent = '🐝 Ready';
+                    }
+                    return this._speakAnnouncementWeb(cleanText, visualizer, status);
+                });
+        }
+        
+        return this._speakAnnouncementWeb(cleanText, visualizer, status);
+    }
+    
+    _speakAnnouncementWeb(cleanText, visualizer, status) {
         // Return a promise that resolves when speech is done
         return new Promise((resolve) => {
             // Use Web Speech API to announce results
             if (!('speechSynthesis' in window)) {
-                // Stop visualizer if no speech synthesis
                 if (visualizer && status) {
                     visualizer.classList.remove('speaking');
                     status.textContent = '🐝 Ready';
                 }
-                resolve(); // If no speech synthesis, resolve immediately
+                resolve();
                 return;
             }
             
@@ -8566,6 +8595,7 @@ class QuizManager {
             if (ss) ss.style.display = 'none';
         };
 
+        // Start with Buzzy Voice pill: force announcer ON for this session so Buzzy speaks intro + all feedback
         const startWithVoice = () => {
             if (this.quizStarted) return;
             this.voiceUnlocked = true;
@@ -8576,21 +8606,9 @@ class QuizManager {
             this.quizStarted = true;
             this.introInProgress = false;
             showQuizButtons();
-            // CRITICAL: Speak IMMEDIATELY in tap handler to unlock speech on Android (Chrome blocks speech without user gesture).
-            // Short warm-up on Android to establish unlock, then load word; full intro on desktop.
+            try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (_) {}
             const msg = (this.studentName ? `Hello ${this.studentName}! ` : '') +
                 "I'm Buzzy! Listen to each word, then spell it. Let's go!";
-            speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(msg);
-            u.rate = 0.95;
-            u.volume = 0.9;
-            const sessionVoice = typeof getQuizSessionVoice === 'function' ? getQuizSessionVoice() : null;
-            if (sessionVoice) u.voice = sessionVoice;
-            if (this.isAndroid) {
-                u.volume = 1.0;
-                u.lang = u.lang || 'en';
-                try { speechSynthesis.resume && speechSynthesis.resume(); } catch (_) {}
-            }
             var introDone = false;
             var done = () => {
                 if (introDone) return;
@@ -8598,14 +8616,33 @@ class QuizManager {
                 if (safetyTimer) clearTimeout(safetyTimer);
                 this.loadNextWordWithIntro();
             };
-            u.onend = done;
-            u.onerror = done;
             var safetyTimer = this.isAndroid ? setTimeout(done, 8000) : setTimeout(done, 5000);
-            try {
-                speechSynthesis.speak(u);
-            } catch (err) {
-                if (!introDone) done();
+            // Android: use native TTS so intro is heard (WebView speechSynthesis often silent)
+            const self = this;
+            if (self.isAndroid && typeof window.BeeSmartTryNativeTTS === 'function') {
+                window.BeeSmartTryNativeTTS(msg, { rate: 0.95, pitch: 1.0 }).then(function(ok) {
+                    if (ok) done();
+                    else doWebIntro();
+                }).catch(function() { doWebIntro(); });
+                return;
             }
+            function doWebIntro() {
+                speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(msg);
+                u.rate = 0.95;
+                u.volume = 0.9;
+                const sessionVoice = typeof getQuizSessionVoice === 'function' ? getQuizSessionVoice() : null;
+                if (sessionVoice) u.voice = sessionVoice;
+                if (self.isAndroid) {
+                    u.volume = 1.0;
+                    u.lang = u.lang || 'en';
+                    try { speechSynthesis.resume && speechSynthesis.resume(); } catch (_) {}
+                }
+                u.onend = done;
+                u.onerror = done;
+                try { speechSynthesis.speak(u); } catch (err) { if (!introDone) done(); }
+            }
+            doWebIntro();
         };
 
         const startSilent = () => {
@@ -11403,17 +11440,19 @@ function unlockiOSAudio() {
     
     console.log(isIOS ? '🍎 iOS' : '🤖 Android', 'detected - setting up audio unlock');
     
-    // Silent utterance to wake up speech synthesis on first user interaction
     const unlock = () => {
-        console.log('🔓 Unlocking iOS audio...');
+        console.log('🔓 Unlocking mobile audio...');
         
-        // Method 1: Silent speech utterance
-        const utterance = new SpeechSynthesisUtterance(' ');
-        utterance.volume = 0.01; // Almost silent
-        speechSynthesis.speak(utterance);
-        setTimeout(() => speechSynthesis.cancel(), 100);
+        // Android: do NOT use speechSynthesis.speak + cancel here - the 100ms cancel can kill Buzzy's intro/announcer.
+        // Android uses native TTS; this unlock was only for Web Speech and could block/cancel real speech.
+        if (!isAndroid) {
+            const utterance = new SpeechSynthesisUtterance(' ');
+            utterance.volume = 0.01; // Almost silent
+            speechSynthesis.speak(utterance);
+            setTimeout(() => speechSynthesis.cancel(), 100);
+        }
         
-        // Method 2: Resume AudioContext if exists
+        // Resume AudioContext if exists (both platforms)
         if (window.AudioContext || window.webkitAudioContext) {
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             if (audioContext.state === 'suspended') {
@@ -11425,12 +11464,10 @@ function unlockiOSAudio() {
         
         console.log('✅ Mobile audio unlocked');
         
-        // Remove listeners after first unlock
         document.removeEventListener('touchstart', unlock);
         document.removeEventListener('click', unlock);
     };
     
-    // Listen for first user interaction
     document.addEventListener('touchstart', unlock, { once: true });
     document.addEventListener('click', unlock, { once: true });
 }
