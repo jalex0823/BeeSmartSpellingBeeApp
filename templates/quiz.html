@@ -242,8 +242,16 @@ if ('speechSynthesis' in window) {
         overscroll-behavior: auto !important;
         overscroll-behavior-y: auto !important;
         overscroll-behavior-x: auto !important;
-        touch-action: pan-y;
+        touch-action: pan-y; /* iOS Safari + Android: allow vertical scroll */
         -webkit-overflow-scrolling: touch; /* iOS momentum scroll */
+    }
+    /* iOS Safari + Android: reinforce body as scroll container on touch devices */
+    @media (hover: none) and (pointer: coarse) {
+        body.route-quiz {
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            touch-action: pan-y !important;
+        }
     }
     /* Prevent html-level rubber banding */
     html.route-quiz,
@@ -11604,13 +11612,18 @@ document.addEventListener('visibilitychange', () => {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
-    // 🍎 SCROLL FIX: Initialize immediately to prevent rubber banding, stuck scrolling, and ensure visible scrollbar
+    // 🍎 SCROLL FIX: Quiz uses PAGE SCROLL (body), not inner .card-scroll. iOS Safari + Android must not turn .card-scroll into a scroller.
     (function initScrollFix() {
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         const isAndroid = /Android/i.test(navigator.userAgent) || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
-        
-        if (isIOS) {
-            // Force CSS properties on html and body immediately for iOS
+        const isQuizPage = document.body && document.body.classList && document.body.classList.contains('route-quiz');
+
+        // So html.route-quiz CSS (overscroll-behavior) applies
+        if (isQuizPage && document.documentElement && !document.documentElement.classList.contains('route-quiz')) {
+            document.documentElement.classList.add('route-quiz');
+        }
+
+        if (isIOS && !isQuizPage) {
             document.documentElement.style.overscrollBehavior = 'none';
             document.documentElement.style.overscrollBehaviorY = 'none';
             document.documentElement.style.overscrollBehaviorX = 'none';
@@ -11618,17 +11631,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.body.style.overscrollBehaviorY = 'none';
             document.body.style.overscrollBehaviorX = 'none';
         }
-        
-        // Initialize scroll container as soon as it exists (for ALL devices)
+        if (isQuizPage) {
+            // Quiz: body is the scroll container; .card-scroll must stay overflow:visible (CSS). Do NOT set overflowY on .card-scroll.
+            console.log('✅ Quiz page scroll mode: body scroll, .card-scroll not used as inner scroller');
+            return;
+        }
+
+        // Non-quiz: initialize inner scroll container
         const initScrollContainer = () => {
             const scroller = document.querySelector('.card-scroll');
             if (!scroller) {
-                // Retry if not ready yet
                 setTimeout(initScrollContainer, 50);
                 return;
             }
-            
-            // Force CSS properties
             if (isIOS) {
                 scroller.style.overscrollBehavior = 'none';
                 scroller.style.overscrollBehaviorY = 'none';
@@ -11641,37 +11656,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 scroller.style.willChange = 'scroll-position';
             }
             scroller.style.overflowY = 'auto';
-            scroller.style.scrollbarWidth = 'thin'; // Firefox
-            scroller.style.scrollbarColor = 'rgba(0, 0, 0, 0.4) transparent'; // Firefox
-            
-            // Ensure scrollbar is visible by checking if content overflows
+            scroller.style.scrollbarWidth = 'thin';
+            scroller.style.scrollbarColor = 'rgba(0, 0, 0, 0.4) transparent';
             const checkScrollbar = () => {
                 if (scroller.scrollHeight > scroller.clientHeight) {
                     scroller.style.overflowY = 'auto';
-                    // Force a reflow to ensure scrollbar appears
                     scroller.offsetHeight;
                 }
             };
-            
-            // Check immediately and after delays to catch dynamic content
             checkScrollbar();
             setTimeout(checkScrollbar, 100);
             setTimeout(checkScrollbar, 500);
             setTimeout(checkScrollbar, 1000);
-            
-            // Also check when content changes
-            const observer = new MutationObserver(() => {
-                checkScrollbar();
-            });
+            const observer = new MutationObserver(() => { checkScrollbar(); });
             observer.observe(scroller, { childList: true, subtree: true, attributes: true });
-            
-            // Also check on window resize
             window.addEventListener('resize', checkScrollbar);
-            
             console.log('✅ Scroll container initialized with visible scrollbar');
         };
-        
-        // Start initialization immediately
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initScrollContainer);
         } else {
