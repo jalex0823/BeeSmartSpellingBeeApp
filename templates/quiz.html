@@ -27,15 +27,16 @@ window.DISABLE_BUZZY_HELP_MODAL = true;
         try {
             var ua = navigator.userAgent || '';
             var cap = window.Capacitor;
-            var isA = /Android/i.test(ua) || (cap && typeof cap.getPlatform === 'function' && cap.getPlatform() === 'android');
-            if (isA) {
-                document.documentElement.classList.add('android');
+            var isAndroid = /Android/i.test(ua) || (cap && typeof cap.getPlatform === 'function' && cap.getPlatform() === 'android');
+            var isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+            if (isAndroid) document.documentElement.classList.add('android');
+            if (isAndroid || isIOS) {
                 var inp = document.getElementById('spellingInput');
-                if (inp && !inp.dataset.androidBlur) {
-                    inp.setAttribute('readonly','readonly');
-                    inp.setAttribute('inputmode','none');
-                    inp.dataset.androidBlur = '1';
-                    inp.addEventListener('focus', function(){ inp.blur(); }, { passive: true });
+                if (inp && !inp.dataset.mobileKbLock) {
+                    inp.setAttribute('readonly', 'readonly');
+                    inp.setAttribute('inputmode', 'none');
+                    inp.dataset.mobileKbLock = '1';
+                    inp.addEventListener('focus', function () { try { inp.blur(); } catch (_) {} }, { passive: true });
                 }
             }
         } catch(e){}
@@ -231,11 +232,13 @@ if ('speechSynthesis' in window) {
     /* D) Quiz-only: allow normal page scrolling (no scroll traps) */
     body.route-quiz {
         overflow-y: auto !important;
+        overflow-x: hidden !important;
         position: static !important;
         overscroll-behavior: auto !important;
         overscroll-behavior-y: auto !important;
         overscroll-behavior-x: auto !important;
         touch-action: pan-y;
+        -webkit-overflow-scrolling: touch; /* iOS momentum scroll */
     }
     /* Prevent html-level rubber banding */
     html.route-quiz,
@@ -246,6 +249,11 @@ if ('speechSynthesis' in window) {
     }
     /* Card content is in normal document flow; page scrolls. */
     body.route-quiz .card-scroll { overflow: visible !important; }
+    /* iOS: allow content to extend so body can actually scroll (no clipping) */
+    body.route-quiz .quiz-card,
+    body.route-quiz .quiz-card .quiz-card-content {
+        overflow: visible !important;
+    }
 
     /* .quiz-page = theme background (style guide), flex column */
     .quiz-page {
@@ -4675,7 +4683,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input type="text"
                            id="spellingInput"
                            placeholder="Type your answer..."
-                           inputmode="text"
+                           inputmode="none"
                            autocomplete="off"
                            autocorrect="off"
                            autocapitalize="off"
@@ -4683,7 +4691,7 @@ document.addEventListener('DOMContentLoaded', () => {
                            style="font-size: 16px;">
                 </div>
                 <script>
-                (function(){ var ua = navigator.userAgent || ''; var cap = window.Capacitor; var isAndroid = /Android/i.test(ua) || (cap && cap.getPlatform && cap.getPlatform() === 'android'); if (isAndroid) { var inp = document.getElementById('spellingInput'); if (inp) { inp.setAttribute('readonly','readonly'); inp.setAttribute('inputmode','none'); } })();
+                (function(){ var ua = navigator.userAgent || ''; var cap = window.Capacitor; var isA = /Android/i.test(ua) || (cap && cap.getPlatform && cap.getPlatform() === 'android'); var isI = /iPad|iPhone|iPod/.test(ua); if (isA || isI) { var inp = document.getElementById('spellingInput'); if (inp) { inp.setAttribute('readonly','readonly'); inp.setAttribute('inputmode','none'); } })();
                 </script>
                 <!-- Show keyboard button (visible when keyboard is hidden so user can bring it back) -->
                 <button type="button" id="showKeyboardBtn" class="action-btn secondary quiz-show-keyboard-btn" style="display: none; margin-top: 8px; width: 100%; max-width: 260px;" aria-label="Show keyboard">
@@ -6555,12 +6563,14 @@ class QuizManager {
         }
         
         // iOS Safari rubber-band prevention (ONLY when using inner scroller).
-        // If the page is the scroll owner (preferred), do not install scroll traps.
+        // CRITICAL: On quiz page we use BODY scroll and keyboard is in-flow; do NOT install scroll traps
+        // or the keyboard sticks and scroll breaks (Android-only changes must not affect iOS).
         try {
+            const isQuizPage = document.body && document.body.classList && document.body.classList.contains('route-quiz');
             const scroller = document.querySelector('.card-scroll');
             const usesInnerScroller = (() => {
                 try {
-                    if (!scroller) return false;
+                    if (!scroller || isQuizPage) return false;
                     const cs = window.getComputedStyle(scroller);
                     const oy = (cs && cs.overflowY) ? String(cs.overflowY) : '';
                     return (oy === 'auto' || oy === 'scroll');
@@ -7463,7 +7473,7 @@ class QuizManager {
                         targetEl: keyboardContainer,
                         inputEl: spellingInput,
                         spacerTargetEl: null,
-                        lockSystemKeyboard: this.isAndroid || (document.documentElement && document.documentElement.classList.contains('android')),
+                        lockSystemKeyboard: this.isAndroid || this.isIOS || !!(document.documentElement && document.documentElement.classList.contains('android')),
                         onSubmit: () => { if (this.submitAnswer) this.submitAnswer(); },
                         allowSpaces: true,
                         autoCaps: true,
@@ -7746,7 +7756,7 @@ class QuizManager {
                         targetEl: keyboardContainer,
                         inputEl: spellingInput,
                         spacerTargetEl: null,
-                        lockSystemKeyboard: this.isAndroid || (document.documentElement && document.documentElement.classList.contains('android')),
+                        lockSystemKeyboard: this.isAndroid || this.isIOS || !!(document.documentElement && document.documentElement.classList.contains('android')),
                         onSubmit: () => { if (this.submitAnswer) this.submitAnswer(); },
                         allowSpaces: true,
                         autoCaps: true,

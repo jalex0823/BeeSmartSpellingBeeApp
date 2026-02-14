@@ -876,6 +876,8 @@
             // Prevent zoom on double tap for form elements
             let lastTouchEnd = 0;
             document.addEventListener('touchend', function (event) {
+                // Don't block scroll on quiz page (body scroll must work)
+                if (document.body && document.body.classList && document.body.classList.contains('route-quiz')) return;
                 const now = (new Date()).getTime();
                 if (now - lastTouchEnd <= 300) {
                     // Avoid blocking normal taps/clicks on interactive controls.
