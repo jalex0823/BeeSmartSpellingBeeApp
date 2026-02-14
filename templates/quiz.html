@@ -229,7 +229,12 @@ if ('speechSynthesis' in window) {
         overflow-x: hidden;
     }
 
-    /* D) Quiz-only: allow normal page scrolling (no scroll traps) */
+    /* D) Quiz-only: PAGE SCROLL (not card scroll).
+     * - Body is the scroll container; .card-scroll and card content use overflow:visible
+     *   so the page grows and one unified scroll works on iOS, Android, desktop.
+     * - JS must NOT install document-level touchmove/touchstart traps on quiz
+     *   (isQuizPage -> usesInnerScroller false). See setupiOSKeyboardHandling().
+     */
     body.route-quiz {
         overflow-y: auto !important;
         overflow-x: hidden !important;
