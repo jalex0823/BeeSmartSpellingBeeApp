@@ -2906,6 +2906,15 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'  # Redirect to login page if not authenticated
 login_manager.login_message = ' Please log in to save your progress!'
 
+
+@login_manager.unauthorized_handler
+def unauthorized_callback():
+    """Return JSON 401 for API routes so clients get parseable responses instead of HTML redirect."""
+    if request.path.startswith("/api/") or (request.accept_mimetypes.best and "application/json" in str(request.accept_mimetypes)):
+        return jsonify({"error": "login_required", "message": "Please log in to continue."}), 401
+    return redirect(url_for(login_manager.login_view, next=request.url))
+
+
 @login_manager.user_loader
 def load_user(user_id):
     """Load user by ID for Flask-Login
@@ -11294,8 +11303,8 @@ def api_dictionary_status():
 def api_clear():
     """Clear wordbank and quiz state with authorization check"""
     try:
-        # Check for authorization parameter
-        data = request.get_json() or {}
+        # Check for authorization parameter (silent=True avoids 500 on malformed body)
+        data = request.get_json(silent=True) or {}
         confirmed = data.get('confirmed', False)
         
         if not confirmed:
@@ -11312,30 +11321,24 @@ def api_clear():
         
         # Delete from PostgreSQL database (single source of truth)
         if storage_id:
-            delete_wordbank(storage_id)
-            print(f"DEBUG /api/clear: Deleted wordbank from PostgreSQL database")
+            try:
+                delete_wordbank(storage_id)
+                print(f"DEBUG /api/clear: Deleted wordbank from PostgreSQL database")
+            except Exception as db_e:
+                print(f"DEBUG /api/clear: delete_wordbank failed (non-fatal): {db_e}")
         
         # Clear all session data thoroughly
-        session.pop("wordbank_storage_id", None)
-        session.pop(DATA_KEY, None)
-        session.pop(QUIZ_STATE_KEY, None)
-        session.pop("wordbank_count", None)
-        session.pop("using_default_words", None)
-        session.pop("skip_default_load", None)
-        session.pop("has_uploaded_once", None)
-        session.pop("is_random_play", None)
-        
-        # Mark wordbank as intentionally cleared
+        for key in ("wordbank_storage_id", DATA_KEY, QUIZ_STATE_KEY, "wordbank_count",
+                    "using_default_words", "skip_default_load", "has_uploaded_once", "is_random_play"):
+            session.pop(key, None)
         session["wordbank_count"] = 0
         session["wordbank_cleared"] = True
-        
-        # Force session modification
         session.modified = True
         
         print(f"DEBUG /api/clear: Session cleared. User must manually upload words or use Random Words feature")
         
         return jsonify({
-            "ok": True, 
+            "ok": True,
             "message": "All word lists and quiz progress cleared successfully! Word list is now completely empty.",
             "cleared": {
                 "wordbank": True,
