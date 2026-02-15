@@ -1,0 +1,474 @@
+{
+  "timestamp": "2026-02-14T09:40:41.597509",
+  "base_url": "https://beesmartspelling.app",
+  "user_agent": "Android WebView (Chrome 120)",
+  "summary": {
+    "total": 66,
+    "passed": 66,
+    "failed": 0
+  },
+  "tests": [
+    {
+      "category": "Build",
+      "test": "build.gradle exists",
+      "passed": true,
+      "details": "versionCode/versionName: True",
+      "timestamp": "2026-02-14T09:40:26.519871"
+    },
+    {
+      "category": "Build",
+      "test": "Application ID configured",
+      "passed": true,
+      "details": "",
+      "timestamp": "2026-02-14T09:40:26.519871"
+    },
+    {
+      "category": "Build",
+      "test": "Billing dependency present",
+      "passed": true,
+      "details": "",
+      "timestamp": "2026-02-14T09:40:26.519871"
+    },
+    {
+      "category": "Build",
+      "test": "AndroidManifest exists",
+      "passed": true,
+      "details": "",
+      "timestamp": "2026-02-14T09:40:26.521393"
+    },
+    {
+      "category": "Build",
+      "test": "INTERNET permission",
+      "passed": true,
+      "details": "",
+      "timestamp": "2026-02-14T09:40:26.521393"
+    },
+    {
+      "category": "Build",
+      "test": "BILLING permission",
+      "passed": true,
+      "details": "",
+      "timestamp": "2026-02-14T09:40:26.521393"
+    },
+    {
+      "category": "Build",
+      "test": "Capacitor config exists",
+      "passed": true,
+      "details": "",
+      "timestamp": "2026-02-14T09:40:26.529313"
+    },
+    {
+      "category": "Build",
+      "test": "Android config in Capacitor",
+      "passed": true,
+      "details": "",
+      "timestamp": "2026-02-14T09:40:26.529313"
+    },
+    {
+      "category": "Code",
+      "test": "Android IAP verify endpoint",
+      "passed": true,
+      "details": "",
+      "timestamp": "2026-02-14T09:40:26.532425"
+    },
+    {
+      "category": "Code",
+      "test": "Android subscription verify",
+      "passed": true,
+      "details": "",
+      "timestamp": "2026-02-14T09:40:26.532425"
+    },
+    {
+      "category": "Code",
+      "test": "Android RTDN endpoint",
+      "passed": true,
+      "details": "",
+      "timestamp": "2026-02-14T09:40:26.532425"
+    },
+    {
+      "category": "Code",
+      "test": "Google Play product IDs",
+      "passed": true,
+      "details": "",
+      "timestamp": "2026-02-14T09:40:26.532425"
+    },
+    {
+      "category": "Code",
+      "test": "Avatar picker Android redirect",
+      "passed": true,
+      "details": "",
+      "timestamp": "2026-02-14T09:40:26.554958"
+    },
+    {
+      "category": "Code",
+      "test": "Speed round Android handling",
+      "passed": true,
+      "details": "",
+      "timestamp": "2026-02-14T09:40:26.594383"
+    },
+    {
+      "category": "Health",
+      "test": "Main health",
+      "passed": true,
+      "details": "Status: 200, version: 34",
+      "timestamp": "2026-02-14T09:40:28.081879"
+    },
+    {
+      "category": "Health",
+      "test": "IAP health",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:28.763221"
+    },
+    {
+      "category": "Pages",
+      "test": "Home / Main menu",
+      "passed": true,
+      "details": "Status: 200, Size: 1015803 bytes",
+      "timestamp": "2026-02-14T09:40:29.216429"
+    },
+    {
+      "category": "Pages",
+      "test": "Quiz page",
+      "passed": true,
+      "details": "Status: 200, Size: 1015803 bytes",
+      "timestamp": "2026-02-14T09:40:29.740941"
+    },
+    {
+      "category": "Pages",
+      "test": "Login page",
+      "passed": true,
+      "details": "Status: 200, Size: 70161 bytes",
+      "timestamp": "2026-02-14T09:40:29.923098"
+    },
+    {
+      "category": "Pages",
+      "test": "Registration page",
+      "passed": true,
+      "details": "Status: 200, Size: 87726 bytes",
+      "timestamp": "2026-02-14T09:40:30.044227"
+    },
+    {
+      "category": "Pages",
+      "test": "Student dashboard",
+      "passed": true,
+      "details": "Status: 200, Size: 70161 bytes",
+      "timestamp": "2026-02-14T09:40:30.209347"
+    },
+    {
+      "category": "Pages",
+      "test": "Avatar picker",
+      "passed": true,
+      "details": "Status: 200, Size: 23025 bytes",
+      "timestamp": "2026-02-14T09:40:30.306621"
+    },
+    {
+      "category": "Pages",
+      "test": "Speed round setup",
+      "passed": true,
+      "details": "Status: 200, Size: 56472 bytes",
+      "timestamp": "2026-02-14T09:40:30.626759"
+    },
+    {
+      "category": "Pages",
+      "test": "Word lists",
+      "passed": true,
+      "details": "Status: 200, Size: 108319 bytes",
+      "timestamp": "2026-02-14T09:40:30.756461"
+    },
+    {
+      "category": "Pages",
+      "test": "Privacy policy",
+      "passed": true,
+      "details": "Status: 200, Size: 4215 bytes",
+      "timestamp": "2026-02-14T09:40:30.872169"
+    },
+    {
+      "category": "Pages",
+      "test": "Points explanation",
+      "passed": true,
+      "details": "Status: 200, Size: 12667 bytes",
+      "timestamp": "2026-02-14T09:40:30.994196"
+    },
+    {
+      "category": "Tile:Manual",
+      "test": "Upload manual words",
+      "passed": true,
+      "details": "Status: 200, count: 3",
+      "timestamp": "2026-02-14T09:40:33.032126"
+    },
+    {
+      "category": "Tile:Text",
+      "test": "Import text words",
+      "passed": true,
+      "details": "Stored: 3",
+      "timestamp": "2026-02-14T09:40:33.515674"
+    },
+    {
+      "category": "Tile:Dictionary",
+      "test": "Lookup word",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:33.793424"
+    },
+    {
+      "category": "Tile:Image",
+      "test": "Image upload endpoint",
+      "passed": true,
+      "details": "Status: 401",
+      "timestamp": "2026-02-14T09:40:34.124411"
+    },
+    {
+      "category": "Tile:Random",
+      "test": "Random words API",
+      "passed": "login_required",
+      "details": "Status: 401",
+      "timestamp": "2026-02-14T09:40:34.406018"
+    },
+    {
+      "category": "Tile:Saved",
+      "test": "Saved lists API",
+      "passed": true,
+      "details": "Status: 401",
+      "timestamp": "2026-02-14T09:40:34.703280"
+    },
+    {
+      "category": "Tile:Nav",
+      "test": "Avatars tile",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:34.993571"
+    },
+    {
+      "category": "Tile:Nav",
+      "test": "Groups tile",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:35.197146"
+    },
+    {
+      "category": "Tile:Nav",
+      "test": "Join teacher tile",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:35.306452"
+    },
+    {
+      "category": "Tile:Nav",
+      "test": "Battles tile",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:35.481211"
+    },
+    {
+      "category": "Wordbank",
+      "test": "Get count",
+      "passed": true,
+      "details": "Count: 0",
+      "timestamp": "2026-02-14T09:40:35.933439"
+    },
+    {
+      "category": "Wordbank",
+      "test": "Add words",
+      "passed": true,
+      "details": "Status: success",
+      "timestamp": "2026-02-14T09:40:36.080442"
+    },
+    {
+      "category": "Wordbank",
+      "test": "Clear wordbank",
+      "passed": true,
+      "details": "",
+      "timestamp": "2026-02-14T09:40:36.223975"
+    },
+    {
+      "category": "Quiz",
+      "test": "Setup wordbank",
+      "passed": true,
+      "details": "",
+      "timestamp": "2026-02-14T09:40:36.724392"
+    },
+    {
+      "category": "Quiz",
+      "test": "Get next word",
+      "passed": true,
+      "details": "Word: cat",
+      "timestamp": "2026-02-14T09:40:36.832848"
+    },
+    {
+      "category": "Quiz",
+      "test": "Submit correct answer",
+      "passed": true,
+      "details": "Correct: True",
+      "timestamp": "2026-02-14T09:40:36.954543"
+    },
+    {
+      "category": "Quiz",
+      "test": "Submit incorrect answer",
+      "passed": true,
+      "details": "Correct: False",
+      "timestamp": "2026-02-14T09:40:37.168605"
+    },
+    {
+      "category": "Quiz",
+      "test": "Hint endpoint",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:37.258696"
+    },
+    {
+      "category": "Quiz",
+      "test": "Pronounce endpoint",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:37.351465"
+    },
+    {
+      "category": "Avatar",
+      "test": "Get avatar list",
+      "passed": true,
+      "details": "Avatars: 41",
+      "timestamp": "2026-02-14T09:40:37.703107"
+    },
+    {
+      "category": "Avatar",
+      "test": "Select avatar endpoint",
+      "passed": true,
+      "details": "Status: 401 (auth required)",
+      "timestamp": "2026-02-14T09:40:37.771284"
+    },
+    {
+      "category": "SpeedRound",
+      "test": "Start speed round",
+      "passed": true,
+      "details": "Status: 401 (auth/premium gate)",
+      "timestamp": "2026-02-14T09:40:38.097804"
+    },
+    {
+      "category": "QuizAux",
+      "test": "Quiz state",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:38.550024"
+    },
+    {
+      "category": "QuizAux",
+      "test": "Quiz status",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:38.651712"
+    },
+    {
+      "category": "QuizAux",
+      "test": "Live status",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:38.755605"
+    },
+    {
+      "category": "QuizAux",
+      "test": "Clear session",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:38.819536"
+    },
+    {
+      "category": "Misc",
+      "test": "Buzz dust info",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:39.119732"
+    },
+    {
+      "category": "Misc",
+      "test": "Bundles list",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:39.207192"
+    },
+    {
+      "category": "Misc",
+      "test": "Auth status",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:39.288232"
+    },
+    {
+      "category": "IAP",
+      "test": "Google verify endpoint",
+      "passed": true,
+      "details": "Status: 400",
+      "timestamp": "2026-02-14T09:40:39.565040"
+    },
+    {
+      "category": "IAP",
+      "test": "Restore (Google)",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:39.643286"
+    },
+    {
+      "category": "SpeedRound",
+      "test": "Setup page loads",
+      "passed": true,
+      "details": "Status: 200",
+      "timestamp": "2026-02-14T09:40:40.113884"
+    },
+    {
+      "category": "SpeedRound",
+      "test": "Health endpoint",
+      "passed": true,
+      "details": "Status: operational",
+      "timestamp": "2026-02-14T09:40:40.329279"
+    },
+    {
+      "category": "Assets",
+      "test": "Main CSS",
+      "passed": true,
+      "details": "Status: 200, Size: 27395 bytes",
+      "timestamp": "2026-02-14T09:40:40.716976"
+    },
+    {
+      "category": "Assets",
+      "test": "3D Avatar loader",
+      "passed": true,
+      "details": "Status: 200, Size: 32412 bytes",
+      "timestamp": "2026-02-14T09:40:40.869314"
+    },
+    {
+      "category": "Assets",
+      "test": "User avatar loader",
+      "passed": true,
+      "details": "Status: 200, Size: 34282 bytes",
+      "timestamp": "2026-02-14T09:40:41.069634"
+    },
+    {
+      "category": "Assets",
+      "test": "Avatar picker JS",
+      "passed": true,
+      "details": "Status: 200, Size: 138046 bytes",
+      "timestamp": "2026-02-14T09:40:41.200910"
+    },
+    {
+      "category": "Assets",
+      "test": "Service worker",
+      "passed": true,
+      "details": "Status: 200, Size: 7930 bytes",
+      "timestamp": "2026-02-14T09:40:41.321809"
+    },
+    {
+      "category": "Assets",
+      "test": "Web manifest",
+      "passed": true,
+      "details": "Status: 200, Size: 729 bytes",
+      "timestamp": "2026-02-14T09:40:41.461809"
+    },
+    {
+      "category": "Assets",
+      "test": "Android App Links",
+      "passed": true,
+      "details": "Status: 200, Size: 340 bytes",
+      "timestamp": "2026-02-14T09:40:41.595923"
+    }
+  ]
+}
