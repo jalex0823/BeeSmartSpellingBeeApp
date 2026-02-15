@@ -45,6 +45,22 @@ window.DISABLE_BUZZY_HELP_MODAL = true;
     document.addEventListener('DOMContentLoaded', addAndroid);
 })();
 
+// Android: one-time audio unlock on first touch (helps some WebViews allow subsequent audio/TTS)
+(function(){
+    if (!/Android/i.test(navigator.userAgent)) return;
+    var unlocked = false;
+    function unlock() {
+        if (unlocked) return;
+        unlocked = true;
+        try {
+            var a = new Audio();
+            a.play().catch(function() {});
+        } catch (_) {}
+    }
+    document.addEventListener('touchstart', unlock, { once: true, passive: true });
+    document.addEventListener('click', unlock, { once: true, passive: true });
+})();
+
 // Dev-only: ?debug=layout shows red (input), blue (keyboard), green (button grid) outlines for iPhone verification
 if (typeof location !== 'undefined' && location.search && location.search.indexOf('debug=layout') !== -1) {
     document.documentElement.addEventListener('DOMContentLoaded', function () { document.body.classList.add('dev-visual-debug'); });
@@ -141,7 +157,7 @@ function selectBestFemaleVoiceGlobal(voices) {
 
 // Android: Try native Capacitor TTS when Web Speech API fails (WebView often has no sound)
 // Requires @capacitor-community/text-to-speech and "npx cap sync android" from mobile/ so the plugin is in the build.
-// Retries once after 400ms if plugin not ready (Capacitor bridge can load after page).
+// Retries once after 400ms if plugin not ready. Uses en-US (Android/plugin default); falls back to 'en' if unsupported.
 window.BeeSmartTryNativeTTS = async function(text, opts) {
     if (!text || !/Android/i.test(navigator.userAgent)) return false;
     function getTTS() {
@@ -149,13 +165,13 @@ window.BeeSmartTryNativeTTS = async function(text, opts) {
         if (!cap || !cap.Plugins) return null;
         return cap.Plugins.TextToSpeech || cap.Plugins['TextToSpeech'] || null;
     }
-    function trySpeak(TTS) {
+    function trySpeak(TTS, locale) {
         if (!TTS || typeof TTS.speak !== 'function') return Promise.resolve(false);
         var rate = (opts && opts.rate) != null ? opts.rate : 0.95;
         var pitch = (opts && opts.pitch) != null ? opts.pitch : 1.0;
         return TTS.speak({
             text: String(text),
-            lang: 'en',
+            lang: locale || 'en-US',
             rate: rate,
             pitch: pitch,
             volume: 1.0
@@ -164,21 +180,60 @@ window.BeeSmartTryNativeTTS = async function(text, opts) {
     try {
         var TTS = getTTS();
         if (TTS && typeof TTS.speak === 'function') {
-            return await trySpeak(TTS);
+            var ok = await trySpeak(TTS, 'en-US');
+            if (ok) return true;
+            ok = await trySpeak(TTS, 'en');
+            return ok;
         }
-        // Capacitor/plugin may not be ready yet – retry once after short delay
-        if (/Android/i.test(navigator.userAgent)) {
-            await new Promise(function(r) { setTimeout(r, 400); });
-            TTS = getTTS();
-            if (TTS && typeof TTS.speak === 'function') {
-                return await trySpeak(TTS);
-            }
-            console.warn('Android TTS: Plugin not found after retry. Run "npx cap sync android" from mobile/.');
+        await new Promise(function(r) { setTimeout(r, 400); });
+        TTS = getTTS();
+        if (TTS && typeof TTS.speak === 'function') {
+            var ok = await trySpeak(TTS, 'en-US');
+            if (ok) return true;
+            return await trySpeak(TTS, 'en');
         }
+        console.warn('Android TTS: Plugin not found after retry. Run "npx cap sync android" from mobile/.');
         return false;
     } catch (e) {
         console.warn('Native TTS failed:', e);
         return false;
+    }
+};
+
+// Android TTS smoke test: run from DevTools (chrome://inspect) or attach to window for a debug button.
+// Call: BeeSmartTTSSmokeTest() then check console for languages/voices and listen for test phrase.
+window.BeeSmartTTSSmokeTest = async function() {
+    if (!/Android/i.test(navigator.userAgent)) {
+        console.log('BeeSmartTTSSmokeTest: not Android, skipping');
+        return;
+    }
+    var cap = window.Capacitor;
+    var TTS = cap && cap.Plugins && (cap.Plugins.TextToSpeech || cap.Plugins['TextToSpeech']);
+    if (!TTS) {
+        console.warn('BeeSmartTTSSmokeTest: TextToSpeech plugin not found');
+        return;
+    }
+    try {
+        if (typeof TTS.getSupportedLanguages === 'function') {
+            var langRes = await TTS.getSupportedLanguages();
+            console.log('TTS supported languages:', (langRes && langRes.languages) ? langRes.languages.slice(0, 30) : langRes);
+        }
+        if (typeof TTS.getSupportedVoices === 'function') {
+            var voiceRes = await TTS.getSupportedVoices();
+            var voices = voiceRes && voiceRes.voices;
+            console.log('TTS supported voices count:', voices ? voices.length : 0, voices ? voices.slice(0, 5) : '');
+        }
+        console.log('TTS speak start', Date.now());
+        await TTS.speak({
+            text: 'BeeSmart Android text to speech test.',
+            lang: 'en-US',
+            rate: 1.0,
+            pitch: 1.0,
+            volume: 1.0
+        });
+        console.log('TTS speak end', Date.now());
+    } catch (e) {
+        console.error('BeeSmartTTSSmokeTest failed:', e);
     }
 };
 
