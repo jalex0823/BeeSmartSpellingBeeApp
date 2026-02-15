@@ -3293,6 +3293,7 @@ if ('speechSynthesis' in window) {
         overflow-y: auto;
         flex: 1;
     }
+    .android-tts-version { margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #6d4c00; font-weight: 600; }
     .android-tts-status { margin: 0 0 0.5rem 0; font-weight: 600; color: #333; }
     .android-tts-log {
         background: #1e1e1e;
@@ -5137,6 +5138,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button type="button" class="android-tts-modal-close" id="androidTtsModalClose" aria-label="Close">&times;</button>
             </div>
             <div class="android-tts-modal-body">
+                <p class="android-tts-version" id="androidTtsAppVersion">App version: —</p>
                 <p class="android-tts-status" id="androidTtsStatus">Run test to see results…</p>
                 <pre id="androidTtsLog" class="android-tts-log"></pre>
                 <p class="android-tts-hint">Check: Media volume up, DND off, Settings → TTS → Play sample works.</p>
@@ -5178,7 +5180,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   var logEl = document.getElementById('androidTtsLog');
   var statusEl = document.getElementById('androidTtsStatus');
+  var versionEl = document.getElementById('androidTtsAppVersion');
   var modal = document.getElementById('androidTtsTestModal');
+
+  function setAppVersion() {
+    if (!versionEl) return;
+    var cap = window.Capacitor;
+    var App = cap && cap.Plugins && (cap.Plugins.App || cap.Plugins['App']);
+    if (App && typeof App.getInfo === 'function') {
+      App.getInfo().then(function(info) {
+        var v = (info && info.version) ? info.version : '?';
+        var b = (info && info.build != null) ? info.build : '?';
+        versionEl.textContent = 'App version: ' + v + ' (build ' + b + ')';
+      }).catch(function() {
+        versionEl.textContent = 'App version: unknown';
+      });
+    } else {
+      versionEl.textContent = 'App version: not available (web?)';
+    }
+  }
+
   function log(msg) {
     if (logEl) logEl.textContent += msg + '\n';
     console.log('[Android TTS]', msg);
@@ -5200,6 +5221,13 @@ document.addEventListener('DOMContentLoaded', () => {
         var plat = window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : '?';
         lines.push('Platform: ' + plat);
       } catch (e) { lines.push('Platform error: ' + e.message); }
+      var App = window.Capacitor.Plugins && (window.Capacitor.Plugins.App || window.Capacitor.Plugins['App']);
+      if (App && typeof App.getInfo === 'function') {
+        try {
+          var info = await App.getInfo();
+          lines.push('App version: ' + (info.version || '?') + ' (build ' + (info.build != null ? info.build : '?') + ')');
+        } catch (e) { lines.push('App version: ' + (e.message || 'error')); }
+      }
     }
 
     var TTS = null;
@@ -5258,6 +5286,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function showModal() {
     if (modal) modal.style.display = 'flex';
+    setAppVersion();
     if (logEl) logEl.textContent = 'Tap "Run test & speak" to run diagnostic.';
     setStatus('Run test to see results.');
   }
