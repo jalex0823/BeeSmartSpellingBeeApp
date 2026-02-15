@@ -141,23 +141,41 @@ function selectBestFemaleVoiceGlobal(voices) {
 
 // Android: Try native Capacitor TTS when Web Speech API fails (WebView often has no sound)
 // Requires @capacitor-community/text-to-speech and "npx cap sync android" from mobile/ so the plugin is in the build.
+// Retries once after 400ms if plugin not ready (Capacitor bridge can load after page).
 window.BeeSmartTryNativeTTS = async function(text, opts) {
     if (!text || !/Android/i.test(navigator.userAgent)) return false;
-    try {
+    function getTTS() {
         var cap = window.Capacitor;
-        var TTS = (cap && cap.Plugins && (cap.Plugins.TextToSpeech || cap.Plugins['TextToSpeech']));
-        if (!TTS || typeof TTS.speak !== 'function') {
-            if (/Android/i.test(navigator.userAgent) && cap) console.warn('Android TTS: Plugin not found. Run "npx cap sync android" from mobile/ so @capacitor-community/text-to-speech is in the build.');
-            return false;
-        }
-        await TTS.speak({
+        if (!cap || !cap.Plugins) return null;
+        return cap.Plugins.TextToSpeech || cap.Plugins['TextToSpeech'] || null;
+    }
+    function trySpeak(TTS) {
+        if (!TTS || typeof TTS.speak !== 'function') return Promise.resolve(false);
+        var rate = (opts && opts.rate) != null ? opts.rate : 0.95;
+        var pitch = (opts && opts.pitch) != null ? opts.pitch : 1.0;
+        return TTS.speak({
             text: String(text),
             lang: 'en',
-            rate: (opts && opts.rate) != null ? opts.rate : 0.95,
-            pitch: (opts && opts.pitch) != null ? opts.pitch : 1.0,
+            rate: rate,
+            pitch: pitch,
             volume: 1.0
-        });
-        return true;
+        }).then(function() { return true; }).catch(function(e) { console.warn('Native TTS speak failed:', e); return false; });
+    }
+    try {
+        var TTS = getTTS();
+        if (TTS && typeof TTS.speak === 'function') {
+            return await trySpeak(TTS);
+        }
+        // Capacitor/plugin may not be ready yet – retry once after short delay
+        if (/Android/i.test(navigator.userAgent)) {
+            await new Promise(function(r) { setTimeout(r, 400); });
+            TTS = getTTS();
+            if (TTS && typeof TTS.speak === 'function') {
+                return await trySpeak(TTS);
+            }
+            console.warn('Android TTS: Plugin not found after retry. Run "npx cap sync android" from mobile/.');
+        }
+        return false;
     } catch (e) {
         console.warn('Native TTS failed:', e);
         return false;
@@ -7134,18 +7152,37 @@ class QuizManager {
                 
                 // If voice already enabled, auto-start without waiting for button
                 if (voiceWasEnabled) {
-                    // Voice already unlocked - start intro immediately
                     const greeting = this.studentName ? `Hello ${this.studentName}!` : "Hello!";
                     const introMessage = `${greeting} I'm Buzzy, your announcer bee! ` +
                                        "Listen carefully to each word, then spell what you hear. " +
                                        "Let's start spelling and fill that honey jar!";
-                    
+                    const self = this;
+
+                    // Android: Web Speech is often silent in WebView – use native TTS so intro is heard, then start quiz
+                    if (this.isAndroid) {
+                        const advance = function() {
+                            if (self.quizStarted) return;
+                            feedbackArea.style.display = 'none';
+                            self.quizStarted = true;
+                            self.loadNextWordWithIntro();
+                        };
+                        if (typeof window.BeeSmartTryNativeTTS === 'function') {
+                            window.BeeSmartTryNativeTTS(introMessage, { rate: 0.95, pitch: 1.1 }).then(function(ok) {
+                                setTimeout(advance, 600);
+                            }).catch(function() { setTimeout(advance, 400); });
+                        } else {
+                            setTimeout(advance, 800);
+                        }
+                        setTimeout(advance, 4500);
+                        return;
+                    }
+
+                    // iOS: use Web Speech for intro (reliable on Safari)
                     speechSynthesis.cancel();
                     const utterance = new SpeechSynthesisUtterance(introMessage);
                     utterance.rate = 0.95;
                     utterance.pitch = 1.1;
                     utterance.volume = 0.9;
-                    
                     utterance.onend = () => {
                         console.log('✅ iOS intro voice completed successfully');
                         setTimeout(() => {
@@ -7154,7 +7191,6 @@ class QuizManager {
                             this.loadNextWordWithIntro();
                         }, 800);
                     };
-                    
                     utterance.onerror = (err) => {
                         console.error('❌ iOS voice failed:', err);
                         setTimeout(() => {
@@ -7163,7 +7199,6 @@ class QuizManager {
                             this.loadNextWordWithIntro();
                         }, 500);
                     };
-                    
                     speechSynthesis.speak(utterance);
                 } else if (iosVoiceBtn) {
                     // Voice not enabled - show optional button (user can skip)
@@ -7559,10 +7594,11 @@ class QuizManager {
                 }
             }
 
-            // Android: pronounce word first (so user hears it), then start timer
-            // Speech has 6s safety timeout so we don't hang if onend never fires
+            // Android: auto-initiate announcer – pronounce word first (so user hears it), then start timer
+            // Short delay so Capacitor TTS bridge is ready; then pronounce then timer
             if (this.isAndroid) {
                 if (this.shouldSpeakWord(data.word, 'pronounce', 1200)) {
+                    await new Promise(function(r) { setTimeout(r, 350); });
                     await this.pronounceWord({ refresh: true });
                 }
                 if (this.timerEnabled && this.quizStarted) {
@@ -9340,8 +9376,7 @@ class QuizManager {
 
     async pronounceWord({ refresh = false, rate = 1.0 } = {}) {
         try {
-            // Play gentle tone before pronunciation
-            playThemedSound('pronounce-word');
+            try { if (typeof playThemedSound === 'function') playThemedSound('pronounce-word'); } catch (_) {}
             
             // Animate voice visualizer during actual speech
             const visualizer = document.getElementById('voiceVisualizer');
