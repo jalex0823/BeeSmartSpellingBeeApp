@@ -160,9 +160,20 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 $aabPath = Join-Path $androidDir "app\build\outputs\bundle\release\app-release.aab"
 if (Test-Path $aabPath) {
     Write-Host ""
-    Write-Host "SUCCESS: AAB created" -ForegroundColor Green
+    Write-Host "SUCCESS: AAB created (signed with upload keystore)" -ForegroundColor Green
     Write-Host "  $aabPath" -ForegroundColor White
+
+    # Copy to a dedicated upload folder so you can upload directly from there
+    $uploadDir = Join-Path $mobileDir "release-upload"
+    if (-not (Test-Path $uploadDir)) { New-Item -ItemType Directory -Path $uploadDir -Force | Out-Null }
+    $uploadAab = Join-Path $uploadDir "app-release.aab"
+    Copy-Item -Path $aabPath -Destination $uploadAab -Force
+    Write-Host ""
+    Write-Host "Copy for upload:" -ForegroundColor Cyan
+    Write-Host "  $uploadAab" -ForegroundColor White
     Write-Host "Upload this file in Google Play Console (Release > Create new release)." -ForegroundColor Gray
+    # Open the folder so you can drag the AAB to Play Console
+    Start-Process explorer.exe -ArgumentList "/select,`"$uploadAab`""
 } else {
     Write-Host "AAB not found at expected path." -ForegroundColor Red
     exit 1

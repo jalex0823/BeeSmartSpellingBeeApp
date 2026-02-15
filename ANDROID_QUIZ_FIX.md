@@ -1,8 +1,13 @@
 # Android Quiz Fix – Announcer Not Heard & App Reset
 
+## Why iOS/Desktop Work But Android Doesn’t
+
+- **iOS / desktop:** The Web Speech API (`speechSynthesis`) works reliably, so the announcer and word pronunciation use it and you hear sound.
+- **Android:** In the Android WebView (and often in Chrome on Android), `speechSynthesis` is unreliable and often produces **no sound** (no error, just silence). So the quiz uses **native TTS** on Android when the Capacitor Text-to-Speech plugin is present. If the plugin wasn’t included in the Android build, the app falls back to Web Speech and you get no announcer audio.
+
 ## Issues Addressed
 
-1. **Cannot hear word being spelled** – Web Speech API (`speechSynthesis`) may not work reliably in Android WebView.
+1. **Cannot hear word being spelled** – Use native TTS on Android when the plugin is in the build; Web Speech is unreliable in Android WebView.
 2. **Quiz resets the app** – Reload loops when errors occur.
 
 ---
@@ -41,7 +46,13 @@ npx cap open android
 # Then Build → Build Bundle(s) / APK(s) in Android Studio
 ```
 
-The plugin is already added to `package.json`. After `npm install` and `cap sync`, the native TTS will be available. A future update can add a bridge in the quiz to prefer native TTS on Android when the plugin is present.
+The plugin is in `mobile/package.json`. The quiz uses native TTS on Android when the plugin is available (`BeeSmartTryNativeTTS`). The Android project has been updated to include the Text-to-Speech plugin:
+
+- `mobile/android/app/src/main/assets/capacitor.plugins.json` – TTS plugin registered
+- `mobile/android/capacitor.settings.gradle` – TTS module included
+- `mobile/android/app/capacitor.build.gradle` – TTS dependency added
+
+**Before building the Android app:** From repo root run `cd mobile && npm install` so `node_modules/@capacitor-community/text-to-speech` exists. Then build the AAB/APK (e.g. open Android Studio and build). The announcer should then use native TTS and play on device. If you run `npx cap sync android` later, it may regenerate these files; as long as the plugin is in `package.json` and installed, sync will keep the TTS plugin in the build.
 
 ---
 

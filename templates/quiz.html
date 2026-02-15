@@ -140,16 +140,21 @@ function selectBestFemaleVoiceGlobal(voices) {
 }
 
 // Android: Try native Capacitor TTS when Web Speech API fails (WebView often has no sound)
+// Requires @capacitor-community/text-to-speech and "npx cap sync android" from mobile/ so the plugin is in the build.
 window.BeeSmartTryNativeTTS = async function(text, opts) {
     if (!text || !/Android/i.test(navigator.userAgent)) return false;
     try {
-        var TTS = (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.TextToSpeech);
-        if (!TTS || typeof TTS.speak !== 'function') return false;
+        var cap = window.Capacitor;
+        var TTS = (cap && cap.Plugins && (cap.Plugins.TextToSpeech || cap.Plugins['TextToSpeech']));
+        if (!TTS || typeof TTS.speak !== 'function') {
+            if (/Android/i.test(navigator.userAgent) && cap) console.warn('Android TTS: Plugin not found. Run "npx cap sync android" from mobile/ so @capacitor-community/text-to-speech is in the build.');
+            return false;
+        }
         await TTS.speak({
             text: String(text),
             lang: 'en',
-            rate: (opts && opts.rate) || 0.95,
-            pitch: (opts && opts.pitch) || 1.0,
+            rate: (opts && opts.rate) != null ? opts.rate : 0.95,
+            pitch: (opts && opts.pitch) != null ? opts.pitch : 1.0,
             volume: 1.0
         });
         return true;
@@ -5536,6 +5541,7 @@ class BeeSoundboard {
         }
         speechSynthesis.cancel();
         var finish = () => { if (onEndCallback) onEndCallback(); };
+        var isAndroid = /Android/i.test(navigator.userAgent) || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
         const speak = () => {
             const utterance = new SpeechSynthesisUtterance(word);
             utterance.pitch = 1.35;
@@ -5638,20 +5644,19 @@ class BeeSoundboard {
             }
         };
         
-        // iOS Safari fix: Better voice loading with timeout
+        // iOS Safari fix: Better voice loading with timeout. Android: delay after cancel so engine is ready.
+        var runSpeak = () => { if (isAndroid) setTimeout(speak, 80); else speak(); };
         const voices = speechSynthesis.getVoices();
         if (voices.length > 0) {
-            speak();
+            runSpeak();
         } else {
-            // iOS often needs a delay
             let timeout = setTimeout(() => {
                 console.warn('⚠️ Voice loading timeout - speaking anyway');
-                speak();
+                runSpeak();
             }, 2000);
-            
             BeeSmart_onVoicesChanged(() => {
                 clearTimeout(timeout);
-                speak();
+                runSpeak();
             }, { once: true });
         }
     }
@@ -6965,11 +6970,12 @@ class QuizManager {
                 }
             };
             
-            // Ensure voices are loaded
+            // Ensure voices are loaded. Android: delay after any prior cancel so engine is ready.
+            var runSpeak = () => { if (this.isAndroid) setTimeout(speak, 80); else speak(); };
             if (speechSynthesis.getVoices().length > 0) {
-                speak();
+                runSpeak();
             } else {
-                BeeSmart_onVoicesChanged(speak, { once: true });
+                BeeSmart_onVoicesChanged(() => runSpeak(), { once: true });
             }
         });
     }
@@ -9403,9 +9409,41 @@ class QuizManager {
 
     // Direct speech synthesis fallback
     speakDirectly(text, onDone, rate = 1.0) {
+        const self = this;
+        // Android: try native TTS first; if it fails or plugin missing, fall back to Web Speech so we never get silence
+        if (this.isAndroid && text && typeof window.BeeSmartTryNativeTTS === 'function') {
+            var viz = document.getElementById('voiceVisualizer');
+            var st = document.getElementById('voiceStatus');
+            if (viz) viz.classList.add('speaking');
+            if (st) st.textContent = '🗣️ Speaking...';
+            window.BeeSmartTryNativeTTS(text, { rate: rate, pitch: 1.0 }).then(function(ok) {
+                if (ok) {
+                    if (onDone) onDone();
+                    if (viz) viz.classList.remove('speaking', 'word-pulse', 'pausing');
+                    if (st) st.textContent = '🐝 Ready';
+                    return;
+                }
+                // Native TTS not available or failed – use Web Speech so user still hears audio
+                self._speakDirectlyWebSpeech(text, onDone, rate, viz, st);
+            }).catch(function() {
+                self._speakDirectlyWebSpeech(text, onDone, rate, viz, st);
+            });
+            setTimeout(function() {
+                if (viz) viz.classList.remove('speaking', 'word-pulse', 'pausing');
+                if (st) st.textContent = '🐝 Ready';
+            }, Math.min(15000, 500 + (String(text).length * 80)));
+            return;
+        }
+        this._speakDirectlyWebSpeech(text, onDone, rate, null, null);
+    }
+
+    _speakDirectlyWebSpeech(text, onDone, rate, vizEl, statusEl) {
         if ('speechSynthesis' in window) {
             try {
                 speechSynthesis.cancel(); // Cancel any ongoing speech
+                // Android: brief delay after cancel so Web Speech engine is ready (avoids silent speak)
+                var self = this;
+                var doSpeak = () => {
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.rate = rate;
                 utterance.pitch = 1.0;
@@ -9416,7 +9454,7 @@ class QuizManager {
                 if (sessionVoice) {
                     utterance.voice = sessionVoice;
                 }
-                if (this.isAndroid) {
+                if (self.isAndroid) {
                     utterance.volume = 1.0;
                     utterance.lang = utterance.lang || 'en';
                     try { speechSynthesis.resume && speechSynthesis.resume(); } catch (_) {}
@@ -9430,7 +9468,7 @@ class QuizManager {
                     if (onDone) onDone();
                 };
                 // Longer timeout to avoid cutting off longer phrases (e.g. timer announcements)
-                var safetyTimer = this.isAndroid ? setTimeout(finish, 12000) : null;
+                var safetyTimer = self.isAndroid ? setTimeout(finish, 12000) : null;
 
                 utterance.onend = () => {
                     console.log('Direct speech synthesis completed');
@@ -9448,6 +9486,8 @@ class QuizManager {
                     finish();
                 }
                 console.log(`Direct speech synthesis started: "${text}" at rate ${rate}`);
+                };
+                if (self.isAndroid) setTimeout(doSpeak, 80); else doSpeak();
             } catch (error) {
                 console.error('Speech synthesis failed:', error);
                 if (onDone) onDone();

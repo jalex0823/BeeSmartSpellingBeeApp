@@ -9,3 +9,6 @@ KEYSTORE_PASSWORD.txt
 android/upload_certificate.pem
 android/upload-keystore.jks
 android/keystore.properties
+
+# Signed AAB copy for Play upload (build-aab.ps1)
+release-upload/
