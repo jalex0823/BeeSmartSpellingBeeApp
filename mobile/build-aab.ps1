@@ -1,6 +1,10 @@
 # Build Android App Bundle (AAB) for Google Play
 # Ensures Java is installed/set, syncs web assets (if npm available), then builds AAB.
 # Run from repo root or from mobile folder: .\build-aab.ps1
+#
+# Version for this build (injected into app/build.gradle before building so AAB always has correct version)
+$VersionCode = 15
+$VersionName = "5.9"
 
 $ErrorActionPreference = "Stop"
 $scriptDir = $PSScriptRoot
@@ -151,10 +155,18 @@ try {
     }
 } catch {}
 
-# --- Build AAB ---
-Write-Host "Building AAB (bundleRelease)..." -ForegroundColor Yellow
+# --- Inject version into app/build.gradle so AAB always has correct version ---
+$buildGradlePath = Join-Path $androidDir "app\build.gradle"
+$buildGradleContent = Get-Content $buildGradlePath -Raw -ErrorAction SilentlyContinue
+$buildGradleContent = $buildGradleContent -replace "versionCode \d+", "versionCode $VersionCode"
+$buildGradleContent = $buildGradleContent -replace 'versionName "[^"]+"', "versionName `"$VersionName`""
+Set-Content -Path $buildGradlePath -Value $buildGradleContent -NoNewline
+Write-Host "Version: versionCode $VersionCode, versionName `"$VersionName`"" -ForegroundColor Cyan
+
+# --- Build AAB (clean so version/asset changes are picked up) ---
+Write-Host "Building AAB (clean + bundleRelease)..." -ForegroundColor Yellow
 Set-Location $androidDir
-& .\gradlew.bat --no-daemon bundleRelease
+& .\gradlew.bat --no-daemon clean bundleRelease
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $aabPath = Join-Path $androidDir "app\build\outputs\bundle\release\app-release.aab"
