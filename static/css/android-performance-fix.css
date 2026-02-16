@@ -178,3 +178,35 @@ html.android body.honeycomb-avatar-picker .loading-overlay {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }
+
+/* ========================================
+   FIX 9: Honeycomb Avatar Picker - scrollable on Android
+   ======================================== */
+html.android body.honeycomb-avatar-picker {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    min-height: 100vh;
+}
+html.android body.honeycomb-avatar-picker .honeycomb-content {
+    min-height: 0;
+    flex: 1;
+}
+/* Grid container as scroll area on mobile so grid scrolls reliably */
+@media screen and (max-width: 767px) {
+    html.android body.honeycomb-avatar-picker .honeycomb-content {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+    html.android body.honeycomb-avatar-picker .honeycomb-grid-container {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: 55vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+    }
+}

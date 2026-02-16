@@ -11030,7 +11030,7 @@ function showRestoreDialog(title, message, isSuccess) {
         }
         
         function searchDictionary(term) {
-            showLoadingMessage(' Looking up the word "' + term + '" in our magical dictionary...');
+            showLoadingMessage(' Looking up the word "' + term + '" in our magical dictionary...', { simple: true });
             
             fetch('/api/dictionary-lookup', {
                 method: 'POST',
@@ -11042,15 +11042,21 @@ function showRestoreDialog(title, message, isSuccess) {
             .then(response => response.json())
             .then(data => {
                 hideLoadingMessage();
-                if (data.definition && data.definition.trim()) {
-                    showDictionaryResult(data.word, data.definition, data.phonetic || '');
-                } else {
-                    showErrorMessage('Word not found in dictionary');
-                }
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        if (data.definition && data.definition.trim()) {
+                            showDictionaryResult(data.word, data.definition, data.phonetic || '');
+                        } else {
+                            showErrorMessage('Word not found in dictionary');
+                        }
+                    });
+                });
             })
             .catch(error => {
                 hideLoadingMessage();
-                showErrorMessage('Error searching dictionary: ' + error.message);
+                requestAnimationFrame(function() {
+                    showErrorMessage('Error searching dictionary: ' + error.message);
+                });
             });
         }
         
@@ -11374,7 +11380,9 @@ function showRestoreDialog(title, message, isSuccess) {
         }
         
         // UI Helper Functions (reverted to overlay for first-load excitement)
-        function showLoadingMessage(message) {
+        function showLoadingMessage(message, options) {
+            options = options || {};
+            const simple = options.simple === true;
             // Create or update loading overlay
             let overlay = document.getElementById('loadingOverlay');
             if (!overlay) {
@@ -11400,6 +11408,12 @@ function showRestoreDialog(title, message, isSuccess) {
             
             // Use centralized logo if available
             const logoUrl = window.BeeSmartLogo ? window.BeeSmartLogo.getUrl() : '/static/images/BeeSmartSpellingBeeApplication.png?v=20251112';
+            const spinnerHtml = simple ? `
+                <div style="width: 40px; height: 40px; margin: 0 auto 1rem; border: 3px solid rgba(255, 182, 193, 0.5); border-top-color: #FFB300; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+            ` : `
+                <div id="beeHiveLoader" style="width: 200px; height: 200px; margin: 0 auto 1rem; position: relative;"></div>
+            `;
             
             overlay.innerHTML = `
                 <div style="
@@ -11420,19 +11434,15 @@ function showRestoreDialog(title, message, isSuccess) {
                         display: block;
                         filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
                     " />
-                    <div id="beeHiveLoader" style="
-                        width: 200px;
-                        height: 200px;
-                        margin: 0 auto 1rem;
-                        position: relative;
-                    "></div>
+                    ${spinnerHtml}
                     <div style="font-weight: 600; line-height: 1.6;">${message}</div>
                 </div>
             `;
             overlay.style.display = 'flex';
             
-            // Create 3D beehive with buzzing bees
-            create3DBeeHiveAnimation();
+            if (!simple) {
+                create3DBeeHiveAnimation();
+            }
         }
         
         function create3DBeeHiveAnimation() {
@@ -11918,6 +11928,8 @@ function showRestoreDialog(title, message, isSuccess) {
         }
         
         function showDictionaryResult(word, definition, phonetic) {
+            const existing = document.getElementById('dictionaryModal');
+            if (existing) existing.remove();
             // Parse definition in dictionary style (matching quiz format)
             let cleanDef = definition.replace(/^[]\s*/, '');
             let wordType = '';
