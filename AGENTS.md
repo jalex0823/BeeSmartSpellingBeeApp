@@ -1,5 +1,9 @@
 # Agent and workflow rules
 
+## Deployment: DigitalOcean only
+
+**School app and production deploy use DigitalOcean only.** Do not assume or document Railway, Heroku, or other platforms for this project. References to pre-deploy, migrations, or run commands should target DigitalOcean (e.g. App Platform run commands, one-off run, or similar). Ignore or treat as legacy any Railway-specific steps (e.g. `predeploy_check.py` calling migrations is for Railway; on DigitalOcean you run migrations manually or via a DO run command if configured).
+
 ## Branch policy: main vs release/school
 
 Two **independent** products; two branches. Updating one must not change the other.
