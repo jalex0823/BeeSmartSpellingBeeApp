@@ -64,6 +64,7 @@ try:
     from models import SpeedRoundConfig, SpeedRoundScore
     from models import Avatar, BattleSession, PurchaseRecord, BundleKey, DynamicBundle, BundleKeyRedemption
     from models import WordBankStorage  # Single source of truth for all word operations
+    from models import School, SchoolKey  # School Edition
 except Exception:
     import traceback
     sys.stderr.write("STARTUP FAILED (config/models import):\n")
@@ -2757,14 +2758,17 @@ except Exception:
 
 print(f" Environment: {'PRODUCTION' if is_deployed_env else 'DEVELOPMENT (Local)'}")
 
+# School Edition: use separate session cookie when APP_EDITION=school
+_session_cookie_name = 'beesmart_session'
+if os.environ.get('APP_EDITION', '').strip().lower() == 'school':
+    _session_cookie_name = os.environ.get('SESSION_COOKIE_NAME', 'beesmart_school_session').strip() or 'beesmart_school_session'
+
 app.config.update(
     SESSION_COOKIE_SECURE=cookie_secure,  # Only True when we're actually on HTTPS
     SESSION_COOKIE_HTTPONLY=True,
-    # Use Lax by default. (SameSite=None requires Secure=True, which we *cannot*
-    # use on local HTTP dev.)
     SESSION_COOKIE_SAMESITE='Lax',
-    PERMANENT_SESSION_LIFETIME=3600 * 24 * 7,  # 7 days (increased from 1 day)
-    SESSION_COOKIE_NAME='beesmart_session',
+    PERMANENT_SESSION_LIFETIME=3600 * 24 * 7,  # 7 days
+    SESSION_COOKIE_NAME=_session_cookie_name,
     # Avoid re-issuing the session cookie on every request.
     # When combined with other code paths that also touch `session`, this can
     # lead to cookie churn and lost keys in some clients/tests.
@@ -2821,6 +2825,8 @@ def _ensure_db_initialized() -> None:
                 'battle_sessions',
                 'battle_players',
                 'avatars',
+                'schools',
+                'school_keys',
             ]
             missing_tables = []
             for tname in required_tables:
@@ -3125,6 +3131,41 @@ def ensure_session():
     # Mark permanent, but don't toggle it repeatedly.
     if not session.permanent:
         session.permanent = True  # Use PERMANENT_SESSION_LIFETIME
+
+
+# --- School Edition: require school context when configured -------------------
+@app.before_request
+def school_edition_guard():
+    """When REQUIRE_SCHOOL_CONTEXT=true, send unauthenticated or non-school users to /school."""
+    try:
+        from school_edition import require_school_context
+        if not require_school_context():
+            return
+        if request.path.startswith(('/static/', '/health', '/favicon.ico', '/.well-known/', '/school')):
+            return
+        if not getattr(current_user, 'is_authenticated', False):
+            return redirect(url_for('school_landing_page', next=request.url))
+        if not session.get('school_id'):
+            return redirect(url_for('school_landing_page', next=request.url))
+    except Exception:
+        pass
+
+
+# --- School Edition: inject edition/role into all templates -------------------
+@app.context_processor
+def inject_edition_context():
+    """Make edition, role_context, school_mascot_logo_url available in all templates (school edition)."""
+    try:
+        from school_edition import get_edition_context
+        return get_edition_context()
+    except Exception:
+        return {
+            'edition': 'consumer',
+            'role_context': '',
+            'school_mascot_logo_url': None,
+            'school_theme_primary': None,
+            'school_theme_secondary': None,
+        }
 
 
 # --- Session Logging Helper --------------------------------------------------
@@ -13924,6 +13965,145 @@ def login():
         db.session.rollback()
         app.logger.error(f"Login unexpected error: {e}")
         return jsonify({"success": False, "error": "An unexpected server error occurred. Please try again."}), 500
+
+
+# ========== School Edition routes (release/school only; guarded by APP_EDITION/REQUIRE_SCHOOL_CONTEXT) ==========
+@app.route('/school', methods=['GET'])
+def school_landing_page():
+    """School Edition landing: Teacher/Student login with School Key."""
+    from school_edition import is_school_edition
+    if not is_school_edition():
+        return redirect(url_for('home'))
+    return render_template('school/school_landing.html')
+
+
+@app.route('/school/login', methods=['POST'])
+def school_login():
+    """Validate email, password, key_code; set school context and redirect to teacher/student dashboard."""
+    from school_edition import is_school_edition
+    from models import School, SchoolKey
+    from datetime import datetime as dt
+    if not is_school_edition():
+        return jsonify({"success": False, "error": "School login not available"}), 404
+    data = request.get_json(silent=True) or request.form
+    email = (data.get('email') or data.get('username') or '').strip()
+    password = data.get('password', '')
+    key_code = (data.get('key_code') or data.get('key') or '').strip()
+    if not email or not password or not key_code:
+        return jsonify({"success": False, "error": "Email, password, and School Key are required"}), 400
+    try:
+        _ensure_db_initialized()
+        user = User.query.filter(db.func.lower(User.email) == email.lower()).first() or \
+               User.query.filter(db.func.lower(User.username) == email.lower()).first()
+        if not user or not user.check_password(password):
+            return jsonify({"success": False, "error": "Invalid email or password"}), 401
+        if not user.is_active:
+            return jsonify({"success": False, "error": "Account is disabled"}), 403
+        sk = SchoolKey.query.filter_by(key_code=key_code.strip(), is_active=True).first()
+        if not sk:
+            return jsonify({"success": False, "error": "Invalid or inactive School Key"}), 401
+        if sk.expires_at and sk.expires_at < dt.utcnow():
+            return jsonify({"success": False, "error": "School Key has expired"}), 401
+        school = School.query.get(sk.school_id)
+        if not school:
+            return jsonify({"success": False, "error": "School not found"}), 404
+        role_context = 'teacher' if sk.key_type.upper() == 'TEACHER' else 'student' if sk.key_type.upper() == 'STUDENT' else None
+        if not role_context and sk.key_type.upper() == 'SCHOOL':
+            role_context = (user.role or 'student').lower()
+            if role_context not in ('teacher', 'student'):
+                role_context = 'student'
+        if not role_context:
+            role_context = (user.role or 'student').lower()
+        if user.school_id is None:
+            user.school_id = school.id
+            db.session.commit()
+        login_user(user, remember=True)
+        user.update_last_login(ip_address=request.remote_addr)
+        db.session.commit()
+        session['school_id'] = school.id
+        session['school_key_type'] = sk.key_type
+        session['school_code'] = school.school_code
+        session['role_context'] = role_context
+        if role_context == 'teacher':
+            return jsonify({"success": True, "redirect": url_for('school_teacher_dashboard')})
+        return jsonify({"success": True, "redirect": url_for('school_student_dashboard')})
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"School login error: {e}")
+        return jsonify({"success": False, "error": "An unexpected error occurred. Please try again."}), 500
+
+
+@app.route('/school/teacher/dashboard')
+@login_required
+def school_teacher_dashboard():
+    if not session.get('school_id'):
+        return redirect(url_for('school_landing_page'))
+    if (session.get('role_context') or '').lower() != 'teacher':
+        return redirect(url_for('school_student_dashboard'))
+    from school_edition import get_edition_context
+    ctx = get_edition_context()
+    return render_template('school/school_teacher_dashboard.html', **ctx)
+
+
+@app.route('/school/teacher/students')
+@login_required
+def school_teacher_students():
+    if not session.get('school_id'):
+        return redirect(url_for('school_landing_page'))
+    if (session.get('role_context') or '').lower() != 'teacher':
+        return redirect(url_for('school_student_dashboard'))
+    from school_edition import get_edition_context
+    return render_template('school/school_teacher_dashboard.html', **get_edition_context(), active_tab='students')
+
+
+@app.route('/school/teacher/import')
+@login_required
+def school_teacher_import():
+    if not session.get('school_id'):
+        return redirect(url_for('school_landing_page'))
+    if (session.get('role_context') or '').lower() != 'teacher':
+        return redirect(url_for('school_student_dashboard'))
+    from school_edition import get_edition_context
+    return render_template('school/school_teacher_dashboard.html', **get_edition_context(), active_tab='import')
+
+
+@app.route('/school/teacher/assignments')
+@login_required
+def school_teacher_assignments():
+    if not session.get('school_id'):
+        return redirect(url_for('school_landing_page'))
+    if (session.get('role_context') or '').lower() != 'teacher':
+        return redirect(url_for('school_student_dashboard'))
+    from school_edition import get_edition_context
+    return render_template('school/school_teacher_dashboard.html', **get_edition_context(), active_tab='assignments')
+
+
+@app.route('/school/student/dashboard')
+@login_required
+def school_student_dashboard():
+    if not session.get('school_id'):
+        return redirect(url_for('school_landing_page'))
+    from school_edition import get_edition_context
+    ctx = get_edition_context()
+    return render_template('school/school_student_dashboard.html', **ctx)
+
+
+@app.route('/school/student/quiz')
+@login_required
+def school_student_quiz():
+    if not session.get('school_id'):
+        return redirect(url_for('school_landing_page'))
+    from school_edition import get_edition_context
+    return render_template('school/school_student_dashboard.html', **get_edition_context(), active_tab='quiz')
+
+
+@app.route('/school/student/progress')
+@login_required
+def school_student_progress():
+    if not session.get('school_id'):
+        return redirect(url_for('school_landing_page'))
+    from school_edition import get_edition_context
+    return render_template('school/school_student_dashboard.html', **get_edition_context(), active_tab='progress')
 
 
 @app.route('/api/auth/forgot-password', methods=['POST'])

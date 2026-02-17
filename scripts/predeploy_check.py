@@ -58,6 +58,17 @@ def main() -> int:
         else:
             print(f"⚠️ Wordbank migration not found at {wordbank_migration} (skipping)")
 
+        # School Edition: schools + school_keys tables and users.school_id (non-fatal)
+        school_migration = os.path.join("scripts", "migrate_school_tables.py")
+        if os.path.exists(school_migration):
+            try:
+                print(f"🔧 Running school tables migration: {school_migration}")
+                rc = run([sys.executable, school_migration])
+                if rc != 0:
+                    print(f"⚠️ school migration exited with code {rc} (continuing anyway)")
+            except Exception as e:
+                print(f"⚠️ school migration failed: {e} (continuing anyway)")
+
         print("✅ Pre-deploy diagnostics complete. Proceeding to deploy.")
         return 0
     except Exception as e:

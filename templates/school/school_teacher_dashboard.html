@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard - BeeSmart School</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f0e6; }
+        .header {
+            background: linear-gradient(135deg, {{ school_theme_primary or '#E6A800' }}, {{ school_theme_secondary or '#8B6914' }});
+            color: #3b2b04;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header img { max-height: 48px; }
+        .header h1 { margin: 0; font-size: 1.25rem; }
+        .header a { color: #3b2b04; font-weight: 600; text-decoration: none; }
+        .nav { background: #fff; padding: 0.5rem 1rem; border-bottom: 1px solid #e0d5b8; display: flex; gap: 1rem; flex-wrap: wrap; }
+        .nav a { color: #6b5b3d; text-decoration: none; padding: 0.5rem 0.75rem; border-radius: 8px; font-weight: 500; }
+        .nav a:hover, .nav a.active { background: #FFF3CD; color: #3b2b04; }
+        .main { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+        @media (min-width: 1024px) {
+            .main { max-width: 1100px; padding: 2rem; }
+        }
+        @media (min-width: 1280px) {
+            .main { max-width: 1200px; }
+        }
+        .card { background: #fff; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .card h2 { margin: 0 0 0.75rem; font-size: 1.1rem; color: #3b2b04; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        {% if school_mascot_logo_url %}
+        <img src="{{ school_mascot_logo_url }}" alt="School mascot">
+        {% else %}
+        <img src="{{ url_for('static', filename='images/BeeSmartSpellingBeeApplication.png') }}" alt="BeeSmart">
+        {% endif %}
+        <h1>Teacher Dashboard</h1>
+        <a href="{{ url_for('home') }}">Exit School Portal</a>
+    </header>
+    <nav class="nav">
+        <a href="{{ url_for('school_teacher_dashboard') }}" class="{{ 'active' if not active_tab or active_tab == 'dashboard' else '' }}">Dashboard</a>
+        <a href="{{ url_for('school_teacher_students') }}" class="{{ 'active' if active_tab == 'students' else '' }}">Students</a>
+        <a href="{{ url_for('school_teacher_import') }}" class="{{ 'active' if active_tab == 'import' else '' }}">Import</a>
+        <a href="{{ url_for('school_teacher_assignments') }}" class="{{ 'active' if active_tab == 'assignments' else '' }}">Assignments</a>
+    </nav>
+    <main class="main">
+        <div class="card">
+            <h2>Welcome, Teacher</h2>
+            <p>This is your school edition dashboard. Use the links above to manage students, import rosters, and view assignments.</p>
+        </div>
+    </main>
+</body>
+</html>

@@ -140,6 +140,13 @@ class Config:
     # Application settings
     APP_NAME = 'BeeSmart Spelling Bee'
     APP_VERSION = '22'
+
+    # School Edition (release/school branch only)
+    APP_EDITION = os.environ.get('APP_EDITION', '').strip().lower() or None  # 'school' when set
+    REQUIRE_SCHOOL_CONTEXT = os.environ.get('REQUIRE_SCHOOL_CONTEXT', 'false').strip().lower() in ('true', '1', 'yes')
+    SESSION_COOKIE_NAME_SCHOOL = os.environ.get('SESSION_COOKIE_NAME', 'beesmart_school_session').strip() or 'beesmart_school_session'
+    SCHOOL_DEFAULT_THEME_PRIMARY = os.environ.get('SCHOOL_DEFAULT_THEME_PRIMARY', '#E6A800').strip()
+    SCHOOL_DEFAULT_THEME_SECONDARY = os.environ.get('SCHOOL_DEFAULT_THEME_SECONDARY', '#8B6914').strip()
     # Redeem code placeholder shown in avatar picker. Leave blank to not reveal the code; set in .env to show a hint.
     REDEEM_CODE_PLACEHOLDER = os.environ.get('REDEEM_CODE_PLACEHOLDER', '')
     

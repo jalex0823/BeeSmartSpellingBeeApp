@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Portal - BeeSmart Spelling Bee</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #E6A800 0%, #FFD54F 40%, #FFC107 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .logo {
+            max-width: 200px;
+            height: auto;
+            margin-bottom: 1.5rem;
+        }
+        .card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+            padding: 2rem;
+            max-width: 420px;
+            width: 100%;
+        }
+        @media (min-width: 600px) {
+            .card { max-width: 520px; padding: 2.5rem; }
+        }
+        @media (min-width: 900px) {
+            .card { max-width: 560px; }
+        }
+        .card h1 {
+            margin: 0 0 0.5rem;
+            font-size: 1.5rem;
+            color: #3b2b04;
+            text-align: center;
+        }
+        .card .sub {
+            color: #6b5b3d;
+            font-size: 0.9rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .form-group {
+            margin-bottom: 1.1rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #3b2b04;
+            margin-bottom: 0.35rem;
+            font-size: 0.9rem;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e0d5b8;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #E6A800;
+            box-shadow: 0 0 0 3px rgba(230,168,0,0.2);
+        }
+        .pw-toggle {
+            font-size: 0.85rem;
+            color: #6b5b3d;
+            cursor: pointer;
+            margin-top: 0.25rem;
+        }
+        .pw-toggle:hover { text-decoration: underline; }
+        .btn {
+            width: 100%;
+            padding: 1rem;
+            margin-top: 0.5rem;
+            background: linear-gradient(135deg, #E6A800, #FFC107);
+            color: #3b2b04;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(230,168,0,0.4); }
+        .btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+        .help {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #6b5b3d;
+            margin-top: 1rem;
+        }
+        .key-hint { font-size: 0.75rem; color: #8B6914; margin-top: 0.2rem; }
+        .alert {
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .alert-error { background: #FCE8E8; color: #7A1D1D; }
+        .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(59,43,4,0.3); border-top-color: #3b2b04; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <img class="logo" src="{{ url_for('static', filename='images/BeeSmartSpellingBeeApplication.png') }}" alt="BeeSmart" onerror="this.style.display='none'">
+    <div class="card">
+        <h1>School Portal</h1>
+        <p class="sub">Sign in with your School Key or Teacher/Student Key</p>
+        <div id="alert" class="alert alert-error"></div>
+        <form id="schoolLoginForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required placeholder="you@school.edu" autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required placeholder="••••••••" autocomplete="current-password">
+                <span class="pw-toggle" id="pwToggle" role="button" tabindex="0">Show password</span>
+            </div>
+            <div class="form-group">
+                <label for="key_code">School Key</label>
+                <input type="text" id="key_code" name="key_code" required placeholder="e.g. BEE-2026-TEACH-XXXX" autocomplete="off">
+                <div class="key-hint">Enter your School Key or your Teacher/Student Key</div>
+            </div>
+            <button type="submit" class="btn" id="submitBtn">Enter School Portal</button>
+        </form>
+        <p class="help">Contact your teacher or school admin if you don't have a key.</p>
+    </div>
+    <script>
+        (function() {
+            var form = document.getElementById('schoolLoginForm');
+            var alertEl = document.getElementById('alert');
+            var submitBtn = document.getElementById('submitBtn');
+            var pw = document.getElementById('password');
+            var pwToggle = document.getElementById('pwToggle');
+
+            function showError(msg) {
+                alertEl.textContent = msg || '';
+                alertEl.style.display = msg ? 'block' : 'none';
+            }
+
+            pwToggle.addEventListener('click', function() {
+                var isPw = pw.type === 'password';
+                pw.type = isPw ? 'text' : 'password';
+                pwToggle.textContent = isPw ? 'Hide password' : 'Show password';
+            });
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                showError('');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner"></span> Signing in...';
+                var payload = {
+                    email: document.getElementById('email').value.trim(),
+                    password: pw.value,
+                    key_code: document.getElementById('key_code').value.trim()
+                };
+                fetch('{{ url_for("school_login") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify(payload)
+                })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(o) {
+                    if (o.ok && o.data.success && o.data.redirect) {
+                        window.location.href = o.data.redirect;
+                        return;
+                    }
+                    showError(o.data.error || 'Login failed. Please try again.');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Enter School Portal';
+                })
+                .catch(function() {
+                    showError('Network error. Please try again.');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Enter School Portal';
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

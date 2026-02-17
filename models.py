@@ -135,12 +135,16 @@ class User(UserMixin, db.Model):
     wordbank_storage_id = db.Column(db.String(36), nullable=True, index=True)  # UUID pointer to WORD_STORAGE and disk cache
     wordbank_last_updated = db.Column(db.DateTime, nullable=True)  # Track when wordbank was last modified
     
+    # 🏫 School Edition: link user to a school (nullable for consumer/mobile users)
+    school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), nullable=True, index=True)
+    
     # Relationships
     quiz_sessions = db.relationship('QuizSession', backref='user', lazy=True, cascade='all, delete-orphan')
     quiz_results = db.relationship('QuizResult', backref='user', lazy=True, cascade='all, delete-orphan')
     word_mastery = db.relationship('WordMastery', backref='user', lazy=True, cascade='all, delete-orphan')
     achievements = db.relationship('Achievement', backref='user', lazy=True, cascade='all, delete-orphan')
     purchase_records = db.relationship('PurchaseRecord', backref='user', lazy=True, cascade='all, delete-orphan')
+    school = db.relationship('School', backref='users', lazy=True, foreign_keys=[school_id])
     
     def set_password(self, password):
         """Hash and set user password"""
@@ -2002,3 +2006,36 @@ class WordBankStorage(db.Model):
             db.session.commit()
             return True
         return False
+
+
+# ---------------------------------------------------------------------------
+# School Edition: schools and school_keys (teacher/student keys)
+# ---------------------------------------------------------------------------
+
+class School(db.Model):
+    """School entity for School Edition. Links to users and keys."""
+    __tablename__ = 'schools'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    school_code = db.Column(db.String(50), unique=True, nullable=False, index=True)  # School Key
+    mascot_name = db.Column(db.String(100), nullable=True)
+    mascot_logo_url = db.Column(db.Text, nullable=True)
+    mascot_asset_key = db.Column(db.String(100), nullable=True)
+    theme_primary = db.Column(db.String(20), nullable=True)
+    theme_secondary = db.Column(db.String(20), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SchoolKey(db.Model):
+    """Keys for school/teacher/student access. key_code is the value users enter at login."""
+    __tablename__ = 'school_keys'
+    id = db.Column(db.Integer, primary_key=True)
+    school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), nullable=False, index=True)
+    key_code = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    key_type = db.Column(db.String(20), nullable=False, index=True)  # SCHOOL, TEACHER, STUDENT
+    is_active = db.Column(db.Boolean, default=True)
+    expires_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    school = db.relationship('School', backref=db.backref('keys', lazy=True))

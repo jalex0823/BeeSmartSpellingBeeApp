@@ -3289,7 +3289,7 @@ function showRestoreDialog(title, message, isSuccess) {
         }
     </style>
 </head>
-<body>
+<body class="{% if edition == 'school' %}edition-school{% endif %}">
     <!-- Safety shim: ensure kidSounds exists so inline onclick handlers never throw before the real class initializes -->
     <script>
         (function(){
@@ -5324,13 +5324,15 @@ function showRestoreDialog(title, message, isSuccess) {
                     <div class="kid-tip"> Discover new words to learn!</div>
                 </div>
 
-                <!-- Avatars Shop - Clear entry point for IAP purchases -->
+                <!-- Avatars Shop - Hidden in School Edition (consumer-only) -->
+                {% if edition != 'school' %}
                 <div id="tileAvatars" class="menu-option theme-gold" onclick="kidSounds.playRandomEffect(); selectOption('avatars', this)" onmouseover="kidSounds.playHappyDing()" title=" Browse and unlock adorable bee avatars! Purchase new characters to customize your spelling experience.">
                     <div class="option-icon"></div>
                     <div class="option-title">Avatars</div>
                     <div class="option-description">Browse & unlock bee characters</div>
                     <div class="kid-tip"> Collect all the bees! 🍯</div>
                 </div>
+                {% endif %}
 
                 <!-- Saved Word Lists (Premium) -->
                 <div id="tileSavedLists" class="menu-option theme-lavender {% if _is_premium != 'true' %}locked-tile{% endif %}" data-feature="saved" data-requires-premium="true" data-lockmsg="BeeSmart Premium" onmouseover="kidSounds.playBuzz()" title="{% if _is_auth != 'true' %} Sign in to access saved word lists!{% elif _is_premium != 'true' %} Subscribe to BeeSmart Premium to access saved word lists!{% else %} Access your previously saved spelling lists and continue practicing!{% endif %}">
