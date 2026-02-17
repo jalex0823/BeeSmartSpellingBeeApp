@@ -18,8 +18,8 @@ services:
     # Build configuration (trigger: 2025-12-11)
     build_command: pip install --upgrade pip && pip install -r requirements.txt
     
-    # Run configuration - Using eventlet worker for Socket.IO compatibility
-    run_command: gunicorn --bind 0.0.0.0:${PORT:-8080} --timeout 600 --graceful-timeout 30 --workers 1 --worker-class eventlet --keep-alive 5 --log-level info --access-logfile - --error-logfile - AjaSpellBApp:app
+    # Run configuration - sync worker (no gevent/eventlet dependency)
+    run_command: gunicorn --bind 0.0.0.0:${PORT:-8080} --timeout 600 --graceful-timeout 30 --workers 1 --worker-class sync --keep-alive 5 --log-level info --access-logfile - --error-logfile - AjaSpellBApp:app
     
     # Health check
     health_check:

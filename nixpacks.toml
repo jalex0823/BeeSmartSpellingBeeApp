@@ -14,4 +14,4 @@ PIP_DISABLE_PIP_VERSION_CHECK = "1"
 PIP_CACHE_DIR = "/root/.cache/pip"
 
 [start]
-cmd = "gunicorn --bind 0.0.0.0:${PORT:-5000} --timeout 600 --graceful-timeout 30 --workers 1 --threads 4 --worker-class gthread --keep-alive 5 --log-level info --access-logfile - --error-logfile - AjaSpellBApp:app"
+cmd = "gunicorn --bind 0.0.0.0:${PORT:-5000} --timeout 600 --graceful-timeout 30 --workers 1 --worker-class sync --keep-alive 5 --log-level info --access-logfile - --error-logfile - AjaSpellBApp:app"
