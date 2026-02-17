@@ -13993,6 +13993,13 @@ def school_login():
         return jsonify({"success": False, "error": "Email, password, and School Key are required"}), 400
     try:
         _ensure_db_initialized()
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        if not inspector.has_table('schools') or not inspector.has_table('school_keys'):
+            return jsonify({
+                "success": False,
+                "error": "School tables are not set up. Run: python scripts/migrate_school_tables.py"
+            }), 503
         user = User.query.filter(db.func.lower(User.email) == email.lower()).first() or \
                User.query.filter(db.func.lower(User.username) == email.lower()).first()
         if not user or not user.check_password(password):
