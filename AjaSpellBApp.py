@@ -14024,6 +14024,7 @@ def school_login():
         session['school_key_type'] = sk.key_type
         session['school_code'] = school.school_code
         session['role_context'] = role_context
+        _ensure_school_default_avatar(user, school)
         if role_context == 'teacher':
             return jsonify({"success": True, "redirect": url_for('school_teacher_dashboard')})
         return jsonify({"success": True, "redirect": url_for('school_student_dashboard')})
@@ -14798,6 +14799,12 @@ def api_update_user_avatar_legacy():
 @app.route('/avatar-picker')
 def avatar_picker_page():
     """Avatar picker page with 3D viewer for choosing your bee character"""
+    try:
+        from school_edition import is_school_edition
+        if is_school_edition() and session.get('school_id'):
+            return redirect(url_for('school_student_dashboard'))
+    except Exception:
+        pass
     if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
         return redirect(url_for('login', next=request.path))
     return render_template('test_avatar_picker.html')
@@ -14808,7 +14815,14 @@ def honeycomb_avatar_picker():
     
     Allows public browsing to improve IAP discoverability (Apple requirement).
     Guests can view all avatars but must login/register to purchase or select.
+    School edition: access blocked; use /school/avatar instead.
     """
+    try:
+        from school_edition import is_school_edition
+        if is_school_edition() and session.get('school_id'):
+            return redirect(url_for('school_student_dashboard'))
+    except Exception:
+        pass
     timestamp = int(time.time())
     # Optional background override via query param `bg`.
     # Accepts values like '/static/images/my-bg.jpg' or 'images/my-bg.jpg'.
@@ -14859,10 +14873,100 @@ def honeycomb_avatar_picker():
 @app.route('/honeycomb-picker-old')
 def honeycomb_avatar_picker_old():
     """OLD: Original honeycomb picker with absolute positioning"""
-    # Registered users only
+    try:
+        from school_edition import is_school_edition
+        if is_school_edition() and session.get('school_id'):
+            return redirect(url_for('school_student_dashboard'))
+    except Exception:
+        pass
     if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
         return redirect(url_for('login', next=request.path))
     return render_template('honeycomb_avatar_picker.html')
+
+
+# ------------------------------ School default avatar auto-assign ------------------------------
+def _ensure_school_default_avatar(user, school):
+    """
+    If the school has a default avatar (mascot_asset_key = avatar slug), and the user
+    has not selected an avatar or their current avatar is not in this school's list,
+    set the user's avatar to the school default. Caller should commit.
+    """
+    from models import Avatar
+    slug = (school.mascot_asset_key or '').strip()
+    if not slug:
+        return False
+    avatar = Avatar.get_by_slug_for_context(slug, school_id=school.id)
+    if not avatar:
+        return False
+    school_slugs = [a.slug for a in Avatar.get_all_active(school_id=school.id)]
+    if not school_slugs:
+        return False
+    current = (user.avatar_id or '').strip()
+    if current and current in school_slugs:
+        return False  # already valid for this school
+    if not user.has_selected_avatar() or current not in school_slugs:
+        ok, _ = user.update_avatar(slug, 'default')
+        return ok
+    return False
+
+
+# ------------------------------ School avatar API and picker (school_id-scoped only) ------------------------------
+@app.route('/api/school/avatars', methods=['GET'])
+@login_required
+def api_school_avatars():
+    """Return avatars for current school only. Used by school avatar picker. Consumer picker must not use this."""
+    try:
+        from school_edition import is_school_edition
+        if not is_school_edition() or not session.get('school_id'):
+            return jsonify({"status": "error", "message": "School context required"}), 403
+    except Exception:
+        return jsonify({"status": "error", "message": "School context required"}), 403
+    school_id = session.get('school_id')
+    from models import Avatar
+    avatars = Avatar.get_all_active(school_id=school_id)
+    out = []
+    for a in avatars:
+        d = a.to_dict()
+        d['slug'] = a.slug
+        out.append(d)
+    return jsonify({"status": "success", "avatars": out})
+
+
+@app.route('/school/avatar', methods=['GET'])
+@login_required
+def school_avatar_picker_page():
+    """School-only avatar picker: only avatars for this school_id. Consumer picker is blocked in school mode."""
+    if not session.get('school_id'):
+        return redirect(url_for('school_landing_page'))
+    from school_edition import get_edition_context
+    ctx = get_edition_context()
+    return render_template('school/school_avatar_picker.html', **ctx)
+
+
+@app.route('/school/avatar/select', methods=['POST'])
+@login_required
+def school_avatar_select():
+    """Set current user's avatar to slug; only allowed if avatar is in this school's list."""
+    if not session.get('school_id'):
+        return jsonify({"success": False, "error": "School context required"}), 403
+    school_id = session.get('school_id')
+    data = request.get_json(silent=True) or request.form
+    slug = (data.get('avatar_slug') or data.get('slug') or '').strip()
+    if not slug:
+        return jsonify({"success": False, "error": "avatar_slug required"}), 400
+    from models import Avatar
+    avatar = Avatar.get_by_slug_for_context(slug, school_id=school_id)
+    if not avatar:
+        return jsonify({"success": False, "error": "Avatar not available for your school"}), 404
+    try:
+        ok, msg = current_user.update_avatar(slug, 'default')
+        if not ok:
+            return jsonify({"success": False, "error": msg or "Update failed"}), 400
+        db.session.commit()
+        return jsonify({"success": True, "avatar_id": slug})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/test/api')
 def test_api():
@@ -19888,8 +19992,38 @@ def api_get_my_avatar():
         print(f"   - preferences: {user.preferences}")
         print(f"   - use_mascot: {use_mascot}")
         
-        # If user hasn't selected an avatar, return MascotBee as default
+        # If user hasn't selected an avatar, use school default avatar when in school context
         if use_mascot:
+            school_id = session.get('school_id')
+            if school_id:
+                from models import School, Avatar
+                school = School.query.get(school_id)
+                if school and (school.mascot_asset_key or '').strip():
+                    slug = (school.mascot_asset_key or '').strip()
+                    avatar = Avatar.get_by_slug_for_context(slug, school_id=school_id)
+                    if avatar:
+                        _ensure_school_default_avatar(user, school)
+                        db.session.commit()
+                        import os
+                        base_path = "/static/assets/avatars/glb_files"
+                        glb_filename = (avatar.obj_file or "MascotBee.glb").strip()
+                        if glb_filename.lower().endswith('.obj'):
+                            glb_filename = glb_filename[:-4] + '.glb'
+                        elif not glb_filename.lower().endswith('.glb'):
+                            glb_filename = glb_filename + '.glb'
+                        glb_basename = os.path.splitext(os.path.basename(glb_filename))[0]
+                        thumbnail_path = f"{base_path}/AvatarThumbnails/{glb_basename}!.png"
+                        avatar_data = {
+                            'avatar_id': avatar.slug,
+                            'variant': 'default',
+                            'name': avatar.name or 'School Mascot',
+                            'urls': {
+                                'glb': f"{base_path}/{glb_filename}",
+                                'thumbnail': thumbnail_path
+                            }
+                        }
+                        print(f"   → Returning school default avatar: {avatar.slug}")
+                        return jsonify({'status': 'success', 'avatar': avatar_data, 'use_mascot': False})
             print("   → Returning MascotBee (no avatar selected)")
             return jsonify({
                 'status': 'success',

@@ -23,6 +23,17 @@
             height: auto;
             margin-bottom: 1.5rem;
         }
+        .badge-top {
+            display: block;
+            max-width: 280px;
+            width: 100%;
+            height: auto;
+            margin: 0 auto 1.5rem;
+            text-align: center;
+        }
+        @media (min-width: 600px) {
+            .badge-top { max-width: 320px; margin-bottom: 2rem; }
+        }
         .card {
             background: rgba(255,255,255,0.95);
             border-radius: 20px;
@@ -112,7 +123,7 @@
     </style>
 </head>
 <body>
-    <img class="logo" src="{{ url_for('static', filename='images/BeeSmartSpellingBeeApplication.png') }}" alt="BeeSmart" onerror="this.style.display='none'">
+    <img class="badge-top" src="{{ url_for('static', filename='images/BeeKeeperBadge.png') }}" alt="BeeSmart Spelling Bee Application" onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/BeeSmartSpellingBeeApplication.png') }}'; this.className='logo';">
     <div class="card">
         <h1>School Portal</h1>
         <p class="sub">Sign in with your School Key or Teacher/Student Key</p>

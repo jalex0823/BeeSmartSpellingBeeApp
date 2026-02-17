@@ -51,6 +51,21 @@ def migrate_school_tables():
             db.session.commit()
             migrations_done.append("users.school_id")
 
+        # 3) Add school_id to avatars if missing (school-only avatars; NULL = consumer only)
+        if inspector.has_table('avatars'):
+            av_cols = [c["name"] for c in inspector.get_columns("avatars")]
+            if "school_id" not in av_cols:
+                print("Adding school_id to avatars...")
+                db.session.execute(text(
+                    "ALTER TABLE avatars ADD COLUMN school_id INTEGER REFERENCES schools(id)"
+                ))
+                try:
+                    db.session.execute(text("CREATE INDEX ix_avatars_school_id ON avatars(school_id)"))
+                except Exception:
+                    pass
+                db.session.commit()
+                migrations_done.append("avatars.school_id")
+
         if migrations_done:
             print("Migration completed:", migrations_done)
         return True

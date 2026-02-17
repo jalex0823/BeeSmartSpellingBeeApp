@@ -1614,6 +1614,9 @@ class Avatar(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # School Edition: NULL = consumer/mobile only; set = school-only (never show in consumer picker)
+    school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), nullable=True, index=True)
+    
     # Composite index for common query pattern: active avatars ordered by sort_order and name
     __table_args__ = (
         db.Index('idx_active_sorted', 'is_active', 'sort_order', 'name'),
@@ -1623,6 +1626,8 @@ class Avatar(db.Model):
     # Relationship (users who have selected this avatar)
     users = db.relationship('User', backref='avatar', lazy='dynamic',
                            primaryjoin='Avatar.slug == foreign(User.avatar_id)')
+    # School Edition: school-only avatars
+    school = db.relationship('School', backref=db.backref('avatars', lazy=True), foreign_keys=[school_id])
     
     def to_dict(self):
         """Convert to dictionary for API responses"""
@@ -1655,15 +1660,34 @@ class Avatar(db.Model):
         if slug in g._avatar_cache:
             return g._avatar_cache[slug]
         
-        # Query database and cache result
+        # Query database and cache result (no school_id filter in get_by_slug - caller must filter)
         avatar = Avatar.query.filter_by(slug=slug, is_active=True).first()
         g._avatar_cache[slug] = avatar
         return avatar
     
     @staticmethod
-    def get_all_active(category=None):
-        """Get all active avatars, optionally filtered by category"""
+    def get_by_slug_for_context(slug, school_id=None):
+        """Get avatar by slug only if it is allowed in current context.
+        - school_id None (consumer): only return if avatar.school_id is None.
+        - school_id set (school): return if avatar.school_id is None (global) or avatar.school_id == school_id.
+        """
+        avatar = Avatar.query.filter_by(slug=slug, is_active=True).first()
+        if not avatar:
+            return None
+        if avatar.school_id is None:
+            return avatar
+        if school_id is None:
+            return None  # Consumer must not see school-only avatars
+        return avatar if avatar.school_id == school_id else None
+    
+    @staticmethod
+    def get_all_active(category=None, school_id=None):
+        """Get all active avatars. school_id=None means consumer-only (school_id IS NULL)."""
         query = Avatar.query.filter_by(is_active=True)
+        if school_id is None:
+            query = query.filter(Avatar.school_id.is_(None))
+        else:
+            query = query.filter((Avatar.school_id.is_(None)) | (Avatar.school_id == school_id))
         if category:
             query = query.filter_by(category=category)
         return query.order_by(Avatar.sort_order, Avatar.name).all()

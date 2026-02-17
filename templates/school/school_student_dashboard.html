@@ -46,6 +46,7 @@
     </header>
     <nav class="nav">
         <a href="{{ url_for('school_student_dashboard') }}" class="{{ 'active' if not active_tab or active_tab == 'dashboard' else '' }}">Dashboard</a>
+        <a href="{{ url_for('school_avatar_picker_page') }}">Avatar</a>
         <a href="{{ url_for('school_student_quiz') }}" class="{{ 'active' if active_tab == 'quiz' else '' }}">Quiz</a>
         <a href="{{ url_for('school_student_progress') }}" class="{{ 'active' if active_tab == 'progress' else '' }}">Progress</a>
     </nav>
