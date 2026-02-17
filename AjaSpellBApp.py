@@ -14014,24 +14014,41 @@ def school_login():
                 role_context = 'student'
         if not role_context:
             role_context = (user.role or 'student').lower()
-        if user.school_id is None:
-            user.school_id = school.id
-            db.session.commit()
+        try:
+            if hasattr(user, 'school_id') and user.school_id is None:
+                user.school_id = school.id
+                db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            app.logger.warning(f"School login: could not set user.school_id: {e}")
         login_user(user, remember=True)
-        user.update_last_login(ip_address=request.remote_addr)
-        db.session.commit()
+        try:
+            user.update_last_login(ip_address=request.remote_addr)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            app.logger.warning(f"School login: update_last_login failed: {e}")
         session['school_id'] = school.id
         session['school_key_type'] = sk.key_type
         session['school_code'] = school.school_code
         session['role_context'] = role_context
-        _ensure_school_default_avatar(user, school)
+        try:
+            _ensure_school_default_avatar(user, school)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            app.logger.warning(f"School login: ensure_school_default_avatar failed: {e}")
         if role_context == 'teacher':
             return jsonify({"success": True, "redirect": url_for('school_teacher_dashboard')})
         return jsonify({"success": True, "redirect": url_for('school_student_dashboard')})
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f"School login error: {e}")
-        return jsonify({"success": False, "error": "An unexpected error occurred. Please try again."}), 500
+        import traceback
+        app.logger.error(f"School login error: {e}\n{traceback.format_exc()}")
+        err_msg = "An unexpected error occurred. Please try again."
+        if app.debug or os.environ.get("FLASK_ENV") == "development":
+            err_msg = str(e)
+        return jsonify({"success": False, "error": err_msg}), 500
 
 
 @app.route('/school/teacher/dashboard')
