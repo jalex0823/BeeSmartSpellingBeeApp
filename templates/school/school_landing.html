@@ -149,6 +149,7 @@
         </form>
         <p class="help">Contact your teacher or school admin if you don't have a key.</p>
     </div>
+    <script defer src="{{ url_for('static', filename='js/action-sfx.js') }}?v=20260218"></script>
     <script>
         (function() {
             var form = document.getElementById('schoolLoginForm');
@@ -160,6 +161,7 @@
             function showError(msg) {
                 alertEl.textContent = msg || '';
                 alertEl.style.display = msg ? 'block' : 'none';
+                try { if (msg && window.BeeSmartActionSfx) window.BeeSmartActionSfx.error(); } catch (_) {}
             }
 
             pwToggle.addEventListener('click', function() {
@@ -186,7 +188,8 @@
                 .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
                 .then(function(o) {
                     if (o.ok && o.data.success && o.data.redirect) {
-                        window.location.href = o.data.redirect;
+                        try { if (window.BeeSmartActionSfx) window.BeeSmartActionSfx.success(); } catch (_) {}
+                        setTimeout(function() { window.location.href = o.data.redirect; }, 90);
                         return;
                     }
                     showError(o.data.error || 'Login failed. Please try again.');
