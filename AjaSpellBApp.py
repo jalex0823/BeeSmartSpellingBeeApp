@@ -3294,7 +3294,12 @@ def school_edition_guard():
         from school_edition import require_school_context
         if not require_school_context():
             return
-        if request.path.startswith(('/static/', '/health', '/favicon.ico', '/.well-known/', '/school')):
+        # Allow admin + admin APIs to bypass school context so admins can manage the system.
+        if request.path.startswith((
+            '/static/', '/health', '/favicon.ico', '/.well-known/',
+            '/school',
+            '/admin', '/api/admin',
+        )):
             return
         if not getattr(current_user, 'is_authenticated', False):
             return redirect(url_for('school_landing_page', next=request.url))
@@ -17331,11 +17336,21 @@ def admin_create_school():
         return redirect(url_for('admin_schools'))
 
     requested_code = (request.form.get('school_code') or '').strip().upper()
+    mascot_mode = (request.form.get('mascot_mode') or 'none').strip().lower()
     mascot_asset_key = (request.form.get('mascot_asset_key') or '').strip()
     mascot_logo_url = (request.form.get('mascot_logo_url') or '').strip()
     theme_primary = (request.form.get('theme_primary') or '').strip()
     theme_secondary = (request.form.get('theme_secondary') or '').strip()
     make_keys = (request.form.get('make_keys') or '1').strip() in ('1', 'true', 'yes', 'on')
+
+    # Only keep one mascot setting (either avatar slug or logo URL)
+    if mascot_mode == 'avatar':
+        mascot_logo_url = ''
+    elif mascot_mode == 'logo':
+        mascot_asset_key = ''
+    else:
+        mascot_asset_key = ''
+        mascot_logo_url = ''
 
     def _rand(n=4):
         import random, string

@@ -1,9 +1,88 @@
 {% extends "base.html" %}
 
-{% block title %}Admin Dashboard - BeeSmart Spelling{% endblock %}
+{% block title %}BeeSmart Admin Portal{% endblock %}
+{% block body_class %}admin-portal{% endblock %}
 
 {% block content %}
 <style>
+    /* BeeSmart Admin Portal (distinct look) */
+    body.admin-portal {
+        background: radial-gradient(1200px 700px at 50% -120px, rgba(255, 215, 0, 0.18), transparent 55%),
+                    radial-gradient(900px 600px at 10% 10%, rgba(138, 43, 226, 0.10), transparent 55%),
+                    radial-gradient(900px 600px at 90% 18%, rgba(0, 191, 255, 0.08), transparent 55%),
+                    #07070B !important;
+        color: #E8EEF7;
+        min-height: 100vh;
+    }
+    body.admin-portal .fairy-container,
+    body.admin-portal .bee-swarm,
+    body.admin-portal .floating-bee {
+        display: none !important;
+    }
+    body.admin-portal main.container {
+        max-width: 1180px;
+        padding: 1.25rem 1rem 2.5rem;
+    }
+    body.admin-portal a { color: #FFD86A; }
+    body.admin-portal a:hover { color: #FFF2B8; }
+
+    .admin-hero {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.25rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.1rem;
+        padding: 1rem 1.1rem;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 215, 0, 0.18);
+        background: rgba(10, 10, 14, 0.6);
+        box-shadow: 0 14px 45px rgba(0,0,0,0.35);
+        backdrop-filter: blur(10px);
+    }
+    .admin-hero .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+    }
+    .admin-hero img {
+        width: 78px;
+        height: 78px;
+        object-fit: contain;
+        filter: drop-shadow(0 10px 28px rgba(255,215,0,0.25));
+    }
+    .admin-hero h1 {
+        margin: 0;
+        font-size: 1.55rem;
+        letter-spacing: 0.02em;
+        color: #F8FAFF;
+    }
+    .admin-hero .sub {
+        margin: 0.2rem 0 0;
+        color: rgba(232,238,247,0.78);
+        font-weight: 600;
+    }
+    .admin-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+    .admin-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding: 0.7rem 0.95rem;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 215, 0, 0.20);
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.18), rgba(255, 193, 7, 0.10));
+        color: #FFF6CC;
+        font-weight: 800;
+        text-decoration: none;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+    }
+    .admin-btn:hover { transform: translateY(-1px); }
+
     /* Hide floating bee and orb animations on admin dashboard */
     .floating-bee {
         display: none !important;
@@ -205,10 +284,18 @@
     }
 </style>
 
-<div style="max-width: 1100px; margin: 0 auto; padding: 0.75rem 1rem 0;">
-  <a href="{{ url_for('admin_schools') }}" class="btn btn-secondary" style="display:inline-block; padding:0.6rem 0.9rem; border-radius:12px; font-weight:800; text-decoration:none;">
-    Manage Schools
-  </a>
+<div class="admin-hero">
+  <div class="brand">
+    <img src="{{ url_for('static', filename='images/BeeKeeperBadge.png') }}" alt="BeeKeeper BeeSmart Spelling Bee Application">
+    <div>
+      <h1>BeeSmart Admin Portal</h1>
+      <p class="sub">System admin tools (distinct from School Portal)</p>
+    </div>
+  </div>
+  <div class="admin-actions">
+    <a class="admin-btn" href="{{ url_for('admin_schools') }}" data-action-sfx="success">🏫 Schools</a>
+    <a class="admin-btn" href="{{ url_for('admin_users') }}" data-action-sfx="success">👤 Users</a>
+  </div>
 </div>
 
 <div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem; display: flex; flex-direction: column; align-items: center;">
