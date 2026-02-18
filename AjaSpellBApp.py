@@ -3036,6 +3036,64 @@ def _ensure_db_initialized() -> None:
             except Exception as e:
                 print(f"️ Scanlan Oak test-user seed failed: {e}")
                 db.session.rollback()
+
+            # Optional: Bootstrap an admin user via env vars (DigitalOcean-safe).
+            # Enable temporarily, deploy once, then disable.
+            try:
+                admin_seed = (os.environ.get("SEED_ADMIN_BOOTSTRAP") or "").strip().lower()
+                if admin_seed in ("1", "true", "yes", "y", "on"):
+                    from models import User
+                    a_user = (os.environ.get("ADMIN_BOOTSTRAP_USERNAME") or "").strip()
+                    a_pass = (os.environ.get("ADMIN_BOOTSTRAP_PASSWORD") or "").strip()
+                    a_email = (os.environ.get("ADMIN_BOOTSTRAP_EMAIL") or "").strip()
+
+                    if not (a_user and a_pass):
+                        print("️ SEED_ADMIN_BOOTSTRAP enabled but missing required env vars:")
+                        print("  - ADMIN_BOOTSTRAP_USERNAME / ADMIN_BOOTSTRAP_PASSWORD")
+                    else:
+                        existing = User.query.filter_by(username=a_user).first()
+                        if not existing and a_email:
+                            try:
+                                existing = User.query.filter(db.func.lower(User.email) == a_email.lower()).first()
+                            except Exception:
+                                existing = None
+
+                        if not existing:
+                            existing = User(
+                                username=a_user,
+                                display_name="BeeKeeper Admin",
+                                email=(a_email or None),
+                                role="admin",
+                                is_active=True,
+                            )
+                            db.session.add(existing)
+                            print(f" Seeded admin user: {a_user}")
+
+                        # Force admin role and set password while bootstrap flag is enabled.
+                        try:
+                            existing.role = "admin"
+                            existing.is_active = True
+                            if hasattr(existing, "admin_all_access"):
+                                existing.admin_all_access = True
+                        except Exception:
+                            pass
+
+                        try:
+                            existing.set_password(a_pass)
+                        except Exception:
+                            pass
+
+                        try:
+                            if hasattr(existing, "generate_teacher_key") and not getattr(existing, "teacher_key", None):
+                                existing.generate_teacher_key()
+                        except Exception:
+                            pass
+
+                        db.session.commit()
+                        print("✅ Admin bootstrap complete (SEED_ADMIN_BOOTSTRAP).")
+            except Exception as e:
+                print(f"️ Admin bootstrap failed: {e}")
+                db.session.rollback()
     except Exception as e:
         # Never crash app startup; just log. Auth routes will still surface a friendly error.
         print(f"️ DB initialization check failed: {e}")
