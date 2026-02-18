@@ -2775,7 +2775,7 @@ app.config.update(
     SESSION_REFRESH_EACH_REQUEST=False,
     SESSION_COOKIE_PATH='/',  # Ensure cookie works across all paths
     SESSION_COOKIE_DOMAIN=None,  # Let Flask auto-detect domain
-    MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max upload
+    MAX_CONTENT_LENGTH=64 * 1024 * 1024,  # 64MB max upload (school GLB uploads)
     SEND_FILE_MAX_AGE_DEFAULT=3600  # 1 hour default cache for static files
 )
 
@@ -15170,6 +15170,20 @@ def api_school_avatars():
     for a in avatars:
         d = a.to_dict()
         d['slug'] = a.slug
+        try:
+            import os as _os
+            base_path = "/static/assets/avatars/glb_files"
+            glb_filename = (a.obj_file or "MascotBee.glb").strip()
+            if glb_filename.lower().endswith('.obj'):
+                glb_filename = glb_filename[:-4] + '.glb'
+            glb_basename = _os.path.splitext(_os.path.basename(glb_filename))[0]
+            d['thumbnail_url'] = f"{base_path}/AvatarThumbnails/{glb_basename}!.png"
+            if getattr(a, 'glb_data', None):
+                d['glb_url'] = url_for('api_get_avatar_glb', avatar_id=a.slug)
+            else:
+                d['glb_url'] = f"{base_path}/{glb_filename}"
+        except Exception:
+            pass
         out.append(d)
     return jsonify({"status": "success", "avatars": out})
 
@@ -17455,19 +17469,17 @@ def admin_create_school():
     requested_code = (request.form.get('school_code') or '').strip().upper()
     mascot_mode = (request.form.get('mascot_mode') or 'none').strip().lower()
     mascot_asset_key = (request.form.get('mascot_asset_key') or '').strip()
-    mascot_logo_url = (request.form.get('mascot_logo_url') or '').strip()
     theme_primary = (request.form.get('theme_primary') or '').strip()
     theme_secondary = (request.form.get('theme_secondary') or '').strip()
     make_keys = (request.form.get('make_keys') or '1').strip() in ('1', 'true', 'yes', 'on')
 
-    # Only keep one mascot setting (either avatar slug or logo URL)
+    # Only keep mascot avatar slug (GLB). Logo URL is not used for school mascots.
     if mascot_mode == 'avatar':
-        mascot_logo_url = ''
+        pass
     elif mascot_mode == 'logo':
         mascot_asset_key = ''
     else:
         mascot_asset_key = ''
-        mascot_logo_url = ''
 
     def _rand(n=4):
         import random, string
@@ -17497,7 +17509,6 @@ def admin_create_school():
         name=name,
         school_code=school_code,
         mascot_asset_key=mascot_asset_key or None,
-        mascot_logo_url=mascot_logo_url or None,
         theme_primary=theme_primary or None,
         theme_secondary=theme_secondary or None,
     )
@@ -17534,6 +17545,85 @@ def admin_create_school():
     except Exception as e:
         db.session.rollback()
         flash(f'Error creating school: {e}', 'error')
+        return redirect(url_for('admin_schools'))
+
+
+@app.route('/admin/schools/<int:school_id>/avatar/upload', methods=['POST'])
+@login_required
+def admin_upload_school_avatar(school_id: int):
+    """Admin: upload a school-only GLB avatar and associate it with a school (stored in DB)."""
+    if (getattr(current_user, 'role', None) or '').lower() != 'admin':
+        flash('Access denied: Admins only', 'error')
+        return redirect(url_for('home'))
+    from models import School, Avatar
+    import re
+    import os as _os
+    import time as _time
+
+    school = School.query.get(school_id)
+    if not school:
+        flash('School not found.', 'error')
+        return redirect(url_for('admin_schools'))
+
+    f = request.files.get('glb_file')
+    if not f or not getattr(f, 'filename', ''):
+        flash('GLB file is required.', 'error')
+        return redirect(url_for('admin_schools'))
+
+    filename = (f.filename or '').strip()
+    if not filename.lower().endswith('.glb'):
+        flash('Only .glb files are supported.', 'error')
+        return redirect(url_for('admin_schools'))
+
+    slug_in = (request.form.get('slug') or '').strip()
+    name_in = (request.form.get('name') or '').strip()
+    set_default = (request.form.get('set_default') or '').strip() in ('1', 'true', 'yes', 'on')
+
+    def _slugify(s: str) -> str:
+        s = (s or '').strip().lower()
+        s = re.sub(r'[^a-z0-9]+', '-', s).strip('-')
+        s = re.sub(r'-{2,}', '-', s)
+        return s[:50] if s else ''
+
+    base_from_file = _os.path.splitext(_os.path.basename(filename))[0]
+    slug_base = _slugify(slug_in) or _slugify(base_from_file) or _slugify(school.school_code) or 'school-avatar'
+    slug = slug_base
+    n = 0
+    while Avatar.query.filter_by(slug=slug).first():
+        n += 1
+        slug = f"{slug_base}-{n}"
+        if n > 50:
+            slug = f"{slug_base}-{int(_time.time())}"
+            break
+
+    try:
+        data = f.read()
+        if not data:
+            flash('Uploaded file was empty.', 'error')
+            return redirect(url_for('admin_schools'))
+        avatar = Avatar(
+            slug=slug,
+            name=name_in or (base_from_file.replace('_', ' ').replace('-', ' ').title()[:100] or slug),
+            description=f"School avatar for {school.name}.",
+            category='school',
+            folder_path='glb_files',
+            obj_file=filename,
+            glb_data=data,
+            glb_file_size=len(data),
+            school_id=school.id,
+            is_active=True,
+            sort_order=0,
+        )
+        db.session.add(avatar)
+        if set_default:
+            school.mascot_asset_key = slug
+            db.session.add(school)
+        db.session.commit()
+        flash(f"Uploaded GLB avatar '{avatar.name}' (slug: {slug}).", 'success')
+        return redirect(url_for('admin_schools'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Upload failed: {e}', 'error')
         return redirect(url_for('admin_schools'))
 
 
@@ -19373,6 +19463,35 @@ def api_get_avatar(avatar_id):
             'status': 'error',
             'message': str(e)
         }), 500
+
+
+@app.route("/api/avatar/<avatar_id>/glb", methods=["GET"])
+def api_get_avatar_glb(avatar_id):
+    """Serve avatar GLB from DB if present; otherwise redirect to static GLB."""
+    try:
+        from models import Avatar
+        avatar = Avatar.get_by_slug(avatar_id)
+        if not avatar:
+            return jsonify({'status': 'error', 'message': f'Avatar not found: {avatar_id}'}), 404
+        # If stored in DB, serve directly
+        if getattr(avatar, 'glb_data', None):
+            from io import BytesIO
+            data = avatar.glb_data
+            if not data:
+                return jsonify({'status': 'error', 'message': 'GLB data missing'}), 404
+            fn = avatar.obj_file or f"{avatar.slug}.glb"
+            if not str(fn).lower().endswith('.glb'):
+                fn = f"{fn}.glb"
+            resp = send_file(BytesIO(data), mimetype="model/gltf-binary", as_attachment=False, download_name=fn)
+            resp.headers["Cache-Control"] = "public, max-age=86400"
+            return resp
+        # Fallback to static file path
+        glb_filename = avatar.obj_file or "MascotBee.glb"
+        if str(glb_filename).lower().endswith('.obj'):
+            glb_filename = str(glb_filename)[:-4] + '.glb'
+        return redirect(f"/static/assets/avatars/glb_files/{glb_filename}")
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @app.route("/api/avatars/categories", methods=["GET"])

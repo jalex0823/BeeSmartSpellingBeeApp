@@ -66,21 +66,15 @@
           <label>Mascot (optional)</label>
           <div class="radio-row">
             <label class="radio-pill"><input type="radio" name="mascot_mode" value="none" checked> None</label>
-            <label class="radio-pill"><input type="radio" name="mascot_mode" value="avatar"> Default avatar slug</label>
-            <label class="radio-pill"><input type="radio" name="mascot_mode" value="logo"> Logo URL</label>
+            <label class="radio-pill"><input type="radio" name="mascot_mode" value="avatar"> Default avatar slug (GLB)</label>
           </div>
-          <div class="hint">Choose one. You don’t need both.</div>
+          <div class="hint">Mascots are 3D GLB avatars. You can upload a GLB per school below.</div>
         </div>
 
         <div class="form-row" id="mascotAvatarRow" style="display:none;">
           <label for="mascot_asset_key">Default avatar slug</label>
           <input id="mascot_asset_key" name="mascot_asset_key" placeholder="e.g. scanlan-bee">
           <div class="hint">Stored as <code>School.mascot_asset_key</code>. If set, students auto-get this avatar.</div>
-        </div>
-
-        <div class="form-row" id="mascotLogoRow" style="display:none;">
-          <label for="mascot_logo_url">Mascot logo URL</label>
-          <input id="mascot_logo_url" name="mascot_logo_url" placeholder="e.g. /static/images/BeeKeeperBadge.png">
         </div>
 
         <details style="margin: 0.5rem 0 0.85rem;">
@@ -124,7 +118,9 @@
             <th>School</th>
             <th>Code</th>
             <th>Default Avatar</th>
+            <th>Login</th>
             <th>Keys (active)</th>
+            <th>Mascot GLB</th>
           </tr>
         </thead>
         <tbody>
@@ -135,6 +131,12 @@
               <td><span class="pill">{{ s.school_code }}</span></td>
               <td>{{ s.mascot_asset_key or '' }}</td>
               <td>
+                <div class="hint">
+                  Portal: <span class="pill">/school</span><br>
+                  Use SCHOOL/TEACHER/STUDENT key to choose role
+                </div>
+              </td>
+              <td>
                 <div class="keys">
                   {% for ktype, codes in (row.keys or {}).items() %}
                     {% for code in codes %}
@@ -142,6 +144,31 @@
                     {% endfor %}
                   {% endfor %}
                 </div>
+              </td>
+              <td>
+                <details>
+                  <summary style="cursor:pointer; font-weight:900; color:#FFF6CC;">Upload</summary>
+                  <form method="post" action="{{ url_for('admin_upload_school_avatar', school_id=s.id) }}" enctype="multipart/form-data" style="margin-top:0.75rem;">
+                    <div class="form-row">
+                      <label for="glb_{{ s.id }}">GLB file</label>
+                      <input id="glb_{{ s.id }}" name="glb_file" type="file" accept=".glb" required>
+                      <div class="hint">Upload a GLB to store in the database and associate to this school.</div>
+                    </div>
+                    <div class="form-row">
+                      <label for="slug_{{ s.id }}">Avatar slug (optional)</label>
+                      <input id="slug_{{ s.id }}" name="slug" placeholder="e.g. scanlan-bee">
+                    </div>
+                    <div class="form-row">
+                      <label for="aname_{{ s.id }}">Avatar name (optional)</label>
+                      <input id="aname_{{ s.id }}" name="name" placeholder="e.g. Scanlan Bee">
+                    </div>
+                    <div class="form-row" style="flex-direction:row; align-items:center; gap:0.5rem;">
+                      <input id="setdef_{{ s.id }}" name="set_default" type="checkbox" value="1" checked>
+                      <label for="setdef_{{ s.id }}" style="margin:0;">Set as default school avatar</label>
+                    </div>
+                    <button class="btn" type="submit" data-action-sfx="success">Upload GLB</button>
+                  </form>
+                </details>
               </td>
             </tr>
           {% endfor %}
@@ -157,11 +184,8 @@
     function qs(sel){ return document.querySelector(sel); }
     function setMode(mode){
       var a = qs('#mascotAvatarRow');
-      var l = qs('#mascotLogoRow');
       if (a) a.style.display = (mode === 'avatar') ? '' : 'none';
-      if (l) l.style.display = (mode === 'logo') ? '' : 'none';
       if (mode !== 'avatar' && qs('#mascot_asset_key')) qs('#mascot_asset_key').value = '';
-      if (mode !== 'logo' && qs('#mascot_logo_url')) qs('#mascot_logo_url').value = '';
     }
     document.querySelectorAll('input[name="mascot_mode"]').forEach(function(r){
       r.addEventListener('change', function(){ setMode(this.value); });

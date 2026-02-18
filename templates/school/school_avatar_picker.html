@@ -70,7 +70,8 @@
                         var card = document.createElement('div');
                         card.className = 'card';
                         card.dataset.slug = a.slug || a.id;
-                        var thumb = (a.thumbnail_file || a.obj_file) ? ('/static/assets/avatars/glb_files/AvatarThumbnails/' + (a.obj_file || '').replace(/\.[^.]*$/, '') + '!.png') : '';
+                        var thumb = a.thumbnail_url || '';
+                        if (!thumb) thumb = (a.thumbnail_file || a.obj_file) ? ('/static/assets/avatars/glb_files/AvatarThumbnails/' + (a.obj_file || '').replace(/\.[^.]*$/, '') + '!.png') : '';
                         if (!thumb && a.folder) thumb = '/static/assets/avatars/' + (a.folder || '') + '/AvatarThumbnails/' + (a.obj_file || '').replace(/\.[^.]*$/, '') + '!.png';
                         card.innerHTML = '<img src="' + (thumb || '/static/images/BeeSmartSpellingBeeApplication.png') + '" alt="" onerror="this.src=\'/static/images/BeeSmartSpellingBeeApplication.png\'"><div class="name">' + (a.name || a.slug || a.id) + '</div>';
                         card.addEventListener('click', function() {
