@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}BeeSmart Admin Portal{% endblock %}
+{% block body_class %}admin-portal{% endblock %}
+
+{% block content %}
+<style>
+  body.admin-portal {
+    background: radial-gradient(1200px 700px at 50% -120px, rgba(255, 215, 0, 0.18), transparent 55%),
+                radial-gradient(900px 600px at 10% 10%, rgba(138, 43, 226, 0.10), transparent 55%),
+                radial-gradient(900px 600px at 90% 18%, rgba(0, 191, 255, 0.08), transparent 55%),
+                #07070B !important;
+    color: #E8EEF7;
+    min-height: 100vh;
+  }
+  body.admin-portal .fairy-container,
+  body.admin-portal .bee-swarm,
+  body.admin-portal .floating-bee { display:none !important; }
+  body.admin-portal main.container { max-width: 980px; padding: 2.25rem 1rem 2.5rem; }
+
+  .card {
+    max-width: 520px;
+    margin: 0 auto;
+    border-radius: 20px;
+    border: 1px solid rgba(255,215,0,0.18);
+    background: rgba(10, 10, 14, 0.62);
+    box-shadow: 0 18px 55px rgba(0,0,0,0.45);
+    backdrop-filter: blur(10px);
+    padding: 1.25rem 1.25rem 1.35rem;
+  }
+  .brand {
+    display:flex; align-items:center; gap:0.9rem; margin-bottom: 0.9rem;
+  }
+  .brand img {
+    width: 78px; height: 78px; object-fit: contain;
+    filter: drop-shadow(0 10px 28px rgba(255,215,0,0.25));
+  }
+  .brand h1 { margin:0; font-size:1.55rem; color:#F8FAFF; }
+  .sub { margin:0.2rem 0 0; color: rgba(232,238,247,0.78); font-weight:600; }
+
+  .row { display:flex; flex-direction:column; gap:0.35rem; margin: 0.85rem 0; }
+  label { font-weight: 800; color:#F3F6FF; }
+  input {
+    padding:0.75rem 0.9rem;
+    border-radius: 14px;
+    border: 1px solid rgba(255,215,0,0.18);
+    background: rgba(255,255,255,0.06);
+    color:#E8EEF7;
+    font-size: 1rem;
+  }
+  input:focus { outline:none; box-shadow: 0 0 0 3px rgba(255,215,0,0.18); }
+  .btn {
+    width:100%;
+    margin-top: 0.5rem;
+    padding:0.9rem 1rem;
+    border-radius: 14px;
+    border: 1px solid rgba(255,215,0,0.22);
+    background: linear-gradient(135deg, rgba(255,215,0,0.22), rgba(255,193,7,0.12));
+    color:#FFF6CC;
+    font-weight: 900;
+    cursor:pointer;
+  }
+  .hint { color: rgba(232,238,247,0.70); font-size: 0.9rem; margin-top: 0.75rem; text-align:center; }
+  .flash { margin: 0.75rem 0; }
+  .flash .msg {
+    border-radius: 14px;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid rgba(255, 99, 132, 0.35);
+    background: rgba(255, 99, 132, 0.10);
+    color: #FFD6DE;
+    font-weight: 800;
+  }
+</style>
+
+<div class="card">
+  <div class="brand">
+    <img src="{{ url_for('static', filename='images/BeeKeeperBadge.png') }}" alt="BeeKeeper BeeSmart Spelling Bee Application">
+    <div>
+      <h1>BeeSmart Admin Portal</h1>
+      <p class="sub">Sign in to manage schools and users</p>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash">
+        {% for category, message in messages %}
+          {% if category == 'error' %}
+            <div class="msg" data-action-sfx="error">{{ message }}</div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <form method="post" action="{{ url_for('admin_login') }}">
+    <input type="hidden" name="next" value="{{ next or '' }}">
+    <div class="row">
+      <label for="username">Email or Username</label>
+      <input id="username" name="username" autocomplete="username" required>
+    </div>
+    <div class="row">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+    </div>
+    <button class="btn" type="submit" data-action-sfx="success">Sign In</button>
+  </form>
+
+  <div class="hint">This login bypasses the School Portal requirement.</div>
+</div>
+{% endblock %}
+

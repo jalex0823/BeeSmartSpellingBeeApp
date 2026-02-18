@@ -3071,6 +3071,8 @@ def unauthorized_callback():
     """Return JSON 401 for API routes so clients get parseable responses instead of HTML redirect."""
     if request.path.startswith("/api/") or (request.accept_mimetypes.best and "application/json" in str(request.accept_mimetypes)):
         return jsonify({"error": "login_required", "message": "Please log in to continue."}), 401
+    if request.path.startswith("/admin"):
+        return redirect(url_for('admin_login', next=request.url))
     return redirect(url_for(login_manager.login_view, next=request.url))
 
 
@@ -17198,6 +17200,63 @@ def admin_dashboard():
         return render_template('error.html', 
                              error_message=f"Admin Dashboard Error: {str(e)}",
                              error_details=error_details if app.debug else None), 500
+
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Admin-only login page that bypasses School Portal guard."""
+    # If already logged in as admin, go straight to admin portal.
+    try:
+        if getattr(current_user, 'is_authenticated', False) and (getattr(current_user, 'role', '') or '').lower() == 'admin':
+            return redirect(url_for('admin_dashboard'))
+    except Exception:
+        pass
+
+    if request.method == 'GET':
+        nxt = (request.args.get('next') or '').strip()
+        return render_template('admin/login.html', next=nxt)
+
+    data = request.get_json(silent=True) if request.is_json else request.form
+    username_or_email = (data.get('username') or data.get('email') or '').strip()
+    password = data.get('password', '')
+    nxt = (data.get('next') or '').strip()
+
+    if not username_or_email or not password:
+        flash('Email/Username and password are required.', 'error')
+        return render_template('admin/login.html', next=nxt), 400
+
+    try:
+        _ensure_db_initialized()
+        # Find by email first, then username (case-insensitive)
+        user = User.query.filter(db.func.lower(User.email) == username_or_email.lower()).first() or \
+               User.query.filter(db.func.lower(User.username) == username_or_email.lower()).first()
+        if not user or not user.check_password(password):
+            flash('Invalid credentials.', 'error')
+            return render_template('admin/login.html', next=nxt), 401
+        if not user.is_active:
+            flash('Account is disabled.', 'error')
+            return render_template('admin/login.html', next=nxt), 403
+        if (user.role or '').lower() != 'admin':
+            flash('Access denied: Admins only.', 'error')
+            return render_template('admin/login.html', next=nxt), 403
+
+        login_user(user, remember=True)
+        try:
+            user.update_last_login(ip_address=request.remote_addr)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        # Safe next: only allow internal admin paths
+        if not nxt or not nxt.startswith('/admin'):
+            nxt = url_for('admin_dashboard')
+        return redirect(nxt)
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        app.logger.error(f"Admin login error: {e}\n{traceback.format_exc()}")
+        flash('Admin login failed due to a server error.', 'error')
+        return render_template('admin/login.html', next=nxt), 500
 
 
 @app.route('/admin/fix-avatar-glb')
