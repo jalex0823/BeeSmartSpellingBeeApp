@@ -2916,6 +2916,126 @@ def _ensure_db_initialized() -> None:
             except Exception as e:
                 print(f"️ school_id migration: {e}")
                 db.session.rollback()
+
+            # Optional: Seed Scanlan Oak teacher/student test users in PROD via env vars.
+            # This avoids hardcoding credentials in git. Enable temporarily, deploy once, then disable.
+            try:
+                seed_flag = (os.environ.get("SEED_SCANLAN_OAK_TEST_USERS") or "").strip().lower()
+                if seed_flag in ("1", "true", "yes", "y", "on"):
+                    from models import User, School, SchoolKey
+                    from sqlalchemy import func
+
+                    SCHOOL_CODE = "SCANLAN-OAK-2026"
+                    TEACHER_KEY = "BEE-2026-SCANLAN-TEACH"
+                    STUDENT_KEY = "BEE-2026-SCANLAN-STUD"
+
+                    t_email = (os.environ.get("SCANLAN_TEST_TEACHER_EMAIL") or "").strip()
+                    t_pass = (os.environ.get("SCANLAN_TEST_TEACHER_PASSWORD") or "").strip()
+                    s_email = (os.environ.get("SCANLAN_TEST_STUDENT_EMAIL") or "").strip()
+                    s_pass = (os.environ.get("SCANLAN_TEST_STUDENT_PASSWORD") or "").strip()
+
+                    if not (t_email and t_pass and s_email and s_pass):
+                        print("️ SEED_SCANLAN_OAK_TEST_USERS enabled but missing required env vars:")
+                        print("  - SCANLAN_TEST_TEACHER_EMAIL / SCANLAN_TEST_TEACHER_PASSWORD")
+                        print("  - SCANLAN_TEST_STUDENT_EMAIL / SCANLAN_TEST_STUDENT_PASSWORD")
+                    else:
+                        # Ensure school + keys exist (idempotent)
+                        school = School.query.filter_by(school_code=SCHOOL_CODE).first()
+                        if not school:
+                            school = School(
+                                name="Scanlan Oak Elementary",
+                                school_code=SCHOOL_CODE,
+                                mascot_name="Scanlan Bee",
+                                mascot_asset_key="scanlan-bee",
+                            )
+                            db.session.add(school)
+                            db.session.flush()
+                            print(f" Seeded school: {school.name} (id={school.id})")
+
+                        def _ensure_key(code: str, ktype: str):
+                            existing = SchoolKey.query.filter_by(key_code=code).first()
+                            if existing:
+                                return existing
+                            k = SchoolKey(school_id=school.id, key_code=code, key_type=ktype, is_active=True)
+                            db.session.add(k)
+                            return k
+
+                        _ensure_key(TEACHER_KEY, "TEACHER")
+                        _ensure_key(STUDENT_KEY, "STUDENT")
+
+                        def _safe_username(prefix: str) -> str:
+                            base = prefix.lower().replace("@", "_").replace(".", "_").replace("+", "_")
+                            base = (base[:32] or "scanlan_user").strip("_")
+                            candidate = base
+                            n = 0
+                            while User.query.filter_by(username=candidate).first():
+                                n += 1
+                                candidate = f"{base}_{n}"
+                                if n > 50:
+                                    candidate = f"{base}_{int(time.time())}"
+                                    break
+                            return candidate
+
+                        # Teacher user
+                        teacher = User.query.filter(func.lower(User.email) == t_email.lower()).first()
+                        if not teacher:
+                            teacher = User(
+                                username=_safe_username("scanlan_teacher"),
+                                display_name="Scanlan Test Teacher",
+                                email=t_email,
+                                role="teacher",
+                                school_name=school.name,
+                                is_active=True,
+                            )
+                            teacher.set_password(t_pass)
+                            try:
+                                teacher.generate_teacher_key()
+                            except Exception:
+                                pass
+                            db.session.add(teacher)
+                            print(f" Seeded teacher user: {t_email}")
+                        else:
+                            # Keep role consistent for testing; do not change password unless explicitly requested.
+                            if (teacher.role or "").lower() != "teacher":
+                                teacher.role = "teacher"
+                            if not teacher.school_name:
+                                teacher.school_name = school.name
+
+                        # Student user
+                        student = User.query.filter(func.lower(User.email) == s_email.lower()).first()
+                        if not student:
+                            student = User(
+                                username=_safe_username("scanlan_student"),
+                                display_name="Scanlan Test Student",
+                                email=s_email,
+                                role="student",
+                                grade_level="5th Grade",
+                                school_name=school.name,
+                                is_active=True,
+                            )
+                            student.set_password(s_pass)
+                            db.session.add(student)
+                            print(f" Seeded student user: {s_email}")
+                        else:
+                            if (student.role or "").lower() != "student":
+                                student.role = "student"
+                            if not student.school_name:
+                                student.school_name = school.name
+
+                        # Link both to the school if the column exists
+                        try:
+                            if hasattr(teacher, "school_id"):
+                                teacher.school_id = school.id
+                            if hasattr(student, "school_id"):
+                                student.school_id = school.id
+                        except Exception:
+                            pass
+
+                        db.session.commit()
+                        print("✅ Scanlan Oak test users seeded (SEED_SCANLAN_OAK_TEST_USERS).")
+            except Exception as e:
+                print(f"️ Scanlan Oak test-user seed failed: {e}")
+                db.session.rollback()
     except Exception as e:
         # Never crash app startup; just log. Auth routes will still surface a friendly error.
         print(f"️ DB initialization check failed: {e}")
