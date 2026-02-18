@@ -17281,6 +17281,130 @@ def admin_users():
     return render_template('admin/users.html', user=current_user)
 
 
+@app.route('/admin/schools', methods=['GET'])
+@login_required
+def admin_schools():
+    """Admin: manage School Edition schools and keys."""
+    try:
+        if (getattr(current_user, 'role', None) or '').lower() != 'admin':
+            flash('Access denied: Admins only', 'error')
+            return redirect(url_for('home'))
+        from models import School, SchoolKey
+        schools = School.query.order_by(School.created_at.desc()).all()
+        rows = []
+        for s in schools:
+            keys = SchoolKey.query.filter_by(school_id=s.id, is_active=True).all()
+            by_type = {}
+            for k in keys:
+                by_type.setdefault((k.key_type or '').upper(), []).append(k.key_code)
+            rows.append({
+                "school": s,
+                "keys": by_type,
+            })
+        return render_template('admin/schools.html', user=current_user, rows=rows)
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f" ADMIN SCHOOLS ERROR: {str(e)}")
+        print(error_details)
+        flash(f'Error loading schools admin: {str(e)}', 'error')
+        return render_template('error.html',
+                              error_message=f"Admin Schools Error: {str(e)}",
+                              error_details=error_details if app.debug else None), 500
+
+
+@app.route('/admin/schools/create', methods=['POST'])
+@login_required
+def admin_create_school():
+    """Admin: create a school and generate SCHOOL/TEACHER/STUDENT keys."""
+    if (getattr(current_user, 'role', None) or '').lower() != 'admin':
+        flash('Access denied: Admins only', 'error')
+        return redirect(url_for('home'))
+    from models import School, SchoolKey
+    import re
+    import datetime
+    from sqlalchemy.exc import IntegrityError
+
+    name = (request.form.get('name') or '').strip()
+    if not name:
+        flash('School name is required.', 'error')
+        return redirect(url_for('admin_schools'))
+
+    requested_code = (request.form.get('school_code') or '').strip().upper()
+    mascot_asset_key = (request.form.get('mascot_asset_key') or '').strip()
+    mascot_logo_url = (request.form.get('mascot_logo_url') or '').strip()
+    theme_primary = (request.form.get('theme_primary') or '').strip()
+    theme_secondary = (request.form.get('theme_secondary') or '').strip()
+    make_keys = (request.form.get('make_keys') or '1').strip() in ('1', 'true', 'yes', 'on')
+
+    def _rand(n=4):
+        import random, string
+        return ''.join(random.choices(string.ascii_uppercase + string.digits, k=n))
+
+    def _slug_base(s: str) -> str:
+        base = re.sub(r'[^A-Za-z0-9]+', '-', (s or '').strip().upper()).strip('-')
+        base = re.sub(r'-{2,}', '-', base)
+        return (base[:18] or 'SCHOOL')
+
+    def _gen_school_code() -> str:
+        year = datetime.datetime.utcnow().year
+        base = _slug_base(name)
+        return f"{base}-{year}-{_rand(3)}"
+
+    school_code = requested_code or _gen_school_code()
+    # Ensure uniqueness
+    tries = 0
+    while School.query.filter_by(school_code=school_code).first():
+        tries += 1
+        if tries > 25:
+            school_code = f"{_slug_base(name)}-{datetime.datetime.utcnow().year}-{_rand(6)}"
+            break
+        school_code = _gen_school_code()
+
+    school = School(
+        name=name,
+        school_code=school_code,
+        mascot_asset_key=mascot_asset_key or None,
+        mascot_logo_url=mascot_logo_url or None,
+        theme_primary=theme_primary or None,
+        theme_secondary=theme_secondary or None,
+    )
+
+    try:
+        db.session.add(school)
+        db.session.flush()
+
+        created_keys = {}
+        if make_keys:
+            # SCHOOL key defaults to the school_code (easy to share)
+            def _ensure_key(code: str, ktype: str):
+                if SchoolKey.query.filter_by(key_code=code).first():
+                    return None
+                k = SchoolKey(school_id=school.id, key_code=code, key_type=ktype, is_active=True)
+                db.session.add(k)
+                created_keys[ktype] = code
+                return k
+
+            _ensure_key(school_code, "SCHOOL")
+            _ensure_key(f"BEE-{datetime.datetime.utcnow().year}-{_slug_base(name)[:10]}-TEACH-{_rand(4)}", "TEACHER")
+            _ensure_key(f"BEE-{datetime.datetime.utcnow().year}-{_slug_base(name)[:10]}-STUD-{_rand(4)}", "STUDENT")
+
+        db.session.commit()
+        msg = f"Created school '{name}' (code: {school_code})."
+        if created_keys:
+            msg += " Keys: " + ", ".join([f"{k}={v}" for k, v in created_keys.items()])
+        flash(msg, 'success')
+        return redirect(url_for('admin_schools'))
+    except IntegrityError:
+        db.session.rollback()
+        flash('Could not create school: code or keys already exist. Try again.', 'error')
+        return redirect(url_for('admin_schools'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error creating school: {e}', 'error')
+        return redirect(url_for('admin_schools'))
+
+
 @app.route('/admin/user/<int:user_id>')
 @login_required
 def admin_user_detail(user_id):

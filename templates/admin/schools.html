@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}School Management - BeeSmart Admin{% endblock %}
+
+{% block content %}
+<style>
+  .admin-wrap { max-width: 1100px; margin: 0 auto; padding: 1.25rem 1rem 2rem; }
+  .admin-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  .admin-header h1 { margin:0; font-size:1.6rem; color:#3b2b04; }
+  .admin-card { background: rgba(255,255,255,0.95); border: 2px solid rgba(230,168,0,0.25); border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); padding: 1rem; }
+  .grid { display:grid; grid-template-columns: 1fr; gap: 1rem; }
+  @media (min-width: 980px){ .grid { grid-template-columns: 420px 1fr; } }
+  .form-row { display:flex; flex-direction:column; gap:0.35rem; margin-bottom:0.85rem; }
+  .form-row label { font-weight:700; color:#3b2b04; }
+  .form-row input { padding:0.65rem 0.85rem; border-radius:12px; border:2px solid #e0d5b8; font-size:1rem; }
+  .hint { font-size:0.85rem; color:#6b5b3d; }
+  .btn { display:inline-block; padding:0.85rem 1rem; border-radius: 12px; border:none; cursor:pointer; font-weight:800; background: linear-gradient(135deg, #E6A800, #FFC107); color:#3b2b04; width:100%; }
+  .table { width:100%; border-collapse: collapse; }
+  .table th, .table td { text-align:left; padding:0.65rem 0.5rem; border-bottom: 1px solid rgba(0,0,0,0.08); vertical-align: top; }
+  .table th { font-size:0.85rem; text-transform: uppercase; letter-spacing:0.04em; color:#6b5b3d; }
+  .pill { display:inline-block; padding:0.25rem 0.5rem; border-radius:999px; background: rgba(255,193,7,0.2); border: 1px solid rgba(230,168,0,0.35); font-weight:800; color:#3b2b04; margin-right:0.35rem; margin-bottom:0.35rem; }
+  .keys { display:flex; flex-wrap:wrap; gap:0.35rem; }
+  .small { font-size:0.9rem; }
+</style>
+
+<div class="admin-wrap">
+  <div class="admin-header">
+    <h1>School Management</h1>
+    <div class="small">
+      <a href="{{ url_for('admin_dashboard') }}">← Back to Admin Dashboard</a>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top: 1rem;">
+    <div class="admin-card">
+      <h2 style="margin:0 0 0.75rem 0; font-size:1.15rem; color:#3b2b04;">Create a School</h2>
+      <form method="post" action="{{ url_for('admin_create_school') }}">
+        <div class="form-row">
+          <label for="name">School name *</label>
+          <input id="name" name="name" required placeholder="e.g. Scanlan Oak Elementary">
+        </div>
+        <div class="form-row">
+          <label for="school_code">School code (optional)</label>
+          <input id="school_code" name="school_code" placeholder="Leave blank to auto-generate">
+          <div class="hint">If keys are generated, the SCHOOL key will default to this code.</div>
+        </div>
+        <div class="form-row">
+          <label for="mascot_asset_key">Default avatar slug (optional)</label>
+          <input id="mascot_asset_key" name="mascot_asset_key" placeholder="e.g. scanlan-bee">
+          <div class="hint">Stored as <code>School.mascot_asset_key</code>. If set, students auto-get this avatar.</div>
+        </div>
+        <div class="form-row">
+          <label for="mascot_logo_url">Mascot logo URL (optional)</label>
+          <input id="mascot_logo_url" name="mascot_logo_url" placeholder="e.g. /static/images/BeeKeeperBadge.png">
+        </div>
+        <div class="form-row">
+          <label for="theme_primary">Theme primary (optional)</label>
+          <input id="theme_primary" name="theme_primary" placeholder="#E6A800">
+        </div>
+        <div class="form-row">
+          <label for="theme_secondary">Theme secondary (optional)</label>
+          <input id="theme_secondary" name="theme_secondary" placeholder="#8B6914">
+        </div>
+        <div class="form-row" style="flex-direction:row; align-items:center; gap:0.5rem;">
+          <input id="make_keys" name="make_keys" type="checkbox" value="1" checked>
+          <label for="make_keys" style="margin:0;">Generate SCHOOL / TEACHER / STUDENT keys</label>
+        </div>
+        <button class="btn" type="submit" data-action-sfx="success">Create School</button>
+      </form>
+      <div class="hint" style="margin-top:0.75rem;">
+        Tip: this is the programmatic path—no per-school env vars required.
+      </div>
+    </div>
+
+    <div class="admin-card">
+      <h2 style="margin:0 0 0.75rem 0; font-size:1.15rem; color:#3b2b04;">Existing Schools</h2>
+      {% if not rows %}
+        <p class="hint">No schools found yet.</p>
+      {% else %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>School</th>
+            <th>Code</th>
+            <th>Default Avatar</th>
+            <th>Keys (active)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            {% set s = row.school %}
+            <tr>
+              <td><strong>{{ s.name }}</strong></td>
+              <td><span class="pill">{{ s.school_code }}</span></td>
+              <td>{{ s.mascot_asset_key or '' }}</td>
+              <td>
+                <div class="keys">
+                  {% for ktype, codes in (row.keys or {}).items() %}
+                    {% for code in codes %}
+                      <span class="pill">{{ ktype }}: {{ code }}</span>
+                    {% endfor %}
+                  {% endfor %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
