@@ -11,13 +11,9 @@
     <meta http-equiv="Expires" content="0">
     <title>BeeSmart Spelling App</title>
     
-    <!-- Favicon for all platforms -->
-    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="/static/favicon-96x96.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="/static/android-chrome-192x192.png">
+    <!-- Favicon / App icon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/BeeKeeperBadge.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/BeeKeeperBadge.png') }}">
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v=20251129">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251129">
