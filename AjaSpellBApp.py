@@ -2883,6 +2883,39 @@ def _ensure_db_initialized() -> None:
             except Exception as e:
                 print(f"️ points_applied migration: {e}")
                 db.session.rollback()
+
+            # School Edition migration: ensure users.school_id and avatars.school_id exist
+            # (create_all above ensures tables; these ALTERs ensure added columns on long-lived DBs)
+            try:
+                if inspector.has_table('users'):
+                    ucols = [col['name'] for col in inspector.get_columns('users')]
+                    if 'school_id' not in ucols:
+                        print(" Adding school_id column to users table...")
+                        db.session.execute(text(
+                            "ALTER TABLE users ADD COLUMN school_id INTEGER REFERENCES schools(id)"
+                        ))
+                        try:
+                            db.session.execute(text("CREATE INDEX ix_users_school_id ON users(school_id)"))
+                        except Exception:
+                            pass
+                        db.session.commit()
+                        print(" Added users.school_id")
+                if inspector.has_table('avatars'):
+                    acols = [col['name'] for col in inspector.get_columns('avatars')]
+                    if 'school_id' not in acols:
+                        print(" Adding school_id column to avatars table...")
+                        db.session.execute(text(
+                            "ALTER TABLE avatars ADD COLUMN school_id INTEGER REFERENCES schools(id)"
+                        ))
+                        try:
+                            db.session.execute(text("CREATE INDEX ix_avatars_school_id ON avatars(school_id)"))
+                        except Exception:
+                            pass
+                        db.session.commit()
+                        print(" Added avatars.school_id")
+            except Exception as e:
+                print(f"️ school_id migration: {e}")
+                db.session.rollback()
     except Exception as e:
         # Never crash app startup; just log. Auth routes will still surface a friendly error.
         print(f"️ DB initialization check failed: {e}")
