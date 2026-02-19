@@ -599,7 +599,7 @@
 
     <!-- Global Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading checks" data-brand-loaded="false" style="display: none;">
-    <img src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Crest Logo" class="crest-logo brand-logo" decoding="async" />
+    <img src="{{ url_for('static', filename=('images/BeeKeeperBadge.png' if (request is defined and request.path and request.path.startswith('/admin')) else 'BeeSmartCrestLogo1.png')) }}" alt="BeeSmart Crest Logo" class="crest-logo brand-logo" decoding="async" />
         <div class="checks" id="loadingChecks" aria-live="polite" style="display: none;">
             <!-- Loading check items -->
         </div>
