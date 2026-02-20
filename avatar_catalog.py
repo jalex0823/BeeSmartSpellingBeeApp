@@ -865,10 +865,6 @@ def check_avatar_unlocked(avatar_id, user_honey_points=0, purchased_avatars=None
     if avatar.get("is_default_free", False):
         return {"unlocked": True, "reason": "Free avatar", "required_points": 0, "price": 0}
 
-    # Subscription: premium subscription optionally unlocks premium avatar set
-    if has_premium_subscription and (avatar.get("tier") == "premium" or avatar.get("is_premium_included")):
-        return {"unlocked": True, "reason": "Included with Premium", "required_points": 0, "price": avatar.get("price", 0)}
-
     # Check if purchased (string-exact by normalized slug; restores store by product_id -> avatar slug)
     if avatar_id_norm in purchased_norm:
         return {"unlocked": True, "reason": "Purchased", "required_points": avatar.get("unlock_points", 0), "price": avatar.get("price", 0)}

@@ -22,12 +22,12 @@ def test_avatar_skus_syntax_and_catalog_load():
 
 
 def test_avatar_catalog_check_unlocked():
-    """avatar_catalog.check_avatar_unlocked with normalized slugs and subscription."""
+    """avatar_catalog.check_avatar_unlocked with normalized slugs."""
     import avatar_catalog
     from avatar_catalog import check_avatar_unlocked, _norm_slug
 
     assert _norm_slug("Franken_Bee") == "franken-bee"
-    # Locked without purchase or subscription
+    # Locked without purchase
     r = check_avatar_unlocked("al-bee", 0, [], has_premium_subscription=False)
     assert r["unlocked"] is False
     # Unlocked by purchased_avatars (normalized)
@@ -35,9 +35,9 @@ def test_avatar_catalog_check_unlocked():
     assert r2["unlocked"] is True and r2["reason"] == "Purchased"
     r2b = check_avatar_unlocked("al-bee", 0, ["Al_Bee"], has_premium_subscription=False)
     assert r2b["unlocked"] is True
-    # Unlocked by subscription (premium set)
+    # Premium subscription does not unlock avatars (avatars unlock via points/purchase)
     r3 = check_avatar_unlocked("al-bee", 0, [], has_premium_subscription=True)
-    assert r3["unlocked"] is True and r3["reason"] == "Included with Premium"
+    assert r3["unlocked"] is False
 
 
 def test_js_picker_no_syntax_glitch():
