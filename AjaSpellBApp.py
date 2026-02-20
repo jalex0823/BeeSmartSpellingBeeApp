@@ -76,6 +76,7 @@ from avatar_skus import (
     APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG,
     app_store_product_id_for_avatar,
     google_play_product_id_for_avatar,
+    google_play_purchase_option_id_for_avatar,
     build_product_entitlements,
     build_product_entitlements_from_catalog,
     sku_for_slug,
@@ -411,7 +412,7 @@ def init_quiz_state(total_words: int):
         try:
             quiz_session = QuizSession(
                 user_id=user_obj.id,
-                total_words=total_words
+                total_words=int(total_words or 0),
             )
             link = TeacherStudent.query.filter_by(student_id=user_obj.id, is_active=True).first()
             if link and not quiz_session.teacher_key:
@@ -1493,7 +1494,7 @@ def api_avatars():
         try:
             if avatar_id and not is_unlocked:
                 if use_google_play_ids:
-                    product_id = google_play_product_id_for_avatar(avatar_id)
+                    product_id = google_play_purchase_option_id_for_avatar(avatar_id) or google_play_product_id_for_avatar(avatar_id)
                 else:
                     product_id = app_store_product_id_for_avatar(avatar_id)
                 if not product_id:
