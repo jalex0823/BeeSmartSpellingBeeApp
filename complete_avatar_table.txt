@@ -901,3 +901,22 @@ Important:
 - No additional content is tied to this purchase.
 - After a successful purchase the avatar becomes selectable immediately.
 - Any sandbox tester Apple ID can be used for purchase verification.
+
+40) YardStick Bee Avatar
+Product ID: beesmart.avatar.yardstick_bee
+Price: $0.99
+Display Name (App Store): YardStick Bee
+Description (App Store): Measure up your spelling skills! YardStick Bee keeps your progress right on track.
+Review Notes:
+This purchase unlocks the YardStick Bee Avatar, a cosmetic character used in the BeeSmart Spelling Bee app.
+It does not change gameplay or provide player advantages.
+How to find and test this IAP:
+1. Launch the BeeSmart app.
+2. Tap “Avatars” on the main menu.
+3. Select “YardStick Bee Avatar” from the list.
+4. Tap “Choose This Bee” to initiate the In-App Purchase.
+Important:
+- This IAP only unlocks the visual avatar.
+- No additional content is tied to this purchase.
+- After a successful purchase the avatar becomes selectable immediately.
+- Any sandbox tester Apple ID can be used for purchase verification.

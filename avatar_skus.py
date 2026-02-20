@@ -262,6 +262,8 @@ def build_product_entitlements_from_catalog() -> Dict[str, dict]:
             out[pid] = {'type': 'avatar', 'avatar_id': key}
             # Purchase option ID (step 2) uses hyphens only; register for verification
             po_id = _ios_to_google_play_purchase_option_id(pid)
+            if key == 'yardstick-bee':
+                po_id = 'beesmart-avatar-yardstick-bee-v3'
             if po_id and po_id != pid:
                 out[po_id] = {'type': 'avatar', 'avatar_id': key}
     return out
@@ -365,6 +367,9 @@ def google_play_purchase_option_id_for_avatar(avatar_slug: str) -> str | None:
     Use for Availability and pricing → Purchase option ID field.
     """
     ios_id = app_store_product_id_for_avatar(avatar_slug)
+    slug = (avatar_slug or '').strip().lower().replace('_', '-')
+    if slug == 'yardstick-bee':
+        return 'beesmart-avatar-yardstick-bee-v3'
     return _ios_to_google_play_purchase_option_id(ios_id) if ios_id else None
 
 
