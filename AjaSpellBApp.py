@@ -3780,6 +3780,8 @@ def normalize(s: str) -> str:
 INAPPROPRIATE_WORDS = {
     # Profanity and vulgar terms
     "damn", "damned", "hell", "hells", "crap", "sucks", "piss", "pissed",
+    "shit", "shits", "fuck", "fucks", "fucker", "fuckers", "fuckhead", "fuckheads", "motherfucker", "motherfuckers",
+    "bitch", "bitches", "asshole", "assholes", "bastard", "bastards", "dumbass", "dumbasses",
     # Sexual/adult content - CRITICAL: Block all adult/child abuse terms
     "sex", "sexy", "porn", "orgasm", "penis", "vagina", "breast", "breasts",
     "ejaculation", "ejaculations", "erection", "masturbate", "prostitute",
@@ -4551,7 +4553,6 @@ except Exception as e:
     print(f"️ Battle API registration failed: {e}")
 
 # --- Routes: Health Check for API Debugging ----------------------------------
-
 
 @app.route("/api/debug/health", methods=["GET"])
 def api_debug_health():
@@ -5574,7 +5575,7 @@ def toggle_saved_list_favorite(list_id=None):
         user = get_or_create_guest_user()
         if not user:
             return jsonify({"ok": False, "error": "Unable to resolve user"}), 400
-
+        
         # Get list_id from URL or body
         if list_id is None:
             data = request.get_json() or {}
@@ -6977,6 +6978,14 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
     
     for word, data in wiktionary.items():
         word_lower = word.lower()
+        
+        # Kid-safety filter: never include inappropriate words in Random Play
+        try:
+            ok, _reason = is_kid_friendly(word_lower)
+            if not ok:
+                continue
+        except Exception:
+            pass
         
         # ══════════════════════════════════════════════════════════════
         # SKIP CONDITIONS (quality filters)
