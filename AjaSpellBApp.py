@@ -6991,9 +6991,13 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
         # SKIP CONDITIONS (quality filters)
         # ══════════════════════════════════════════════════════════════
         
-        # Skip very short words unless difficulty is 1
-        if len(word) < 3 and difficulty > 1:
-            continue
+        # Difficulty 1 should be only 2-3 letter words; higher difficulties require >=3 letters
+        if difficulty == 1:
+            if len(word) < 2 or len(word) > 3:
+                continue
+        else:
+            if len(word) < 3:
+                continue
         
         # Skip words with non-alphabetic characters
         if not word.isalpha():
