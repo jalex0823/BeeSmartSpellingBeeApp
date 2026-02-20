@@ -1807,7 +1807,16 @@ function showRestoreDialog(title, message, isSuccess) {
             console.log('IAP: purchase started');
 
             try {
-                const result = await Promise.resolve(window.BeeSmartIAP.purchase(productId));
+                const _purchaseWithTimeout = function (promise, timeoutMs) {
+                    const ms = Math.max(0, Number(timeoutMs || 0) || 0);
+                    if (!ms) return promise;
+                    return Promise.race([
+                        promise,
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('purchase_timeout')), ms))
+                    ]);
+                };
+
+                const result = await _purchaseWithTimeout(Promise.resolve(window.BeeSmartIAP.purchase(productId)), 20000);
                 if (result && (result.cancelled === true)) {
                     window.__beesmartPurchaseInFlight = false;
                     _applyPremiumUiState();
@@ -1868,6 +1877,13 @@ function showRestoreDialog(title, message, isSuccess) {
                 alert('Purchase complete! Premium is active.');
                 try { window.location.href = '/app'; } catch (e) {}
             } catch (e) {
+                // IMPORTANT: Never leave the CTA in a disabled/loading state.
+                // Google Play will flag a frozen CTA as "broken functionality".
+                try {
+                    if (e && String(e.message || e).includes('purchase_timeout')) {
+                        alert('Google Play is taking too long to respond. Please check your connection and try again.');
+                    }
+                } catch (_e) { /* ignore */ }
                 var extra = (window.__beesmartStoreCopy && window.__beesmartStoreCopy.purchaseErrorExtra) ? window.__beesmartStoreCopy.purchaseErrorExtra() : 'If you already subscribed on this Apple ID, try Restore Purchases.';
                 const msg = (!window.IS_REAL_AUTH)
                     ? 'Purchase could not be completed. ' + extra + ' Registration is optional for cross-device access.'
@@ -2146,6 +2162,10 @@ function showRestoreDialog(title, message, isSuccess) {
                     btn.addEventListener('click', function () {
                         subscribe('monthly');
                     });
+                    btn.addEventListener('touchend', function (e) {
+                        try { if (e) e.preventDefault(); } catch (_e) { /* ignore */ }
+                        subscribe('monthly');
+                    }, { passive: false });
                 }
             } catch (e) { /* ignore */ }
 

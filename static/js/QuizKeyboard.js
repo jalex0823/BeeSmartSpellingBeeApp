@@ -17,6 +17,8 @@
 
     let instance = null;
 
+    let lastTouchActivationTs = 0;
+
     function playKeyClick(volume) {
         try {
             if (typeof window.BeeSmartButtonSfx !== 'undefined' && window.BeeSmartButtonSfx.playRandom) {
@@ -47,6 +49,7 @@
         button.textContent = opts.autoCaps !== false ? letter : letter.toLowerCase();
         button.dataset.letter = letter;
         const onLetter = () => {
+            if (Date.now() - lastTouchActivationTs < 450) return;
             keyPopAnimation(button);
             playKeyClick(0.3);
             opts.onLetter(letter);
@@ -54,7 +57,10 @@
         button.addEventListener('click', onLetter);
         button.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            button.click();
+            lastTouchActivationTs = Date.now();
+            keyPopAnimation(button);
+            playKeyClick(0.3);
+            opts.onLetter(letter);
         }, { passive: false });
         return button;
     }
@@ -68,6 +74,7 @@
         button.setAttribute('data-no-button-sfx', '1');
         button.innerHTML = label;
         const wrapped = () => {
+            if (Date.now() - lastTouchActivationTs < 450) return;
             keyPopAnimation(button);
             playKeyClick(0.32);
             onClick();
@@ -75,7 +82,10 @@
         button.addEventListener('click', wrapped);
         button.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            button.click();
+            lastTouchActivationTs = Date.now();
+            keyPopAnimation(button);
+            playKeyClick(0.32);
+            onClick();
         }, { passive: false });
         return button;
     }

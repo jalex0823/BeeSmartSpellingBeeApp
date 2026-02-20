@@ -32,8 +32,7 @@
         html, body {
             height: 100%;
             overflow-x: hidden;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
+            overflow-y: hidden;
             overscroll-behavior-y: none; /* Changed from contain to none for smoother scrolling */
         }
         body {
@@ -69,7 +68,54 @@
             if(overlay) overlay.addEventListener('click', function(e){ if(e.target===overlay) closeWhatNow(); });
             document.addEventListener('keydown', function(e){ if(e.key==='Escape'&& overlay && overlay.style.display==='flex'){ closeWhatNow(); e.preventDefault(); } });
         }
+
+        function initIOSOverscrollSuppression(){
+            try {
+                var ua = (navigator && navigator.userAgent) ? String(navigator.userAgent) : '';
+                var isiOS = /iP(hone|ad|od)/i.test(ua);
+                if (!isiOS) return;
+
+                var scroller = document.querySelector('.main-container');
+                if (!scroller) return;
+
+                var startY = 0;
+
+                scroller.addEventListener('touchstart', function(e){
+                    try {
+                        if (!e || !e.touches || !e.touches.length) return;
+                        startY = e.touches[0].clientY;
+                    } catch (_e) { /* ignore */ }
+                }, { passive: true });
+
+                scroller.addEventListener('touchmove', function(e){
+                    try {
+                        if (!e || !e.touches || !e.touches.length) return;
+                        var currentY = e.touches[0].clientY;
+                        var deltaY = currentY - startY;
+
+                        var scrollTop = scroller.scrollTop;
+                        var maxScrollTop = scroller.scrollHeight - scroller.clientHeight;
+
+                        if (maxScrollTop <= 0) {
+                            e.preventDefault();
+                            return;
+                        }
+
+                        var atTop = scrollTop <= 0;
+                        var atBottom = scrollTop >= (maxScrollTop - 1);
+
+                        if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
+                            e.preventDefault();
+                        }
+                    } catch (_e) { /* ignore */ }
+                }, { passive: false });
+            } catch (_e) {
+                /* ignore */
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', initWhatNowModal);
+        document.addEventListener('DOMContentLoaded', initIOSOverscrollSuppression);
         (function(){
             // Performance hard-stop: kill the diagonal/transparent overlay FX that was hurting scroll.
             // We still allow normal gradients/shadows, but disable injected sweep overlays + background FX.
@@ -1104,7 +1150,16 @@ function showRestoreDialog(title, message, isSuccess) {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
+            height: 100vh;
+            height: 100dvh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+        }
+        .main-container > * {
+            margin-left: auto;
+            margin-right: auto;
         }
 
         /* Name badge container - NEW: reduce bottom margin to close gap */

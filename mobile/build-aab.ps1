@@ -3,8 +3,8 @@
 # Run from repo root or from mobile folder: .\build-aab.ps1
 #
 # Version for this build (injected into app/build.gradle before building so AAB always has correct version)
-$VersionCode = 15
-$VersionName = "5.9"
+$VersionCode = 17
+$VersionName = "5.9.2"
 
 $ErrorActionPreference = "Stop"
 $scriptDir = $PSScriptRoot

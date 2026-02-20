@@ -16,9 +16,9 @@ def test_avatar_skus_syntax_and_catalog_load():
     import avatar_skus
     assert hasattr(avatar_skus, "APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG")
     assert len(avatar_skus.APP_STORE_AVATAR_PRODUCT_ID_TO_SLUG) >= 36
-    assert avatar_skus.app_store_product_id_for_avatar("franken-bee") == "beesmart.avatar.franken_bee.v2"
-    assert avatar_skus.app_store_product_id_for_avatar("fairy-bee") == "beesmart.avatar.fairy_bee"
-    assert avatar_skus.app_store_product_id_for_avatar("gamer-bee") == "beesmart.avatar.gamer_bee"
+    assert avatar_skus.app_store_product_id_for_avatar("franken-bee") == "beesmart.avatar.franken_bee.v3"
+    assert avatar_skus.app_store_product_id_for_avatar("fairy-bee") == "beesmart.avatar.fairy_bee.v3"
+    assert avatar_skus.app_store_product_id_for_avatar("gamer-bee") == "beesmart.avatar.gamer_bee.v3"
 
 
 def test_avatar_catalog_check_unlocked():

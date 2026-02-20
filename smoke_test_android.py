@@ -738,7 +738,7 @@ def main():
         print("\nStart the app: python AjaSpellBApp.py")
         sys.exit(1)
 
-    print(f"{GREEN}✅ Server reachable{RESET}\n")
+    print(f"{GREEN}OK: Server reachable{RESET}\n")
 
     # Run all test suites
     test_android_build_config()
@@ -765,10 +765,10 @@ def main():
     all_passed = generate_report()
 
     if all_passed:
-        print(f"\n{GREEN}✅ ALL ANDROID SMOKE TESTS PASSED{RESET}\n")
+        print(f"\n{GREEN}OK: ALL ANDROID SMOKE TESTS PASSED{RESET}\n")
         sys.exit(0)
     else:
-        print(f"\n{RED}❌ SOME TESTS FAILED - Review before Android release{RESET}\n")
+        print(f"\n{RED}FAIL: SOME TESTS FAILED - Review before Android release{RESET}\n")
         sys.exit(1)
 
 
