@@ -37,6 +37,7 @@
     {"avatarKey": "diva-bee", "displayName": "Diva Bee", "iapProductId": "beesmart.avatar.diva_bee.v3", "priceTier": "0.99", "isFree": false, "description": "The Bee-yoncé of the hive! Born to spell, born to shine!"},
     {"avatarKey": "techno-bee", "displayName": "Techno Bee", "iapProductId": "beesmart.avatar.techno_bee.v3", "priceTier": "0.99", "isFree": false, "description": "Glowing neon armor and futuristic style — Techno Bee is powered by pure brain energy!"},
     {"avatarKey": "queen-bee", "displayName": "Queen Bee", "iapProductId": "beesmart.avatar.queen_bee.v3", "priceTier": "0.99", "isFree": false, "description": "Royal and majestic! Leader with grace."},
-    {"avatarKey": "buzz-bee", "displayName": "Buzz Bee", "iapProductId": "beesmart.avatar.buzz_bee.v3", "priceTier": "0.99", "isFree": false, "description": "Always buzzing with energy and enthusiasm!"}
+    {"avatarKey": "buzz-bee", "displayName": "Buzz Bee", "iapProductId": "beesmart.avatar.buzz_bee.v3", "priceTier": "0.99", "isFree": false, "description": "Always buzzing with energy and enthusiasm!"},
+    {"avatarKey": "yardstick-bee", "displayName": "YardStick Bee", "iapProductId": "beesmart.avatar.yardstick_bee.v3", "priceTier": "0.99", "isFree": false, "description": "Measure up your spelling skills! YardStick Bee keeps your progress right on track."}
   ]
 }

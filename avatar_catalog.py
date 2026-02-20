@@ -706,6 +706,23 @@ ADDITIONAL_AVATARS: List[Dict] = [
         "is_purchasable": True,
         "unlock_points": 30000,
         "price": 1.99
+    },
+    {
+        "id": "yardstick-bee",
+        "product_id": "beesmart.avatar.yardstick_bee",
+        "name": "YardStick Bee Avatar",
+        "folder": "glb_files",
+        "obj_file": "YardStickBee.glb",
+        "mtl_file": "",
+        "texture_file": "",
+        "description": "Measure up your spelling skills! YardStick Bee keeps your progress right on track.",
+        "variants": ["default"],
+        "category": "classic",
+        "tier": "premium",
+        "is_default_free": False,
+        "is_purchasable": True,
+        "unlock_points": 15000,
+        "price": 0.99
     }
 ]
 
@@ -1203,8 +1220,8 @@ def get_avatar_info(avatar_id, variant='default'):
         'description': avatar['description'],
         'variant': variant,
         'category': avatar['category'],
-        'thumbnail_url': f"{base_path}/AvatarThumbnails/{os.path.splitext(glb_file)[0]}!.png",
-        'preview_url': f"{base_path}/AvatarThumbnails/{os.path.splitext(glb_file)[0]}!.png",
+        'thumbnail_url': f"{base_path}/{thumbnail_file}",
+        'preview_url': f"{base_path}/{thumbnail_file}",
         'model_glb_url': f"{base_path}/{glb_file}",  # PRIMARY: GLB model file
         'model_obj_url': f"{base_path}/{glb_file}",  # DEPRECATED: For backward compatibility
         'model_mtl_url': None,  # DEPRECATED: Not used with GLB
