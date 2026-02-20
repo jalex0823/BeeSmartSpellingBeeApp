@@ -2519,9 +2519,14 @@ function isProbablyNativeAppContext() {
         // Capacitor present is our strongest signal.
         if (window.Capacitor) return true;
     } catch (e) { /* ignore */ }
-    const ua = navigator.userAgent || '';
-    // TestFlight still reports as iPhone/iPad; Android wrapper reports Android.
-    return (/iPhone|iPad|iPod/i.test(ua) || /Android/i.test(ua));
+
+    // IMPORTANT: Do NOT treat iOS Safari as a "native app".
+    // Only consider this native if the IAP bridge exists.
+    try {
+        if (window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') return true;
+    } catch (e) { /* ignore */ }
+
+    return false;
 }
 
 function findAvatarBySlug(slug) {
