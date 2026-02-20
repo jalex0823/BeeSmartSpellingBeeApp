@@ -21,6 +21,9 @@
 
     function playKeyClick(volume) {
         try {
+            if (window && window.__disableQuizKeyboardSfx) {
+                return;
+            }
             if (typeof window.BeeSmartButtonSfx !== 'undefined' && window.BeeSmartButtonSfx.playRandom) {
                 window.BeeSmartButtonSfx.playRandom({ volume: typeof volume === 'number' ? volume : 0.32 });
             }
