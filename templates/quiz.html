@@ -5058,7 +5058,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 {% block extra_js %}
-<script>window.__disableQuizKeyboardSfx = true;</script>
+<script>window.__useSimpleQuizKeyboardSfx = true;</script>
 <script src="{{ url_for('static', filename='js/QuizKeyboard.js') }}?v={{ timestamp }}"></script>
 <script>
 (function () {

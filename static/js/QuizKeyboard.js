@@ -24,6 +24,23 @@
             if (window && window.__disableQuizKeyboardSfx) {
                 return;
             }
+            try {
+                if (window && typeof window.__beesmartSfxEnabled === 'function' && !window.__beesmartSfxEnabled()) {
+                    return;
+                }
+            } catch (_) {}
+
+            if (window && window.__useSimpleQuizKeyboardSfx) {
+                if (!window.__quizKeyboardClickAudio) {
+                    window.__quizKeyboardClickAudio = new Audio('/static/sounds/button-click.mp3');
+                }
+                const a = window.__quizKeyboardClickAudio;
+                a.volume = typeof volume === 'number' ? volume : 0.32;
+                try { a.currentTime = 0; } catch (_) {}
+                const p = a.play();
+                if (p && typeof p.catch === 'function') p.catch(() => {});
+                return;
+            }
             if (typeof window.BeeSmartButtonSfx !== 'undefined' && window.BeeSmartButtonSfx.playRandom) {
                 window.BeeSmartButtonSfx.playRandom({ volume: typeof volume === 'number' ? volume : 0.32 });
             }
