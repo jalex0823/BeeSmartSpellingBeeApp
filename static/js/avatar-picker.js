@@ -12,10 +12,47 @@ let avatars = [];
 let selectedAvatar = null;
 let viewer3D = null;
 
+let currentSearchQuery = '';
+
 // Load avatars on page load
 document.addEventListener('DOMContentLoaded', () => {
+    setupAvatarSearch();
     loadAvatars();
 });
+
+function setupAvatarSearch() {
+    const searchInput = document.getElementById('avatarSearch');
+    if (!searchInput) return;
+
+    const apply = () => {
+        currentSearchQuery = String(searchInput.value || '').toLowerCase().trim();
+        applySearchAndRender();
+    };
+
+    searchInput.addEventListener('input', apply);
+    searchInput.addEventListener('change', apply);
+}
+
+function applySearchAndRender() {
+    const grid = document.getElementById('avatarGrid');
+    if (!grid) return;
+    if (!Array.isArray(avatars) || avatars.length === 0) return;
+
+    const q = (currentSearchQuery || '').trim();
+    if (!q) {
+        renderAvatarGrid(avatars);
+        return;
+    }
+
+    const filtered = avatars.filter(a => {
+        const name = String(a && a.name ? a.name : '').toLowerCase();
+        const desc = String(a && a.description ? a.description : '').toLowerCase();
+        const id = String(a && a.id ? a.id : '').toLowerCase();
+        return name.includes(q) || desc.includes(q) || id.includes(q);
+    });
+
+    renderAvatarGrid(filtered);
+}
 
 async function loadAvatars() {
     const grid = document.getElementById('avatarGrid');
@@ -97,7 +134,7 @@ async function loadAvatars() {
             // Small delay to show completion
             await new Promise(resolve => setTimeout(resolve, 300));
             
-            renderAvatarGrid(avatars);
+            applySearchAndRender();
         } else {
             console.error('❌ API returned error status');
             if (grid) {
