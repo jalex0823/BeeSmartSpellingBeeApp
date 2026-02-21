@@ -2481,10 +2481,29 @@ function escapeAttr(s) {
 }
 
 function getIapPlatform() {
-    if (window.BeeSmartIAP && window.BeeSmartIAP.platform) {
-        return String(window.BeeSmartIAP.platform).toLowerCase();
-    }
+    // IMPORTANT: iOS must never be treated as Google/Android.
+    // Prefer Capacitor.getPlatform() because native wrappers are authoritative.
+    try {
+        if (window.Capacitor && typeof window.Capacitor.getPlatform === 'function') {
+            const p = String(window.Capacitor.getPlatform() || '').toLowerCase();
+            if (p === 'ios') return 'apple';
+            if (p === 'android') return 'google';
+        }
+    } catch (e) { /* ignore */ }
+
     const ua = navigator.userAgent || '';
+    if (/iPhone|iPad|iPod/i.test(ua)) return 'apple';
+
+    // Fall back to the bridge if present.
+    try {
+        if (window.BeeSmartIAP && window.BeeSmartIAP.platform) {
+            const bp = String(window.BeeSmartIAP.platform).toLowerCase();
+            if (bp === 'apple' || bp === 'ios') return 'apple';
+            if (bp === 'google' || bp === 'android') return 'google';
+            if (bp === 'web') return 'web';
+        }
+    } catch (e) { /* ignore */ }
+
     if (/Android/i.test(ua)) return 'google';
     if (/iPhone|iPad|Mac/i.test(ua)) return 'apple';
     return 'web';
