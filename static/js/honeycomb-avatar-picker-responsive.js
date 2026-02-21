@@ -266,6 +266,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadAvatars();
     setupSearchFilter();
     setupBundleShop();
+
+    // Back to top button (beneath avatar viewer)
+    var backToTopBtn = document.getElementById('picker-back-to-top');
+    if (backToTopBtn) {
+        backToTopBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
     
     // Safety: hide loading overlay after 15s even if some thumbnails stall (same as old version)
     setTimeout(function() {
@@ -1711,6 +1720,14 @@ function selectAvatar(avatar, element) {
     
     // Update preview panel
     updatePreview(avatar);
+
+    // On mobile: auto-scroll so the avatar viewer is in view after selection
+    if (typeof window !== 'undefined' && (window.innerWidth <= 768 || 'ontouchstart' in document)) {
+        const previewPanel = document.querySelector('.avatar-preview-panel');
+        if (previewPanel) {
+            previewPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
 }
 
 // Update preview panel with loading progress

@@ -6271,6 +6271,7 @@ class QuizManager {
         this.hasRetried = false; // Has user already used their retry?
         this.isRetryAttempt = false; // Is current attempt a retry?
         this.retryTimeoutId = null; // Timeout for auto-advance after retry
+        this._pendingWrongForAbandon = null; // When server defers (can_retry), store so "Show Answer" can record it
         
         const DEFAULT_STUDENT_NAME = 'Newbee';
         const normalizeStudentName = (raw) => {
@@ -8981,6 +8982,7 @@ class QuizManager {
             this.retryAvailable = false;
             this.hasRetried = false;
             this.isRetryAttempt = false;
+            this._pendingWrongForAbandon = null;
             this.clearRetryCountdown();
             this.hideRetryButton();
             // Hide next word button
@@ -9633,15 +9635,20 @@ class QuizManager {
         this.stopCountdownTimer();
 
         try {
+            const offerRetryThisWord = !this.isRetryAttempt && !this.hasRetried && this.retryPolicy !== 'none';
+            const body = {
+                user_input: userInput,
+                method: 'keyboard',
+                elapsed_ms: 0
+            };
+            if (offerRetryThisWord) body.retry_available = true;
+            if (this.isRetryAttempt) body.is_retry = true;
+
             const response = await fetch('/api/answer', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    user_input: userInput,
-                    method: 'keyboard',
-                    elapsed_ms: 0
-                })
+                body: JSON.stringify(body)
             });
 
             if (!response.ok) {
@@ -9658,6 +9665,11 @@ class QuizManager {
             }
 
             const result = await response.json();
+
+            // When server defers (wrong + can_retry), store so "Show Answer" can record the wrong and advance
+            if (result.correct === false && result.can_retry === true) {
+                this._pendingWrongForAbandon = { userInput, method: 'keyboard', elapsed_ms: 0 };
+            }
             
             // 🍯 Update points from backend response
             if (result.points) {
@@ -10430,12 +10442,32 @@ class QuizManager {
         console.log('   ✅ Retry choice YES complete');
     }
 
-    handleRetryChoiceNo(correctWord) {
+    async handleRetryChoiceNo(correctWord) {
         console.log('❌ User chose to see ANSWER');
         console.log(`   - correctWord: ${correctWord}`);
         
         if (this.retryChoiceTimeoutId) {
             clearTimeout(this.retryChoiceTimeoutId);
+        }
+
+        // Record the wrong answer and advance on server (so Next Word loads the next word)
+        if (this._pendingWrongForAbandon) {
+            try {
+                await fetch('/api/answer', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_input: this._pendingWrongForAbandon.userInput,
+                        method: this._pendingWrongForAbandon.method || 'keyboard',
+                        elapsed_ms: this._pendingWrongForAbandon.elapsed_ms || 0,
+                        abandon_retry: true
+                    })
+                });
+            } catch (e) {
+                console.warn('Failed to record abandon retry:', e);
+            }
+            this._pendingWrongForAbandon = null;
         }
         
         // Show the correct spelling since user chose to see answer

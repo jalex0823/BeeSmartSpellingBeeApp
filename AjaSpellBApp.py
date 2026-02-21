@@ -9854,6 +9854,9 @@ def api_answer():
     user_input = (payload.get("user_input") or "").strip()
     method = (payload.get("method") or "keyboard").lower()
     elapsed_ms = int(payload.get("elapsed_ms") or 0)
+    retry_available = bool(payload.get("retry_available"))
+    is_retry = bool(payload.get("is_retry") or payload.get("retry_attempt"))
+    abandon_retry = bool(payload.get("abandon_retry"))
 
     state = get_quiz_state()
     wb = get_wordbank()
@@ -9928,6 +9931,48 @@ def api_answer():
             is_correct = False  # still counts as incorrect for accuracy
             print(f" ALMOST RIGHT (near-miss): '{user_input}' vs '{correct_spelling}'")
 
+    #  RETRY DEFER: First wrong when retry is available — do NOT advance or record; let user retry or show answer
+    if not is_correct and not skip_requested and not almost_right and retry_available and not is_retry and not abandon_retry:
+        print(f" RETRY DEFER: Wrong answer, retry_available=True — not advancing index, returning can_retry")
+        word_definition = ""
+        if correct_spelling:
+            try:
+                raw = get_word_info(correct_spelling)
+                d, _s = parse_enriched_info(raw, correct_spelling)
+                word_definition = (d or "").strip()
+            except Exception as e:
+                print(f"Failed to get definition for '{correct_spelling}': {e}")
+        phonetic_help_defer = ""
+        phonetic_spelling_defer = ""
+        word_lower = correct_spelling.lower()
+        if word_lower in DICTIONARY_CACHE:
+            phonetic_help_defer = (DICTIONARY_CACHE[word_lower] or {}).get("phonetic", "")
+        phonetic_spelling_defer = build_phonetic_spelling(correct_spelling)
+        next_index_position = idx + 1
+        return jsonify({
+            "correct": False,
+            "almost_right": False,
+            "word": correct_spelling,
+            "expected": correct_spelling,
+            "skipped": False,
+            "phonetic": phonetic_help_defer,
+            "phonetic_spelling": phonetic_spelling_defer,
+            "feedback_message": f"Try again! The word is spelled: {correct_spelling}",
+            "definition": word_definition if word_definition else None,
+            "streak_milestone": None,
+            "progress": {
+                "index": next_index_position,
+                "total": len(order),
+                "correct": state["correct"],
+                "incorrect": state["incorrect"],
+                "streak": state["streak"],
+                "session_points": state.get("session_points", 0)
+            },
+            "points": {"earned": 0, "breakdown": {}, "session_total": state.get("session_points", 0), "max_streak": state.get("max_streak", 0)},
+            "quiz_complete": False,
+            "can_retry": True
+        })
+
     #  HONEY POINTS CALCULATION
     points_earned = 0
     points_breakdown = {}
@@ -9955,13 +10000,13 @@ def api_answer():
             points_breakdown["streak_bonus"] = streak_bonus
             points_earned += streak_bonus
         
-        # First attempt bonus: +50 points if no previous incorrect attempts on this word
+        # First attempt bonus: +50 points if no previous incorrect attempts on this word (and not a retry attempt)
         # Check if this word already in history with incorrect answer (case-insensitive)
         word_already_attempted_wrong = any(
             normalize(h.get("word", "")) == normalize(correct_spelling) and not h.get("correct") 
             for h in state.get("history", [])
         )
-        if not word_already_attempted_wrong:
+        if not word_already_attempted_wrong and not is_retry:
             points_breakdown["first_attempt"] = 50
             points_earned += 50
         
@@ -9982,6 +10027,13 @@ def api_answer():
             # No hints bonus
             points_breakdown["no_hints"] = 25
             points_earned += 25
+        
+        # Retry penalty: 33% of full points when correct on retry attempt
+        if is_retry:
+            original_points = points_earned
+            points_earned = max(1, int(points_earned * 0.33))
+            points_breakdown["retry_penalty_33%"] = points_earned
+            print(f" Retry penalty applied: {original_points} -> {points_earned} (33%)")
         
         print(f" Points earned: {points_earned} (breakdown: {points_breakdown})")
 
