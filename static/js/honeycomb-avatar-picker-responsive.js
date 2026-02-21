@@ -2436,36 +2436,6 @@ function showLockedMessage(avatar) {
 
 // --------- Purchases (Native IAP bridge) ---------
 
-/**
- * TROUBLESHOOTING ONLY: Show purchase error details in a modal to narrow down the cause.
- * Remove this and its call in the purchase catch block after the issue is fixed.
- */
-function showPurchaseErrorTroubleshootingModal(details) {
-    if (!details) return;
-    var lines = [];
-    if (details.msg) lines.push('Error: ' + details.msg);
-    if (details.productId) lines.push('Product ID: ' + details.productId);
-    if (details.slug) lines.push('Avatar slug: ' + details.slug);
-    if (details.platform) lines.push('Platform: ' + details.platform);
-    if (details.errSnippet) lines.push('Raw: ' + details.errSnippet);
-    var text = lines.join('\n');
-
-    var modal = document.createElement('div');
-    modal.className = 'locked-avatar-modal';
-    modal.innerHTML = '<div class="locked-modal-content">' +
-        '<button class="locked-modal-close" type="button" aria-label="Close">×</button>' +
-        '<div style="font-size: 1.25rem; color: #FFD700; margin-bottom: 0.5rem;">Purchase error (troubleshooting)</div>' +
-        '<pre style="margin: 0; padding: 0.75rem; background: rgba(0,0,0,0.35); border-radius: 8px; font-size: 0.9rem; color: rgba(255,215,0,0.95); white-space: pre-wrap; word-break: break-all; text-align: left;">' + escapeHtml(text) + '</pre>' +
-        '<p style="margin-top: 0.75rem; font-size: 0.9rem; color: rgba(255,215,0,0.75);">Remove this modal after fixing the issue.</p>' +
-        '<button type="button" class="locked-modal-btn" style="margin-top: 1rem;">OK</button>' +
-        '</div>';
-    document.body.appendChild(modal);
-    function closeModal() { if (modal && modal.parentNode) modal.remove(); }
-    modal.querySelector('.locked-modal-close').addEventListener('click', closeModal);
-    modal.querySelector('.locked-modal-btn').addEventListener('click', closeModal);
-    modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
-}
-
 function escapeAttr(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -3017,26 +2987,15 @@ async function purchaseLockedAvatar(slug) {
             return; // Silent return - user cancelled intentionally
         }
         
-        // Actual error - show troubleshooting modal (remove after issue is fixed)
+        // Actual error - show user message
         purchaseState = PurchaseState.FAILED;
         clearPurchaseState();
-
-        var errStr = '';
-        try {
-            errStr = (err && (err.stack || err.toString && err.toString())) ? String(err.stack || err.toString()) : '';
-        } catch (e) { errStr = ''; }
 
         if (/product_not_found/i.test(msg)) {
             console.error('[IAP] StoreKit product_not_found. productId sent:', productId);
         }
 
-        showPurchaseErrorTroubleshootingModal({
-            msg: msg || 'Unknown error',
-            productId: productId || null,
-            slug: slug || null,
-            platform: getIapPlatform(),
-            errSnippet: (errStr || '').slice(0, 250)
-        });
+        alert('The purchase didn\'t go through. Please try again or use Restore Purchases if you already bought this bee.');
 
         // Reset state after delay
         setTimeout(function() {
