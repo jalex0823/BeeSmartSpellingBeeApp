@@ -869,6 +869,16 @@ def check_avatar_unlocked(avatar_id, user_honey_points=0, purchased_avatars=None
     if avatar_id_norm in purchased_norm:
         return {"unlocked": True, "reason": "Purchased", "required_points": avatar.get("unlock_points", 0), "price": avatar.get("price", 0)}
 
+    # Premium-tier avatars are purchase-only (not earnable via Honey Points)
+    tier_norm = str(avatar.get("tier") or "").strip().lower()
+    if tier_norm == "premium":
+        return {
+            "unlocked": False,
+            "reason": "This avatar is only available for purchase.",
+            "required_points": int(avatar.get("unlock_points", 0) or 0),
+            "price": avatar.get("price", 0)
+        }
+
     # Check Honey Points
     required_points = avatar.get("unlock_points", 0)
     if user_honey_points >= required_points:

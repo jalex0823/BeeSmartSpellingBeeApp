@@ -39,6 +39,10 @@ def test_avatar_catalog_check_unlocked():
     r3 = check_avatar_unlocked("al-bee", 0, [], has_premium_subscription=True)
     assert r3["unlocked"] is False
 
+    # Premium-tier avatars are purchase-only (not earnable via Honey Points)
+    r4 = check_avatar_unlocked("al-bee", 999999, [], has_premium_subscription=False)
+    assert r4["unlocked"] is False
+
 
 def test_js_picker_no_syntax_glitch():
     """honeycomb-avatar-picker-responsive.js exists and product_id usage is from API only."""
