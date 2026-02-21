@@ -6235,6 +6235,16 @@ def _debug_root_status(resp):
             resp.headers['Cache-Control'] = 'no-store, no-cache, max-age=0, must-revalidate'
             resp.headers['Pragma'] = 'no-cache'
             resp.headers['Expires'] = '0'
+
+        # CRITICAL: IAP + avatar picker logic must not be cached.
+        # Native wrappers can aggressively cache JS assets; ensure changes propagate immediately.
+        if request.path in (
+            '/static/js/honeycomb-avatar-picker-responsive.js',
+            '/static/js/native-iap-bridge.js',
+        ):
+            resp.headers['Cache-Control'] = 'no-store, no-cache, max-age=0, must-revalidate'
+            resp.headers['Pragma'] = 'no-cache'
+            resp.headers['Expires'] = '0'
         
         # Set proper Content-Type with UTF-8 charset for HTML responses
         # Fixes accessibility/compatibility validator warnings
