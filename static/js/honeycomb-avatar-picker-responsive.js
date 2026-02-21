@@ -2786,6 +2786,14 @@ async function purchaseLockedAvatar(slug) {
 
     try {
         const platform = getIapPlatform();
+
+        // Native apps can inject the IAP bridge after initial JS execution.
+        // Wait briefly for the bridge to appear so the purchase sheet can open reliably.
+        if (inNative) {
+            try {
+                await _waitForNativeIapBridge(5000);
+            } catch (e) { /* ignore */ }
+        }
         
         // Double-check bridge is ready
         if (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function') {
