@@ -1502,6 +1502,10 @@ def api_avatars():
         except Exception:
             product_id = None
 
+        # Apple: App Store Connect uses product IDs without .v3; Google uses .v3. Strip for Apple.
+        if product_id and not use_google_play_ids and product_id.endswith('.v3'):
+            product_id = product_id[:-3]
+
         # Provide consistent unlock metadata for frontends; default price for purchasable locked avatars.
         price_val = float(entry.get('price') or 0.0) if entry.get('price') is not None else None
         if not is_unlocked and product_id and (price_val is None or price_val <= 0):
