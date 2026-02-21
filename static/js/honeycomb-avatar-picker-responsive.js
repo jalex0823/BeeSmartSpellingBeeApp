@@ -261,155 +261,32 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Restore purchase state from localStorage (survives page refresh)
     restorePurchaseState();
     
-    // IAP store initialization moved to system checks (unified_menu.html)
-    // It will be initialized before picker loads, so it's ready when needed
-    
-    // CRITICAL: ALL avatar loading MUST happen during system checks
-    // Picker NEVER loads avatars - only uses pre-loaded data
-    const overlay = document.getElementById('avatar-loading-overlay');
-    
-    if (!window.preloadedAvatars || !Array.isArray(window.preloadedAvatars) || window.preloadedAvatars.length === 0) {
-        console.error('❌ CRITICAL: Avatars not pre-loaded during system checks!');
-        console.error('❌ Falling back to loading avatars directly...');
-        
-        // Show progress so user sees activity (was stuck at 0% until first thumbnail)
-        var prog = document.getElementById('loading-progress');
-        var txt = document.getElementById('loading-text');
-        if (prog) prog.style.width = '15%';
-        if (txt) txt.textContent = '15%';
-        var det = document.getElementById('loading-detail');
-        if (det) det.textContent = 'Loading avatar catalog...';
-        
-        // CRITICAL FIX: Fallback to loading avatars if pre-loading failed
-        // This ensures picker ALWAYS works, even if system checks failed
-        try {
-            console.log('🔄 Loading avatars as fallback...');
-            await loadAvatars();
-            // If loadAvatars succeeds, it will render the grid and return
-            return; // loadAvatars() handles rendering
-        } catch (loadError) {
-            console.error('❌ Fallback avatar loading also failed:', loadError);
-            
-            // Show error message - override base.html's display:none !important rule
-            if (overlay) {
-                // Force show overlay with !important inline styles to override base.html CSS
-                overlay.style.setProperty('display', 'flex', 'important');
-                overlay.style.setProperty('opacity', '1', 'important');
-                overlay.style.setProperty('pointer-events', 'auto', 'important');
-                overlay.style.setProperty('visibility', 'visible', 'important');
-                overlay.classList.remove('hidden');
-                
-                overlay.innerHTML = `
-                    <div class="loading-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;">
-                        <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
-                        <h2 style="color: #FFD700; font-size: 1.5rem; margin-bottom: 0.5rem;">Avatars Not Loaded</h2>
-                        <p style="color: rgba(255, 215, 0, 0.9); font-size: 1rem; margin-bottom: 1rem;">Unable to load avatar catalog.</p>
-                        <p style="color: rgba(255, 215, 0, 0.7); font-size: 0.9rem; margin-top: 0.5rem;">Please refresh the page to try again.</p>
-                        <button onclick="window.location.reload()" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: #FFD700; color: #1a1a1a; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;">Refresh Page</button>
-                    </div>
-                `;
-            }
-            
-            // Fallback: Show error in grid container so page isn't blank
-            const gridContainer = document.querySelector('.honeycomb-grid');
-            if (gridContainer) {
-                gridContainer.innerHTML = `
-                    <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: #FFD700;">
-                        <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
-                        <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Avatars Not Loaded</h2>
-                        <p style="font-size: 1rem; margin-bottom: 1rem;">Unable to load avatar catalog.</p>
-                        <p style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 1.5rem;">Please refresh the page to try again.</p>
-                        <button onclick="window.location.reload()" style="padding: 0.75rem 1.5rem; background: #FFD700; color: #1a1a1a; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;">Refresh Page</button>
-                    </div>
-                `;
-            }
-            return; // STOP - can't proceed without avatars
-        }
-    }
-    
-    console.log('✅ Using pre-loaded avatars from system checks:', window.preloadedAvatars.length);
-    
-    try {
-        // Use pre-loaded avatars immediately - NO loading, NO API calls
-        avatarsData = window.preloadedAvatars.map(avatar => ({
-            ...avatar,
-            // Use cached thumbnail if available (pre-loaded during system checks)
-            _preloadedThumbnail: avatar._thumbnailCache || null
-        }));
-    } catch (mapErr) {
-        console.error('❌ Pre-loaded avatars map failed:', mapErr);
-        await loadAvatars();
-        return;
-    }
-    
-    // iOS: ensure we have App Store product IDs (not Android). Refetch once in background and merge product_id.
-    try {
-        if (getIapPlatform() === 'apple') {
-            (async function() {
-                try {
-                    const url = getAvatarsApiUrl('force=1&t=' + Date.now());
-                    const r = await fetch(url, { method: 'GET', credentials: 'same-origin', cache: 'no-cache' });
-                    if (!r.ok) return;
-                    const data = await r.json();
-                    const list = Array.isArray(data) ? data : (data && Array.isArray(data.avatars) ? data.avatars : []);
-                    if (list.length === 0) return;
-                    const bySlug = new Map(list.map(a => [String(a.id || '').toLowerCase(), a]));
-                    let updated = 0;
-                    for (const av of avatarsData) {
-                        const slug = String(av.slug || av.id || '').toLowerCase();
-                        const fromApi = bySlug.get(slug);
-                        if (fromApi && fromApi.product_id) {
-                            av.product_id = fromApi.product_id;
-                            if (typeof fromApi.is_locked !== 'undefined') av.is_locked = fromApi.is_locked;
-                            updated++;
-                        }
-                    }
-                    if (updated > 0) {
-                        console.log('[IAP] Updated', updated, 'avatar product_id(s) for iOS');
-                        renderAvatarGrid();
-                    }
-                } catch (e) { /* non-fatal */ }
-            })();
-        }
-    } catch (e) { /* non-fatal: still show grid */ }
-    
-    // Set thumbnail tracking for immediate render
-    totalThumbnails = avatarsData.length;
-    loadedThumbnails = avatarsData.filter(a => a._preloadedThumbnail).length;
-    failedThumbnails = avatarsData.length - loadedThumbnails;
-    pendingThumbnails.clear();
-    
-    // CRITICAL: Update progress to 100% immediately (all thumbnails pre-loaded)
-    const progressBar = document.getElementById('loading-progress');
-    const loadingText = document.getElementById('loading-text');
-    const loadingContent = document.getElementById('loading-status');
-    const loadingDetail = document.getElementById('loading-detail');
-    
-    if (progressBar) progressBar.style.width = '100%';
-    if (loadingText) loadingText.textContent = '100%';
-    if (loadingContent) loadingContent.textContent = 'All Bees Ready! 🎉';
-    if (loadingDetail) loadingDetail.textContent = 'Ready to choose your bee! (' + loadedThumbnails + '/' + totalThumbnails + ' loaded)';
-    
-    updateDynamicMarquee(avatarsData);
-    renderAvatarGrid();
-    
-    // CRITICAL: Hide loading overlay IMMEDIATELY (thumbnails already loaded)
-    if (overlay) {
-        overlay.style.transition = 'opacity 0.5s ease, visibility 0.5s ease';
-        overlay.style.opacity = '0';
-        setTimeout(function() {
-            if (overlay) {
-                overlay.classList.add('hidden');
-                overlay.style.display = 'none';
-                console.log('✅ Loading overlay hidden - picker ready instantly');
-            }
-        }, 500);
-    }
-    
-    console.log('✅ Picker loaded instantly: ' + loadedThumbnails + '/' + totalThumbnails + ' thumbnails pre-loaded');
-    
+    // Match previously working version: always load avatars from API (no preloadedAvatars path).
+    // Single fetch with no platform param so backend returns default App Store product IDs for iOS.
+    await loadAvatars();
     setupSearchFilter();
     setupBundleShop();
+    
+    // Safety: hide loading overlay after 15s even if some thumbnails stall (same as old version)
+    setTimeout(function() {
+        var overlay = document.getElementById('avatar-loading-overlay');
+        if (overlay && !overlay.classList.contains('hidden')) {
+            if (pendingThumbnails.size > 0) {
+                console.warn('⚠️ Timeout: Force-completing ' + pendingThumbnails.size + ' pending thumbnail(s)');
+                var pendingCount = pendingThumbnails.size;
+                pendingThumbnails.clear();
+                failedThumbnails += pendingCount;
+            }
+            console.warn('⚠️ Hiding loading overlay due to timeout safeguard (15s)');
+            updateLoadingProgress();
+            setTimeout(function() {
+                if (overlay && !overlay.classList.contains('hidden')) {
+                    overlay.classList.add('hidden');
+                    overlay.style.display = 'none';
+                }
+            }, 100);
+        }
+    }, 15000);
 });
 
 // Verify user authentication before loading avatars
@@ -870,10 +747,9 @@ async function loadAvatars() {
         if (loadTxt) loadTxt.textContent = '20%';
         if (loadDetail) loadDetail.textContent = 'Fetching avatars...';
         
-        // Add timestamp to bypass stale cache + force=1 for server-side cache bypass
+        // Match previously working version: no platform param so backend returns default (App Store) product IDs
         const timestamp = new Date().getTime();
-        // iOS/Safari compatible fetch with explicit headers
-        const response = await fetch(getAvatarsApiUrl(`force=1&t=${timestamp}`), { 
+        const response = await fetch(`/api/avatars?force=1&t=${timestamp}`, {
             method: 'GET',
             credentials: 'same-origin',
             cache: 'no-cache',
@@ -2280,7 +2156,7 @@ function chooseAvatar() {
         alert('🔐 Guest users can only use the Honey Comb mascot avatar.\n\nPlease register for a free account to unlock more bee avatars!');
         
         // Reset to Honey Comb avatar
-        const honeycombAvatar = allAvatars.find(a => a.slug === 'honey-comb' || a.slug === 'honeycomb');
+        const honeycombAvatar = avatarsData.find(a => a.slug === 'honey-comb' || a.slug === 'honeycomb');
         if (honeycombAvatar) {
             const honeycombElement = document.querySelector(`.avatar-hex-position[data-slug="${honeycombAvatar.slug}"]`);
             if (honeycombElement) {
@@ -2812,10 +2688,11 @@ async function purchaseLockedAvatar(slug) {
     // Product ID: from API only (backend uses data/avatars.catalog.json). Do not hardcode — .v2 vs non-.v2 varies by avatar.
     const productId = avatar.product_id || null;
     if (!productId) {
-        console.error('[IAP] No product_id for avatar:', slug);
-        alert('This avatar is not available for purchase. Please try another one.');
+        console.error('[IAP] No product_id for avatar:', slug, '— backend may not have this in App Store catalog');
+        alert('This bee isn\'t in the store yet. Try another bee, or update the app and try again.');
         return;
     }
+    console.log('[IAP] Will purchase productId:', productId, '(must match App Store Connect e.g. beesmart.avatar.xxx.v3)');
 
     // On non-native web: block purchases unless the bridge exists.
     // In native contexts (including iOS WKWebView), we will wait for the bridge and attempt StoreKit.
