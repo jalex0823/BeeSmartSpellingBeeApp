@@ -3003,9 +3003,15 @@ async function purchaseLockedAvatar(slug) {
 
         let userMsg = 'The purchase didn\'t go through.';
         try {
-            if (msg && msg !== 'Unknown error') {
-                userMsg = `The purchase didn't go through. (${msg})`;
-            }
+            // Always include a diagnostic suffix so we can debug production iOS issues.
+            // This intentionally avoids relying only on err.message (which is often blank in WKWebView).
+            const buildTag = 'iap_diag_v2';
+            let errStr = '';
+            try {
+                errStr = (err && (err.stack || err.toString && err.toString())) ? String(err.stack || err.toString()) : '';
+            } catch (e) { errStr = ''; }
+            const diag = `build=${buildTag}; sku=${String(productId || '')}; msg=${String(msg || '')}; err=${(errStr || '').slice(0, 180)}`;
+            userMsg = `The purchase didn't go through. (${diag})`;
             if (/product_not_found/i.test(msg)) {
                 userMsg = 'This purchase item is not available right now (product not found). Please update the app and try again, or try again later.';
             } else if (/requires_ios_15/i.test(msg)) {
