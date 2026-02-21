@@ -5,7 +5,7 @@
  */
 
 // Resolve IAP platform once at script load so avatar fetches use the correct product IDs before any async runs.
-(function resolveIapPlatformAtLoad() {
+;(function resolveIapPlatformAtLoad() {
     try {
         var ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? String(navigator.userAgent) : '';
         if (/iPhone|iPad|iPod/i.test(ua)) {
