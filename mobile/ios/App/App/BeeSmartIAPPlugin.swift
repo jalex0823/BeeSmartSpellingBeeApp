@@ -124,7 +124,7 @@ public class BeeSmartIAPPlugin: CAPPlugin {
                 do {
                     let products = try await Product.products(for: [productId])
                     guard let product = products.first else {
-                        call.reject("product_not_found")
+                        call.reject("product_not_found: \(productId)")
                         return
                     }
 

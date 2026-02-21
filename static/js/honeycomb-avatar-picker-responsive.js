@@ -2436,6 +2436,36 @@ function showLockedMessage(avatar) {
 
 // --------- Purchases (Native IAP bridge) ---------
 
+/**
+ * TROUBLESHOOTING ONLY: Show purchase error details in a modal to narrow down the cause.
+ * Remove this and its call in the purchase catch block after the issue is fixed.
+ */
+function showPurchaseErrorTroubleshootingModal(details) {
+    if (!details) return;
+    var lines = [];
+    if (details.msg) lines.push('Error: ' + details.msg);
+    if (details.productId) lines.push('Product ID: ' + details.productId);
+    if (details.slug) lines.push('Avatar slug: ' + details.slug);
+    if (details.platform) lines.push('Platform: ' + details.platform);
+    if (details.errSnippet) lines.push('Raw: ' + details.errSnippet);
+    var text = lines.join('\n');
+
+    var modal = document.createElement('div');
+    modal.className = 'locked-avatar-modal';
+    modal.innerHTML = '<div class="locked-modal-content">' +
+        '<button class="locked-modal-close" type="button" aria-label="Close">×</button>' +
+        '<div style="font-size: 1.25rem; color: #FFD700; margin-bottom: 0.5rem;">Purchase error (troubleshooting)</div>' +
+        '<pre style="margin: 0; padding: 0.75rem; background: rgba(0,0,0,0.35); border-radius: 8px; font-size: 0.9rem; color: rgba(255,215,0,0.95); white-space: pre-wrap; word-break: break-all; text-align: left;">' + escapeHtml(text) + '</pre>' +
+        '<p style="margin-top: 0.75rem; font-size: 0.9rem; color: rgba(255,215,0,0.75);">Remove this modal after fixing the issue.</p>' +
+        '<button type="button" class="locked-modal-btn" style="margin-top: 1rem;">OK</button>' +
+        '</div>';
+    document.body.appendChild(modal);
+    function closeModal() { if (modal && modal.parentNode) modal.remove(); }
+    modal.querySelector('.locked-modal-close').addEventListener('click', closeModal);
+    modal.querySelector('.locked-modal-btn').addEventListener('click', closeModal);
+    modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
+}
+
 function escapeAttr(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -2987,35 +3017,29 @@ async function purchaseLockedAvatar(slug) {
             return; // Silent return - user cancelled intentionally
         }
         
-        // Actual error - show message
+        // Actual error - show troubleshooting modal (remove after issue is fixed)
         purchaseState = PurchaseState.FAILED;
         clearPurchaseState();
 
-        let userMsg = 'The purchase didn\'t go through.';
+        var errStr = '';
         try {
-            // Always include a diagnostic suffix so we can debug production iOS issues.
-            // This intentionally avoids relying only on err.message (which is often blank in WKWebView).
-            const buildTag = 'iap_diag_v2';
-            let errStr = '';
-            try {
-                errStr = (err && (err.stack || err.toString && err.toString())) ? String(err.stack || err.toString()) : '';
-            } catch (e) { errStr = ''; }
-            const diag = `build=${buildTag}; sku=${String(productId || '')}; msg=${String(msg || '')}; err=${(errStr || '').slice(0, 180)}`;
-            userMsg = `The purchase didn't go through. (${diag})`;
-            if (/product_not_found/i.test(msg)) {
-                console.error('[IAP] StoreKit product_not_found. productId sent:', productId, '— ensure this matches App Store Connect (e.g. beesmart.avatar.xxx.v3)');
-                userMsg = 'This bee isn\'t available in the store right now. Try "Restore Purchases" if you already bought it, or update the app and try again.';
-            } else if (/requires_ios_15/i.test(msg)) {
-                userMsg = 'In-app purchases require iOS 15+. Please update iOS and try again.';
-            } else if (/missing_productid/i.test(msg)) {
-                userMsg = 'This avatar is missing a product id. Please update the app and try again.';
-            }
-        } catch (e) { /* ignore */ }
+            errStr = (err && (err.stack || err.toString && err.toString())) ? String(err.stack || err.toString()) : '';
+        } catch (e) { errStr = ''; }
 
-        alert(`${userMsg} Please try again or use Restore Purchases if you already bought this bee.`);
-        
+        if (/product_not_found/i.test(msg)) {
+            console.error('[IAP] StoreKit product_not_found. productId sent:', productId);
+        }
+
+        showPurchaseErrorTroubleshootingModal({
+            msg: msg || 'Unknown error',
+            productId: productId || null,
+            slug: slug || null,
+            platform: getIapPlatform(),
+            errSnippet: (errStr || '').slice(0, 250)
+        });
+
         // Reset state after delay
-        setTimeout(() => {
+        setTimeout(function() {
             purchaseState = PurchaseState.IDLE;
             currentPurchaseSlug = null;
             currentPurchaseProductId = null;
