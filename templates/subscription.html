@@ -683,10 +683,21 @@
         // Platform-aware copy for restore/purchase messages (Android vs iOS). Used by dialogs defined below.
         window.__beesmartStoreCopy = (function () {
             function platform() {
-                try { if (window.BeeSmartIAP && window.BeeSmartIAP.platform) return String(window.BeeSmartIAP.platform).toLowerCase(); } catch (e) {}
+                // IMPORTANT: If we're in the iOS wrapper, always treat as Apple.
+                // This prevents Android/Google copy from appearing due to any mis-set bridge platform.
+                try {
+                    if (window.Capacitor && typeof window.Capacitor.getPlatform === 'function') {
+                        var p = String(window.Capacitor.getPlatform() || '').toLowerCase();
+                        if (p === 'ios') return 'apple';
+                        if (p === 'android') return 'google';
+                    }
+                } catch (e) {}
+
                 var ua = (navigator && navigator.userAgent) ? String(navigator.userAgent) : '';
-                if (/Android/i.test(ua)) return 'google';
                 if (/iPad|iPhone|iPod/i.test(ua)) return 'apple';
+
+                try { if (window.BeeSmartIAP && window.BeeSmartIAP.platform) return String(window.BeeSmartIAP.platform).toLowerCase(); } catch (e) {}
+                if (/Android/i.test(ua)) return 'google';
                 return 'web';
             }
             return {
