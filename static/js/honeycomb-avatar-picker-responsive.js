@@ -2481,8 +2481,13 @@ function escapeAttr(s) {
 }
 
 function getIapPlatform() {
-    // IMPORTANT: iOS must never be treated as Google/Android.
-    // Prefer Capacitor.getPlatform() because native wrappers are authoritative.
+    // CRITICAL: iOS must never get Android product IDs (hyphenated); StoreKit expects dotted (beesmart.avatar.xxx.v3).
+    // Detect iOS first so we never mis-return 'google' after WebView/Capacitor or OS updates.
+    try {
+        const ua = (navigator && navigator.userAgent) ? String(navigator.userAgent) : '';
+        if (/iPhone|iPad|iPod/i.test(ua)) return 'apple';
+    } catch (e) { /* ignore */ }
+
     try {
         if (window.Capacitor && typeof window.Capacitor.getPlatform === 'function') {
             const p = String(window.Capacitor.getPlatform() || '').toLowerCase();
@@ -2494,7 +2499,6 @@ function getIapPlatform() {
     const ua = navigator.userAgent || '';
     if (/iPhone|iPad|iPod/i.test(ua)) return 'apple';
 
-    // Fall back to the bridge if present.
     try {
         if (window.BeeSmartIAP && window.BeeSmartIAP.platform) {
             const bp = String(window.BeeSmartIAP.platform).toLowerCase();
@@ -2512,7 +2516,7 @@ function getIapPlatform() {
 /** Build /api/avatars URL with platform param so backend returns correct product IDs for purchase. */
 function getAvatarsApiUrl(baseParams) {
     const platform = getIapPlatform();
-    const platformParam = (platform === 'google') ? '&platform=android' : '';
+    const platformParam = (platform === 'google') ? '&platform=android' : ((platform === 'apple') ? '&platform=apple' : '');
     return `/api/avatars?${baseParams}${platformParam}`;
 }
 
