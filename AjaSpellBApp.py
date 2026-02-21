@@ -1014,7 +1014,7 @@ def home_root_direct():
         avatar_product_ids = AVATAR_SKUS
     except Exception:
         avatar_product_ids = {}
-    
+    show_groups_join_tiles = current_app.config.get('ENABLE_SCHOOL_TILES', False)
     return render_template(
         'unified_menu.html',
         user_avatar=user_avatar_data,
@@ -1025,6 +1025,7 @@ def home_root_direct():
         subscription_product_id=subscription_product_id,
         is_premium=is_premium,
         avatar_product_ids=avatar_product_ids,
+        show_groups_join_tiles=show_groups_join_tiles,
     )
 
 # Favicon route to prevent 404 errors
@@ -4279,8 +4280,12 @@ def load_default_wordbank() -> List[Dict[str, str]]:
             if len(words) >= 50:  # Limit to 50 words
                 break
         
-        print(f"DEBUG load_default_wordbank: Successfully loaded {len(words)} default words from {file_path}")
-        return words
+        # Defense-in-depth: filter any inappropriate content (sentence/hint) before use in quizzes
+        filtered, blocked = _filter_records_excluding_inappropriate_text(words)
+        if blocked:
+            print(f"DEBUG load_default_wordbank: Filtered {len(blocked)} inappropriate default word(s)")
+        print(f"DEBUG load_default_wordbank: Successfully loaded {len(filtered)} default words from {file_path}")
+        return filtered
         
     except Exception as e:
         print(f"ERROR load_default_wordbank: Error loading default words: {e}")
@@ -5831,6 +5836,14 @@ def load_saved_wordlist():
         session.pop("is_random_play", None)
         session.modified = True
         
+        # Defense-in-depth: filter inappropriate content before loading into quiz wordbank
+        filtered_rows, blocked = _filter_records_excluding_inappropriate_text(rows)
+        if blocked:
+            print(f" /api/saved-lists/load: Filtered {len(blocked)} inappropriate word(s) from saved list")
+        rows = filtered_rows
+        if not rows:
+            return jsonify({"ok": False, "error": "No words remained after filtering inappropriate content."}), 400
+
         print(f" /api/saved-lists/load: Loading {len(rows)} fresh words from saved list (old wordbank will be auto-deleted)")
 
         # Step 2: Load saved list as brand new wordbank
@@ -6127,6 +6140,7 @@ def app_home():
     except Exception:
         _monthly_fee_for_template = 3.99
 
+    show_groups_join_tiles = current_app.config.get('ENABLE_SCHOOL_TILES', False)
     html = render_template(
         "unified_menu.html",
         timestamp=timestamp,
@@ -6138,7 +6152,8 @@ def app_home():
         subscription_product_id=subscription_product_id,
         subscription_products=subscription_products,
         is_premium=is_premium,
-        avatar_product_ids=avatar_product_ids
+        avatar_product_ids=avatar_product_ids,
+        show_groups_join_tiles=show_groups_join_tiles,
     )
     resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store, max-age=0"
@@ -6337,6 +6352,7 @@ def minimal_main():
         avatar_product_ids = AVATAR_SKUS
     except Exception:
         avatar_product_ids = {}
+    show_groups_join_tiles = current_app.config.get('ENABLE_SCHOOL_TILES', False)
     return render_template(
         "unified_menu.html",
         timestamp=timestamp,
@@ -6344,6 +6360,7 @@ def minimal_main():
         subscription_product_id=subscription_product_id,
         is_premium=is_premium,
         avatar_product_ids=avatar_product_ids,
+        show_groups_join_tiles=show_groups_join_tiles,
     )
 
 @app.route("/quiz", strict_slashes=False)

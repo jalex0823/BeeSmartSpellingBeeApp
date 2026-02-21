@@ -5424,7 +5424,8 @@ function showRestoreDialog(title, message, isSuccess) {
                     <div class="kid-tip">{% if _is_auth != 'true' %} Premium Feature!{% elif _is_premium != 'true' %} Subscribe to unlock!{% else %} How fast can you spell?{% endif %}</div>
                 </div>
 
-                <!-- Groups — One Quiz, One Code -->
+                {% if show_groups_join_tiles | default(false) %}
+                <!-- Groups — One Quiz, One Code (release/school branch only) -->
                 <div id="tileGroups" class="menu-option" style="background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%); border-color: rgba(255, 152, 0, 0.6);" onclick="kidSounds.playRandomEffect(); selectOption('groups', this)" onmouseover="kidSounds.playBuzz()" title=" One quiz, one code — enter your group code to join your class quiz!">
                     <div class="option-icon"></div>
                     <div class="option-title">Groups</div>
@@ -5439,6 +5440,7 @@ function showRestoreDialog(title, message, isSuccess) {
                     <div class="option-description">Enter class code, pick your name</div>
                     <div class="kid-tip"> No registration needed!</div>
                 </div>
+                {% endif %}
             </section>
 
             <!-- Action buttons -->

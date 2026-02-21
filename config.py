@@ -142,7 +142,9 @@ class Config:
     APP_VERSION = '22'
     # Redeem code placeholder shown in avatar picker. Leave blank to not reveal the code; set in .env to show a hint.
     REDEEM_CODE_PLACEHOLDER = os.environ.get('REDEEM_CODE_PLACEHOLDER', '')
-    
+    # Show Groups and Join Teacher/Class tiles on main menu. Set to 1/true on release/school branch only; main branch hides them.
+    ENABLE_SCHOOL_TILES = os.environ.get('ENABLE_SCHOOL_TILES', '').strip().lower() in ('1', 'true', 'yes', 'on')
+
     # Pagination
     STUDENTS_PER_PAGE = 25
     QUIZZES_PER_PAGE = 50
