@@ -2763,7 +2763,10 @@ async function purchaseLockedAvatar(slug) {
         });
     }
 
-    const proceed = confirm(`Purchase ${avatar.name}? You can manage purchases in your App Store / Play settings.`);
+    // IMPORTANT: In native app contexts, avoid blocking confirm() dialogs before invoking
+    // StoreKit/Play purchase flows. Some WebView environments can behave inconsistently
+    // when a modal JS dialog occurs immediately before the OS purchase sheet.
+    const proceed = inNative ? true : confirm(`Purchase ${avatar.name}? You can manage purchases in your App Store / Play settings.`);
     if (!proceed) {
         // CRITICAL FIX: User cancelled - set CANCELLED state (not FAILED)
         clearTimeout(timeoutId);
