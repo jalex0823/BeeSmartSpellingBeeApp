@@ -4,6 +4,33 @@
  * Enhanced with real-time 3D model loading progress
  */
 
+// Resolve IAP platform once at script load so avatar fetches use the correct product IDs before any async runs.
+(function resolveIapPlatformAtLoad() {
+    try {
+        var ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? String(navigator.userAgent) : '';
+        if (/iPhone|iPad|iPod/i.test(ua)) {
+            window.__beesmartIapPlatform = 'apple';
+            return;
+        }
+        if (window.Capacitor && typeof window.Capacitor.getPlatform === 'function') {
+            var p = String(window.Capacitor.getPlatform() || '').toLowerCase();
+            if (p === 'ios') { window.__beesmartIapPlatform = 'apple'; return; }
+            if (p === 'android') { window.__beesmartIapPlatform = 'google'; return; }
+        }
+        if (/Android/i.test(ua)) {
+            window.__beesmartIapPlatform = 'google';
+            return;
+        }
+        if (/iPhone|iPad|Mac/i.test(ua)) {
+            window.__beesmartIapPlatform = 'apple';
+            return;
+        }
+        window.__beesmartIapPlatform = 'web';
+    } catch (e) {
+        window.__beesmartIapPlatform = 'web';
+    }
+})();
+
 let avatarsData = [];
 // Server-provided list of avatar ids/slugs that have been purchased by the current user
 let purchasedAvatarIds = [];
@@ -300,6 +327,35 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Use cached thumbnail if available (pre-loaded during system checks)
         _preloadedThumbnail: avatar._thumbnailCache || null
     }));
+    
+    // iOS: ensure we have App Store product IDs (not Android). Refetch once in background and merge product_id.
+    if (getIapPlatform() === 'apple') {
+        (async function() {
+            try {
+                const url = getAvatarsApiUrl('force=1&t=' + Date.now());
+                const r = await fetch(url, { method: 'GET', credentials: 'same-origin', cache: 'no-cache' });
+                if (!r.ok) return;
+                const data = await r.json();
+                const list = Array.isArray(data) ? data : (data && Array.isArray(data.avatars) ? data.avatars : []);
+                if (list.length === 0) return;
+                const bySlug = new Map(list.map(a => [String(a.id || '').toLowerCase(), a]));
+                let updated = 0;
+                for (const av of avatarsData) {
+                    const slug = String(av.slug || av.id || '').toLowerCase();
+                    const fromApi = bySlug.get(slug);
+                    if (fromApi && fromApi.product_id) {
+                        av.product_id = fromApi.product_id;
+                        if (typeof fromApi.is_locked !== 'undefined') av.is_locked = fromApi.is_locked;
+                        updated++;
+                    }
+                }
+                if (updated > 0) {
+                    console.log('[IAP] Updated', updated, 'avatar product_id(s) for iOS');
+                    renderAvatarGrid();
+                }
+            } catch (e) { /* non-fatal */ }
+        })();
+    }
     
     // Set thumbnail tracking for immediate render
     totalThumbnails = avatarsData.length;
@@ -2481,35 +2537,27 @@ function escapeAttr(s) {
 }
 
 function getIapPlatform() {
-    // CRITICAL: iOS must never get Android product IDs (hyphenated); StoreKit expects dotted (beesmart.avatar.xxx.v3).
-    // Detect iOS first so we never mis-return 'google' after WebView/Capacitor or OS updates.
+    // Use platform resolved at script load so avatar populate always sees the same value.
+    if (window.__beesmartIapPlatform) return window.__beesmartIapPlatform;
+    // Fallback: resolve now and cache (e.g. if script was loaded after navigator changed).
     try {
-        const ua = (navigator && navigator.userAgent) ? String(navigator.userAgent) : '';
-        if (/iPhone|iPad|iPod/i.test(ua)) return 'apple';
-    } catch (e) { /* ignore */ }
-
-    try {
+        var ua = (navigator && navigator.userAgent) ? String(navigator.userAgent) : '';
+        if (/iPhone|iPad|iPod/i.test(ua)) { window.__beesmartIapPlatform = 'apple'; return 'apple'; }
         if (window.Capacitor && typeof window.Capacitor.getPlatform === 'function') {
-            const p = String(window.Capacitor.getPlatform() || '').toLowerCase();
-            if (p === 'ios') return 'apple';
-            if (p === 'android') return 'google';
+            var p = String(window.Capacitor.getPlatform() || '').toLowerCase();
+            if (p === 'ios') { window.__beesmartIapPlatform = 'apple'; return 'apple'; }
+            if (p === 'android') { window.__beesmartIapPlatform = 'google'; return 'google'; }
         }
-    } catch (e) { /* ignore */ }
-
-    const ua = navigator.userAgent || '';
-    if (/iPhone|iPad|iPod/i.test(ua)) return 'apple';
-
-    try {
         if (window.BeeSmartIAP && window.BeeSmartIAP.platform) {
-            const bp = String(window.BeeSmartIAP.platform).toLowerCase();
-            if (bp === 'apple' || bp === 'ios') return 'apple';
-            if (bp === 'google' || bp === 'android') return 'google';
-            if (bp === 'web') return 'web';
+            var bp = String(window.BeeSmartIAP.platform).toLowerCase();
+            if (bp === 'apple' || bp === 'ios') { window.__beesmartIapPlatform = 'apple'; return 'apple'; }
+            if (bp === 'google' || bp === 'android') { window.__beesmartIapPlatform = 'google'; return 'google'; }
+            if (bp === 'web') { window.__beesmartIapPlatform = 'web'; return 'web'; }
         }
+        if (/Android/i.test(ua)) { window.__beesmartIapPlatform = 'google'; return 'google'; }
+        if (/iPhone|iPad|Mac/i.test(ua)) { window.__beesmartIapPlatform = 'apple'; return 'apple'; }
     } catch (e) { /* ignore */ }
-
-    if (/Android/i.test(ua)) return 'google';
-    if (/iPhone|iPad|Mac/i.test(ua)) return 'apple';
+    window.__beesmartIapPlatform = 'web';
     return 'web';
 }
 
@@ -3050,7 +3098,8 @@ async function purchaseLockedAvatar(slug) {
             const diag = `build=${buildTag}; sku=${String(productId || '')}; msg=${String(msg || '')}; err=${(errStr || '').slice(0, 180)}`;
             userMsg = `The purchase didn't go through. (${diag})`;
             if (/product_not_found/i.test(msg)) {
-                userMsg = 'This purchase item is not available right now (product not found). Please update the app and try again, or try again later.';
+                console.error('[IAP] StoreKit product_not_found. productId sent:', productId, '— ensure this matches App Store Connect (e.g. beesmart.avatar.xxx.v3)');
+                userMsg = 'This bee isn\'t available in the store right now. Try "Restore Purchases" if you already bought it, or update the app and try again.';
             } else if (/requires_ios_15/i.test(msg)) {
                 userMsg = 'In-app purchases require iOS 15+. Please update iOS and try again.';
             } else if (/missing_productid/i.test(msg)) {

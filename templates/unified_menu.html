@@ -13767,7 +13767,8 @@ function showRestoreDialog(title, message, isSuccess) {
                             try { await window.userAvatarLoader.loadAvatarCatalog(); } catch(_) {}
                         }
 
-                        const avatarsUrl = '/api/avatars' + (/Android/i.test(navigator.userAgent||'') ? '?platform=android' : '');
+                        const ua = navigator.userAgent || '';
+const avatarsUrl = '/api/avatars' + (/iPhone|iPad|iPod/i.test(ua) ? '?platform=apple' : (/Android/i.test(ua) ? '?platform=android' : ''));
                         const res = await fetch(avatarsUrl, {
                             credentials: 'same-origin',
                             headers: { 'Accept': 'application/json' },

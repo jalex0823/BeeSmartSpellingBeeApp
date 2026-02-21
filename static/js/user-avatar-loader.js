@@ -172,7 +172,12 @@ class UserAvatarLoader {
      * Verify database connection (quick check)
      */
     _avatarsUrl(path) {
-        if (/Android/i.test(navigator.userAgent || '')) {
+        const ua = navigator.userAgent || '';
+        // iOS first: never send platform=android on iPhone/iPad (StoreKit needs App Store product IDs).
+        if (/iPhone|iPad|iPod/i.test(ua)) {
+            return path + (path.includes('?') ? '&' : '?') + 'platform=apple';
+        }
+        if (/Android/i.test(ua)) {
             return path + (path.includes('?') ? '&' : '?') + 'platform=android';
         }
         return path;
