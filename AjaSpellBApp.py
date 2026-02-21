@@ -1502,9 +1502,16 @@ def api_avatars():
         except Exception:
             product_id = None
 
-        # Apple: App Store Connect uses product IDs without .v3; Google uses .v3. Strip for Apple.
+        # Apple: App Store Connect uses .v2 for most; a few have no suffix. Google uses .v3.
         if product_id and not use_google_play_ids and product_id.endswith('.v3'):
-            product_id = product_id[:-3]
+            # Avatars that in App Store Connect have no .v2 suffix (per approved list)
+            _apple_no_suffix = {'bk_bee', 'fairy_bee', 'firefighter_bee', 'gamer_bee'}
+            base = product_id[:-3]  # beesmart.avatar.xxx_bee
+            slug_part = base.split('.')[-1] if '.' in base else ''
+            if slug_part in _apple_no_suffix:
+                product_id = base
+            else:
+                product_id = base + '.v2'
 
         # Provide consistent unlock metadata for frontends; default price for purchasable locked avatars.
         price_val = float(entry.get('price') or 0.0) if entry.get('price') is not None else None
