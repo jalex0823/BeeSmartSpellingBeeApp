@@ -3000,8 +3000,22 @@ async function purchaseLockedAvatar(slug) {
         // Actual error - show message
         purchaseState = PurchaseState.FAILED;
         clearPurchaseState();
-        
-        alert('The purchase didn\'t go through. Please try again or use Restore Purchases if you already bought this bee.');
+
+        let userMsg = 'The purchase didn\'t go through.';
+        try {
+            if (msg && msg !== 'Unknown error') {
+                userMsg = `The purchase didn't go through. (${msg})`;
+            }
+            if (/product_not_found/i.test(msg)) {
+                userMsg = 'This purchase item is not available right now (product not found). Please update the app and try again, or try again later.';
+            } else if (/requires_ios_15/i.test(msg)) {
+                userMsg = 'In-app purchases require iOS 15+. Please update iOS and try again.';
+            } else if (/missing_productid/i.test(msg)) {
+                userMsg = 'This avatar is missing a product id. Please update the app and try again.';
+            }
+        } catch (e) { /* ignore */ }
+
+        alert(`${userMsg} Please try again or use Restore Purchases if you already bought this bee.`);
         
         // Reset state after delay
         setTimeout(() => {
