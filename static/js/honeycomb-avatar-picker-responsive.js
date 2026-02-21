@@ -272,6 +272,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.error('❌ CRITICAL: Avatars not pre-loaded during system checks!');
         console.error('❌ Falling back to loading avatars directly...');
         
+        // Show progress so user sees activity (was stuck at 0% until first thumbnail)
+        var prog = document.getElementById('loading-progress');
+        var txt = document.getElementById('loading-text');
+        if (prog) prog.style.width = '15%';
+        if (txt) txt.textContent = '15%';
+        var det = document.getElementById('loading-detail');
+        if (det) det.textContent = 'Loading avatar catalog...';
+        
         // CRITICAL FIX: Fallback to loading avatars if pre-loading failed
         // This ensures picker ALWAYS works, even if system checks failed
         try {
@@ -321,41 +329,49 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     console.log('✅ Using pre-loaded avatars from system checks:', window.preloadedAvatars.length);
     
-    // Use pre-loaded avatars immediately - NO loading, NO API calls
-    avatarsData = window.preloadedAvatars.map(avatar => ({
-        ...avatar,
-        // Use cached thumbnail if available (pre-loaded during system checks)
-        _preloadedThumbnail: avatar._thumbnailCache || null
-    }));
+    try {
+        // Use pre-loaded avatars immediately - NO loading, NO API calls
+        avatarsData = window.preloadedAvatars.map(avatar => ({
+            ...avatar,
+            // Use cached thumbnail if available (pre-loaded during system checks)
+            _preloadedThumbnail: avatar._thumbnailCache || null
+        }));
+    } catch (mapErr) {
+        console.error('❌ Pre-loaded avatars map failed:', mapErr);
+        await loadAvatars();
+        return;
+    }
     
     // iOS: ensure we have App Store product IDs (not Android). Refetch once in background and merge product_id.
-    if (getIapPlatform() === 'apple') {
-        (async function() {
-            try {
-                const url = getAvatarsApiUrl('force=1&t=' + Date.now());
-                const r = await fetch(url, { method: 'GET', credentials: 'same-origin', cache: 'no-cache' });
-                if (!r.ok) return;
-                const data = await r.json();
-                const list = Array.isArray(data) ? data : (data && Array.isArray(data.avatars) ? data.avatars : []);
-                if (list.length === 0) return;
-                const bySlug = new Map(list.map(a => [String(a.id || '').toLowerCase(), a]));
-                let updated = 0;
-                for (const av of avatarsData) {
-                    const slug = String(av.slug || av.id || '').toLowerCase();
-                    const fromApi = bySlug.get(slug);
-                    if (fromApi && fromApi.product_id) {
-                        av.product_id = fromApi.product_id;
-                        if (typeof fromApi.is_locked !== 'undefined') av.is_locked = fromApi.is_locked;
-                        updated++;
+    try {
+        if (getIapPlatform() === 'apple') {
+            (async function() {
+                try {
+                    const url = getAvatarsApiUrl('force=1&t=' + Date.now());
+                    const r = await fetch(url, { method: 'GET', credentials: 'same-origin', cache: 'no-cache' });
+                    if (!r.ok) return;
+                    const data = await r.json();
+                    const list = Array.isArray(data) ? data : (data && Array.isArray(data.avatars) ? data.avatars : []);
+                    if (list.length === 0) return;
+                    const bySlug = new Map(list.map(a => [String(a.id || '').toLowerCase(), a]));
+                    let updated = 0;
+                    for (const av of avatarsData) {
+                        const slug = String(av.slug || av.id || '').toLowerCase();
+                        const fromApi = bySlug.get(slug);
+                        if (fromApi && fromApi.product_id) {
+                            av.product_id = fromApi.product_id;
+                            if (typeof fromApi.is_locked !== 'undefined') av.is_locked = fromApi.is_locked;
+                            updated++;
+                        }
                     }
-                }
-                if (updated > 0) {
-                    console.log('[IAP] Updated', updated, 'avatar product_id(s) for iOS');
-                    renderAvatarGrid();
-                }
-            } catch (e) { /* non-fatal */ }
-        })();
-    }
+                    if (updated > 0) {
+                        console.log('[IAP] Updated', updated, 'avatar product_id(s) for iOS');
+                        renderAvatarGrid();
+                    }
+                } catch (e) { /* non-fatal */ }
+            })();
+        }
+    } catch (e) { /* non-fatal: still show grid */ }
     
     // Set thumbnail tracking for immediate render
     totalThumbnails = avatarsData.length;
@@ -372,17 +388,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (progressBar) progressBar.style.width = '100%';
     if (loadingText) loadingText.textContent = '100%';
     if (loadingContent) loadingContent.textContent = 'All Bees Ready! 🎉';
-    if (loadingDetail) loadingDetail.textContent = `Ready to choose your bee! (${loadedThumbnails}/${totalThumbnails} loaded)`;
+    if (loadingDetail) loadingDetail.textContent = 'Ready to choose your bee! (' + loadedThumbnails + '/' + totalThumbnails + ' loaded)';
     
     updateDynamicMarquee(avatarsData);
     renderAvatarGrid();
     
     // CRITICAL: Hide loading overlay IMMEDIATELY (thumbnails already loaded)
     if (overlay) {
-        // Update to show completion
         overlay.style.transition = 'opacity 0.5s ease, visibility 0.5s ease';
         overlay.style.opacity = '0';
-        setTimeout(() => {
+        setTimeout(function() {
             if (overlay) {
                 overlay.classList.add('hidden');
                 overlay.style.display = 'none';
@@ -391,7 +406,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }, 500);
     }
     
-    console.log(`✅ Picker loaded instantly: ${loadedThumbnails}/${totalThumbnails} thumbnails pre-loaded`);
+    console.log('✅ Picker loaded instantly: ' + loadedThumbnails + '/' + totalThumbnails + ' thumbnails pre-loaded');
     
     setupSearchFilter();
     setupBundleShop();
@@ -512,7 +527,7 @@ function applyRoleBasedUI() {
 function updateLoadingProgress(customMessage = null) {
     // Calculate percentage based on completed thumbnails (loaded + failed)
     const completedThumbnails = loadedThumbnails + failedThumbnails;
-    const percentage = Math.round((completedThumbnails / totalThumbnails) * 100);
+    const percentage = totalThumbnails > 0 ? Math.round((completedThumbnails / totalThumbnails) * 100) : 100;
     const progressBar = document.getElementById('loading-progress');
     const loadingText = document.getElementById('loading-text');
     const loadingContent = document.getElementById('loading-status');
@@ -847,6 +862,14 @@ async function refreshAvatarUnlockStatus() {
 // Picker should NEVER call this - use refreshAvatarUnlockStatus() for updates
 async function loadAvatars() {
     try {
+        // Show progress early so loader is not stuck at 0%
+        var progBar = document.getElementById('loading-progress');
+        var loadTxt = document.getElementById('loading-text');
+        var loadDetail = document.getElementById('loading-detail');
+        if (progBar) progBar.style.width = '20%';
+        if (loadTxt) loadTxt.textContent = '20%';
+        if (loadDetail) loadDetail.textContent = 'Fetching avatars...';
+        
         // Add timestamp to bypass stale cache + force=1 for server-side cache bypass
         const timestamp = new Date().getTime();
         // iOS/Safari compatible fetch with explicit headers
@@ -874,6 +897,11 @@ async function loadAvatars() {
         }
         
         const data = await response.json();
+        
+        // Progress: fetch done, now processing
+        if (progBar) progBar.style.width = '40%';
+        if (loadTxt) loadTxt.textContent = '40%';
+        if (loadDetail) loadDetail.textContent = 'Processing avatars...';
         
         // Store user info globally for chooseAvatar to check admin/guest status
         // CRITICAL FIX: API returns data.user.{field}, not data.{field}
