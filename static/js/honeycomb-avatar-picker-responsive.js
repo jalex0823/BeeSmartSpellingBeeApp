@@ -2524,8 +2524,6 @@ function isUserAuthenticated() {
 
 function canPurchaseAvatar(avatar) {
     if (!avatar || !avatar.product_id) return false;
-    // Purchases require an authenticated user (server verify endpoint is login_required)
-    if (!isUserAuthenticated()) return false;
     // In native app (TestFlight/Capacitor): always show Purchase button — purchase flow will wait for bridge.
     // Avatars are commissioned for sale; don't hide the button while the IAP bridge is still loading.
     if (isProbablyNativeAppContext()) return true;
@@ -2537,6 +2535,22 @@ function isProbablyNativeAppContext() {
     try {
         // Capacitor present is our strongest signal.
         if (window.Capacitor) return true;
+    } catch (e) { /* ignore */ }
+
+    // Capacitor-like URL schemes (native wrapper contexts).
+    try {
+        const proto = (window.location && window.location.protocol) ? String(window.location.protocol).toLowerCase() : '';
+        if (proto && (proto.startsWith('capacitor:') || proto.startsWith('ionic:') || proto.startsWith('app:'))) return true;
+    } catch (e) { /* ignore */ }
+
+    // iOS WKWebView heuristic:
+    // Many iOS in-app webviews omit the 'Safari' token. Treat those as native contexts so
+    // we attempt to wait for the BeeSmartIAP bridge instead of incorrectly gating purchases.
+    try {
+        const ua = String((navigator && navigator.userAgent) ? navigator.userAgent : '');
+        const isiOS = /iPad|iPhone|iPod/i.test(ua);
+        const isSafari = isiOS && /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
+        if (isiOS && !isSafari) return true;
     } catch (e) { /* ignore */ }
 
     // IMPORTANT: Do NOT treat iOS Safari as a "native app".
@@ -2723,10 +2737,10 @@ async function purchaseLockedAvatar(slug) {
         return;
     }
 
-    // In native app, do not block on "bridge not ready" — try purchase so Apple sheet can appear.
-    // Reuse inNative variable declared above (line 2619)
+    // On non-native web: block purchases unless the bridge exists.
+    // In native contexts (including iOS WKWebView), we will wait for the bridge and attempt StoreKit.
     if (!inNative && (!window.BeeSmartIAP || typeof window.BeeSmartIAP.purchase !== 'function')) {
-        alert('In-app purchase is only available in the BeeSmart app. Install from the App Store to purchase avatars.');
+        alert('Purchases are available in the BeeSmart iOS/Android app.');
         return;
     }
 
