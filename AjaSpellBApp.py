@@ -1373,12 +1373,30 @@ def api_avatars():
     # Build role-aware list
     result = []
 
+    # Determine which hidden/award avatars this user has unlocked via entitlements.
+    # Hidden avatars (hidden=True in catalog) are excluded from the picker unless the
+    # user holds the matching UserEntitlement record.
+    user_unlocked_hidden_slugs = set()
+    if user is not None:
+        try:
+            from models import UserEntitlement as _UE
+            ents = _UE.query.filter_by(user_id=user.id, entitlement_type='avatar').all()
+            for _e in (ents or []):
+                k = str(getattr(_e, 'entitlement_key', '') or '').strip()
+                if k.startswith('avatar.'):
+                    user_unlocked_hidden_slugs.add(k[len('avatar.'):].replace('_', '-'))
+        except Exception:
+            pass
+
     # Registration scope: never expose the full catalog; only allow the default-free avatars.
-    catalog_iter = AVATAR_CATALOG
+    catalog_iter = [
+        e for e in AVATAR_CATALOG
+        if not e.get('hidden') or (str(e.get('id') or '').strip().lower() in user_unlocked_hidden_slugs)
+    ]
     if registration_scope:
         try:
             catalog_iter = [
-                e for e in AVATAR_CATALOG
+                e for e in catalog_iter
                 if bool(e.get('is_default_free')) or (str(e.get('tier') or '').strip().lower() == 'default_free')
             ]
         except Exception:
@@ -4807,6 +4825,23 @@ try:
     print(" Battle API registered successfully - Routes at /api/battles/*")
 except Exception as e:
     print(f"️ Battle API registration failed: {e}")
+
+# Register Coloring Book QR Challenge API Blueprint
+print(" Registering Coloring Book API...")
+try:
+    from coloring_book_api import coloring_book_bp, coloring_book_qr_bp, seed_word_sets
+    app.register_blueprint(coloring_book_bp, url_prefix='/api/children/me')
+    app.register_blueprint(coloring_book_qr_bp)  # no prefix — routes at /q/coloring/*
+    print(" Coloring Book API registered successfully - Routes at /api/children/me/* and /q/coloring/*")
+except Exception as e:
+    print(f"️ Coloring Book API registration failed: {e}")
+
+# Seed A–Z word sets (idempotent — safe on every startup)
+try:
+    with app.app_context():
+        seed_word_sets()
+except Exception as _seed_err:
+    print(f"️ Coloring Book word set seed failed: {_seed_err}")
 
 # --- Routes: Health Check for API Debugging ----------------------------------
 

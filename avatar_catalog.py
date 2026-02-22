@@ -712,6 +712,27 @@ ADDITIONAL_AVATARS: List[Dict] = [
 # Merge in the additional avatars
 AVATAR_CATALOG.extend(ADDITIONAL_AVATARS)
 
+# Hidden award avatar — only visible after earning the Coloring Book entitlement.
+# NOT purchasable, NOT earnable via Honey Points. Server-granted only.
+AVATAR_CATALOG.append({
+    "id": "spelling-champion",
+    "product_id": None,
+    "name": "Spelling Champion Bee",
+    "folder": "glb_files",
+    "obj_file": "SCBee.glb",
+    "mtl_file": "",
+    "texture_file": "",
+    "description": "Awarded to spelling champions who complete all 26 Coloring Book letter challenges!",
+    "variants": ["default"],
+    "category": "award",
+    "tier": "award",
+    "is_default_free": False,
+    "is_purchasable": False,
+    "hidden": True,
+    "unlock_points": 0,
+    "price": 0,
+})
+
 
 # --- Monetization Constants & Helpers ----------------------------------------
 
