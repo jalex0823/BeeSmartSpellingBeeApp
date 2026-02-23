@@ -4,7 +4,7 @@
 // IMPORTANT: do not precache HTML navigations like '/' — stale cached HTML can break auth-gated flows.
 // 2026-01-07: cache bust + ensure Word Lists UI updates immediately (Apple review).
 // 2026-01-16: force-refresh SW caches + never intercept /quiz (fix stale quiz HTML / JS syntax errors).
-const CACHE_VERSION = 'beesmart-v1.4.6-v40-2026-01-16-no-quiz-cache';
+const CACHE_VERSION = 'beesmart-v1.4.7-v41-2026-02-23-coloring-book-fix';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
@@ -115,6 +115,16 @@ self.addEventListener('fetch', (event) => {
 
   // ✅ Word list APIs: always bypass the SW so buttons work immediately after deploy.
   if (url.pathname.startsWith('/api/saved-lists') || url.pathname.startsWith('/api/buzz-dust/')) {
+    return;
+  }
+
+  // ✅ Coloring Book QR landing routes redirect after auth-check — SW must not intercept.
+  // The /q/coloring/* routes do server-side redirects which cause "redirected response" errors.
+  // The /api/children/me/* coloring book APIs are auth-sensitive and must never be cached.
+  if (
+    url.pathname.startsWith('/q/coloring/') ||
+    url.pathname.startsWith('/api/children/me/')
+  ) {
     return;
   }
 

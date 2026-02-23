@@ -123,7 +123,7 @@ def _extract_set_id_from_qr(raw: str) -> str:
     return s.strip()
 
 
-@coloring_book_bp.route('/children/me/wordlists/from-set', methods=['POST'])
+@coloring_book_bp.route('/wordlists/from-set', methods=['POST'])
 @login_required
 def from_set():
     try:
@@ -180,7 +180,7 @@ def from_set():
         return jsonify({"created": False, "error": "server_error", "message": str(e)}), 500
 
 
-@coloring_book_bp.route('/children/me/wordlists/<int:list_id>/words/complete', methods=['POST'])
+@coloring_book_bp.route('/wordlists/<int:list_id>/words/complete', methods=['POST'])
 @login_required
 def complete_word(list_id: int):
     try:
@@ -260,7 +260,7 @@ def complete_word(list_id: int):
         return jsonify({"word_completed": False, "error": "server_error", "message": str(e)}), 500
 
 
-@coloring_book_bp.route('/children/me/coloring-book/status', methods=['GET'])
+@coloring_book_bp.route('/coloring-book/status', methods=['GET'])
 @login_required
 def status():
     try:
