@@ -760,6 +760,19 @@
                 <div class="stat-value" id="dash-best-streak">{{ current_user.best_streak or 0 }}</div>
                 <div class="stat-label">Best Streak</div>
             </div>
+
+            <!-- Coloring Book Challenge Progress -->
+            <div class="stat-card" id="cb-progress-card" style="border: 3px solid rgba(255,140,0,0.4); background: linear-gradient(135deg, #FFF9E6 0%, #FFE5B4 100%); position: relative; overflow: hidden;">
+                <div class="stat-icon">🎨</div>
+                <div class="stat-value" id="cb-completed-count" style="color: #FF8C00;">—</div>
+                <div class="stat-label">Coloring Book Letters</div>
+                <div class="stat-sublabel" id="cb-remaining-label" style="color: #8B4513;">Loading...</div>
+                <!-- Progress bar -->
+                <div style="width: 100%; height: 8px; background: #E0E0E0; border-radius: 4px; margin-top: 0.75rem; overflow: hidden;">
+                    <div id="cb-progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #FF8C00, #FFD700); border-radius: 4px; transition: width 0.6s ease;"></div>
+                </div>
+                <div id="cb-mystery-hint" style="display:none; margin-top: 0.6rem; font-size: 0.78rem; color: #8B4513; font-weight: 600;">🔒 Mystery avatar awaits!</div>
+            </div>
         </div>
         
         <!-- Kid-Friendly Explanation for Apple Reviewers -->
@@ -900,6 +913,37 @@
                     }
                     refresh();
                     setInterval(refresh, 12000);
+                })();
+
+                // Coloring Book Challenge progress
+                (function(){
+                    async function loadCBProgress(){
+                        try{
+                            const r = await fetch('/api/children/me/coloring-book/status', {cache:'no-store', credentials:'same-origin'});
+                            if(!r.ok) return;
+                            const d = await r.json();
+                            const done = Number(d.completed_lists_count || 0);
+                            const total = Number(d.total_lists || 26);
+                            const remaining = total - done;
+                            const el = document.getElementById('cb-completed-count');
+                            const lbl = document.getElementById('cb-remaining-label');
+                            const bar = document.getElementById('cb-progress-bar');
+                            const hint = document.getElementById('cb-mystery-hint');
+                            if(el) el.textContent = done + ' / ' + total;
+                            if(bar) bar.style.width = Math.round((done/total)*100) + '%';
+                            if(lbl){
+                                if(done >= total){
+                                    lbl.textContent = '🏆 All letters complete!';
+                                    lbl.style.color = '#4CAF50';
+                                } else {
+                                    lbl.textContent = remaining + ' letter' + (remaining===1?'':'s') + ' remaining';
+                                }
+                            }
+                            if(hint && done < total) hint.style.display = 'block';
+                            if(hint && done >= total) hint.style.display = 'none';
+                        }catch(e){/*silent*/}
+                    }
+                    loadCBProgress();
                 })();
 
                 // 🔄 Refresh Badges Function
