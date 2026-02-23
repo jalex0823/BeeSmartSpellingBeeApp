@@ -5024,6 +5024,77 @@ function showRestoreDialog(title, message, isSuccess) {
                                 </div>
                             </div>
 
+                            <!-- Coloring Book Challenge Progress Banner -->
+                            {% if current_user.is_authenticated and current_user.role not in ('guest', None) %}
+                            <div id="cb-banner" style="
+                                background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+                                border: 2px solid rgba(255,140,0,0.35);
+                                border-radius: 16px;
+                                padding: 0.75rem 1.1rem;
+                                margin: 0 auto 1.25rem auto;
+                                max-width: 95%;
+                                box-shadow: 0 4px 14px rgba(255,140,0,0.12);
+                                display: flex;
+                                align-items: center;
+                                gap: 0.9rem;
+                                flex-wrap: wrap;
+                            ">
+                                <span style="font-size: 1.8rem; flex-shrink: 0;">🎨</span>
+                                <div style="flex: 1; min-width: 160px;">
+                                    <div style="font-size: 0.85rem; font-weight: 700; color: #8B4513; margin-bottom: 0.25rem;">
+                                        Coloring Book Challenge &nbsp;<span id="cb-menu-count" style="color:#FF8C00;">—</span>
+                                    </div>
+                                    <!-- Progress bar -->
+                                    <div style="width:100%; height:7px; background:#E0D0C0; border-radius:4px; overflow:hidden;">
+                                        <div id="cb-menu-bar" style="height:100%; width:0%; background:linear-gradient(90deg,#FF8C00,#FFD700); border-radius:4px; transition:width 0.6s ease;"></div>
+                                    </div>
+                                    <div id="cb-menu-label" style="font-size:0.75rem; color:#8B4513; margin-top:0.2rem; font-weight:600;">Loading…</div>
+                                </div>
+                                <div id="cb-menu-hint" style="font-size:0.78rem; color:#8B4513; font-weight:700; white-space:nowrap; flex-shrink:0;">🔒 Mystery avatar awaits!</div>
+                            </div>
+                            <script>
+                            (function(){
+                                async function loadCBMenu(){
+                                    try{
+                                        const r = await fetch('/api/children/me/coloring-book/status',{cache:'no-store',credentials:'same-origin'});
+                                        if(!r.ok) return;
+                                        const d = await r.json();
+                                        const done = Number(d.completed_lists_count||0);
+                                        const total = Number(d.total_lists||26);
+                                        const remaining = total - done;
+                                        const cnt = document.getElementById('cb-menu-count');
+                                        const bar = document.getElementById('cb-menu-bar');
+                                        const lbl = document.getElementById('cb-menu-label');
+                                        const hint = document.getElementById('cb-menu-hint');
+                                        if(cnt) cnt.textContent = done+' / '+total+' letters';
+                                        if(bar) bar.style.width = Math.round((done/total)*100)+'%';
+                                        if(lbl){
+                                            if(done>=total){
+                                                lbl.textContent='🏆 All 26 letters complete! Check your avatars!';
+                                                lbl.style.color='#4CAF50';
+                                            } else {
+                                                lbl.textContent = remaining+' letter'+(remaining===1?'':'s')+' remaining to unlock the surprise avatar';
+                                            }
+                                        }
+                                        if(hint){
+                                            hint.textContent = done>=total ? '🎉 Avatar unlocked!' : '🔒 Mystery avatar awaits!';
+                                            hint.style.color = done>=total ? '#4CAF50' : '#8B4513';
+                                        }
+                                        // Hide banner entirely if user has 0 coloring book lists (never scanned a QR)
+                                        if(done===0 && !d.completed_set_ids){
+                                            const banner = document.getElementById('cb-banner');
+                                            if(banner) banner.style.display='none';
+                                        }
+                                    }catch(e){
+                                        const banner = document.getElementById('cb-banner');
+                                        if(banner) banner.style.display='none';
+                                    }
+                                }
+                                loadCBMenu();
+                            })();
+                            </script>
+                            {% endif %}
+
                             <!-- Kid-Friendly Explanation for Apple Reviewers (shown when stats are zero) -->
                             {% if (current_user.total_quizzes_completed or 0) == 0 %}
                             <div style="
