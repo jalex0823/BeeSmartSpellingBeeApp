@@ -4828,20 +4828,83 @@ except Exception as e:
 
 # Register Coloring Book QR Challenge API Blueprint
 print(" Registering Coloring Book API...")
+_coloring_book_loaded = False
 try:
+    import traceback as _tb
     from coloring_book_api import coloring_book_bp, coloring_book_qr_bp, seed_word_sets
     app.register_blueprint(coloring_book_bp, url_prefix='/api/children/me')
     app.register_blueprint(coloring_book_qr_bp)  # no prefix — routes at /q/coloring/*
+    _coloring_book_loaded = True
     print(" Coloring Book API registered successfully - Routes at /api/children/me/* and /q/coloring/*")
 except Exception as e:
-    print(f"️ Coloring Book API registration failed: {e}")
+    import traceback as _tb
+    print(f"COLORING BOOK API REGISTRATION FAILED: {e}")
+    print(_tb.format_exc())
 
 # Seed A–Z word sets (idempotent — safe on every startup)
 try:
     with app.app_context():
         seed_word_sets()
 except Exception as _seed_err:
-    print(f"️ Coloring Book word set seed failed: {_seed_err}")
+    import traceback as _tb2
+    print(f"COLORING BOOK SEED FAILED: {_seed_err}")
+    print(_tb2.format_exc())
+
+# ---------------------------------------------------------------------------
+# Fallback direct route for /q/coloring/<set_id>
+# Registered here in the main app so it works even if the blueprint import
+# above fails on the live server. Blueprint route takes precedence if loaded.
+# ---------------------------------------------------------------------------
+if not _coloring_book_loaded:
+    print(" Registering fallback /q/coloring/<set_id> route directly in main app")
+
+    @app.route('/q/coloring/<set_id>', methods=['GET'])
+    def qr_coloring_fallback(set_id):
+        from flask import redirect, flash, session as _sess
+        from flask_login import current_user as _cu
+        try:
+            from coloring_book_api import (
+                _ensure_coloring_book_schema, _extract_set_id_from_qr,
+                seed_word_sets as _seed
+            )
+            from models import WordSet, ColoringBookList, ColoringBookListItem
+            clean = _extract_set_id_from_qr(set_id)
+            if not clean:
+                flash('Invalid QR code.', 'error')
+                return redirect('/word-lists')
+            if not _cu.is_authenticated:
+                _sess['pending_coloring_set_id'] = clean
+                flash('Please log in to save your Coloring Book word list!', 'info')
+                return redirect('/login?next=/q/coloring/' + clean)
+            _ensure_coloring_book_schema()
+            _seed()
+            ws = WordSet.query.filter_by(set_id=clean, active=True).first()
+            if not ws:
+                flash(f'Word set "{clean}" not found.', 'error')
+                return redirect('/word-lists')
+            lst = ColoringBookList.query.filter_by(user_id=_cu.id, source_set_id=clean).first()
+            if not lst:
+                from models import db as _db
+                from datetime import datetime as _dt
+                letter = str(getattr(ws, 'letter', '') or '').strip().upper() or clean[:1].upper()
+                lst = ColoringBookList(user_id=_cu.id, source_set_id=clean,
+                                       title=f'Coloring Book - {letter}', status='active')
+                _db.session.add(lst)
+                _db.session.flush()
+                words = [str(w).strip() for w in (getattr(ws, 'words_json', []) or []) if str(w or '').strip()][:5]
+                for w in words:
+                    _db.session.add(ColoringBookListItem(list_id=lst.id, word=w, is_completed=False))
+                _db.session.commit()
+                flash(f'Coloring Book - {letter} word list added to your Word Lists!', 'success')
+            else:
+                letter = str(getattr(ws, 'letter', '') or '').strip().upper() or clean[:1].upper()
+                flash(f'Coloring Book - {letter} is already in your Word Lists.', 'info')
+        except Exception as _fe:
+            import traceback as _ftb
+            print(f'FALLBACK /q/coloring/{set_id} error: {_fe}')
+            print(_ftb.format_exc())
+            flash('Something went wrong. Please try again.', 'error')
+        return redirect('/word-lists')
 
 # --- Routes: Health Check for API Debugging ----------------------------------
 
