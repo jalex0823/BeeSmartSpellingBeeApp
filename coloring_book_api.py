@@ -315,7 +315,7 @@ def qr_landing(set_id: str):
     if not current_user.is_authenticated:
         session['pending_coloring_set_id'] = clean_set_id
         flash('Please log in to save your Coloring Book word list!', 'info')
-        return redirect('/login?next=/q/coloring/' + clean_set_id)
+        return redirect('/auth/login?next=/q/coloring/' + clean_set_id)
 
     try:
         _ensure_coloring_book_schema()
