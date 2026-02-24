@@ -4673,6 +4673,24 @@ def api_debug_health():
     """Simple health check endpoint to test basic API functionality without complex dependencies."""
     return jsonify({"status": "healthy"})
 
+@app.route("/api/debug/routes", methods=["GET"])
+def api_debug_routes():
+    """List all registered routes — used to verify blueprint registration on live server."""
+    rules = []
+    for rule in app.url_map.iter_rules():
+        rules.append({
+            "endpoint": rule.endpoint,
+            "methods": sorted(list(rule.methods - {"HEAD", "OPTIONS"})),
+            "rule": str(rule),
+        })
+    rules.sort(key=lambda r: r["rule"])
+    coloring = [r for r in rules if "coloring" in r["rule"] or "/q/" in r["rule"]]
+    return jsonify({
+        "total_routes": len(rules),
+        "coloring_routes": coloring,
+        "all_routes": rules,
+    })
+
 @app.route("/api/debug/session", methods=["GET"])
 def api_debug_session():
     """Debug endpoint to check current session state and wordbank"""
