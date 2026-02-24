@@ -4875,7 +4875,7 @@ if not _coloring_book_loaded:
             if not _cu.is_authenticated:
                 _sess['pending_coloring_set_id'] = clean
                 flash('Please log in to save your Coloring Book word list!', 'info')
-                return redirect('/login?next=/q/coloring/' + clean)
+                return redirect('/auth/login?next=/q/coloring/' + clean)
             _ensure_coloring_book_schema()
             _seed()
             ws = WordSet.query.filter_by(set_id=clean, active=True).first()
