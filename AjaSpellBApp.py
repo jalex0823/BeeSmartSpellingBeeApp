@@ -118,7 +118,7 @@ print("="*70)
 
 # Build/release version (surfaced via /health)
 # Keep this in sync with the public app version used by validation scripts.
-APP_VERSION = "34"
+APP_VERSION = "35"
 
 # Base directory for resolving relative data paths (added to silence linter undefined warning)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -4671,7 +4671,12 @@ if not _coloring_book_loaded:
 @app.route("/api/debug/health", methods=["GET"])
 def api_debug_health():
     """Simple health check endpoint to test basic API functionality without complex dependencies."""
-    return jsonify({"status": "healthy"})
+    return jsonify({"status": "healthy", "version": 35})
+
+@app.route("/q/test", methods=["GET"])
+def q_path_test():
+    """Probe route — confirms /q/* paths reach Flask on the live server."""
+    return jsonify({"status": "ok", "message": "/q/ paths reach Flask", "version": 35})
 
 @app.route("/api/debug/routes", methods=["GET"])
 def api_debug_routes():
