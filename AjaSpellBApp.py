@@ -14243,18 +14243,56 @@ def login():
 
         db.session.commit()
 
-        # Redirect based on role
-        try:
-            if user.role == 'teacher' or user.role == 'parent':
-                redirect_url = url_for('teacher_dashboard') if user.role == 'teacher' else url_for('parent_dashboard')
-            elif user.role == 'admin':
-                redirect_url = url_for('admin_dashboard')
+        # Process any pending coloring book QR scan immediately after login
+        # so we never redirect back to /q/coloring/* (avoids redirect loops)
+        pending_set_id = session.pop('pending_coloring_set_id', None)
+        if pending_set_id:
+            try:
+                from coloring_book_api import _ensure_coloring_book_schema, seed_word_sets as _seed_ws
+                from models import WordSet, ColoringBookList, ColoringBookListItem
+                _ensure_coloring_book_schema()
+                _seed_ws()
+                ws = WordSet.query.filter_by(set_id=pending_set_id, active=True).first()
+                if ws:
+                    lst = ColoringBookList.query.filter_by(user_id=user.id, source_set_id=pending_set_id).first()
+                    if not lst:
+                        letter = str(getattr(ws, 'letter', '') or '').strip().upper() or pending_set_id[:1].upper()
+                        lst = ColoringBookList(user_id=user.id, source_set_id=pending_set_id,
+                                               title=f'Coloring Book - {letter}', status='active')
+                        db.session.add(lst)
+                        db.session.flush()
+                        words = [str(w).strip() for w in (getattr(ws, 'words_json', []) or []) if str(w or '').strip()][:5]
+                        for w in words:
+                            db.session.add(ColoringBookListItem(list_id=lst.id, word=w, is_completed=False))
+                        db.session.commit()
+                        print(f"✅ Login: created coloring book word list for {pending_set_id} user={user.id}")
+            except Exception as _ce:
+                print(f"⚠️ Login: could not process pending coloring set {pending_set_id}: {_ce}")
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+            redirect_url = '/word-lists'
+        else:
+            # Honor ?next= for post-login redirect (e.g. QR code scans)
+            next_url = request.args.get('next') or data.get('next') or ''
+            next_url = next_url.strip()
+            # Only allow relative paths (no external redirects)
+            if next_url and next_url.startswith('/') and not next_url.startswith('//') and next_url != '/auth/login':
+                redirect_url = next_url
             else:
-                redirect_url = url_for('student_dashboard')
-        except Exception as e:
-            app.logger.error(f"Failed to generate redirect URL for role {user.role}: {e}")
-            redirect_url = url_for('home')  # Fallback to home
-        
+                # Redirect based on role
+                try:
+                    if user.role == 'teacher' or user.role == 'parent':
+                        redirect_url = url_for('teacher_dashboard') if user.role == 'teacher' else url_for('parent_dashboard')
+                    elif user.role == 'admin':
+                        redirect_url = url_for('admin_dashboard')
+                    else:
+                        redirect_url = url_for('student_dashboard')
+                except Exception as e:
+                    app.logger.error(f"Failed to generate redirect URL for role {user.role}: {e}")
+                    redirect_url = url_for('home')
+
         # Ensure redirect_url is valid
         if not redirect_url or redirect_url == '':
             app.logger.warning(f"Redirect URL was empty for role {user.role}, using home")
