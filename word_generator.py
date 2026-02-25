@@ -40,21 +40,21 @@ def _is_word_safe(word):
     return True, "OK"
 
 
-# Grade 1-2: CVC words, basic sight words
+# Grade 1-2: CVC words, basic sight words (2-3 letters only)
 GRADE_1_2_WORDS = [
     "cat", "dog", "run", "sun", "hat", "mat", "rat", "bat", "can", "man",
     "pan", "fan", "sit", "hit", "pit", "kit", "hot", "pot", "got", "not",
     "bed", "red", "led", "fed", "pig", "big", "dig", "fig", "bug", "hug",
     "rug", "mug", "box", "fox", "six", "mix", "top", "mop", "hop", "pop",
     "cup", "pup", "up", "bus", "us", "pen", "hen", "ten", "men", "wet",
-    "pet", "net", "get", "set", "let", "the", "and", "for", "are", "but",
-    "not", "you", "all", "can", "had", "her", "was", "one", "our", "out",
-    "day", "get", "has", "him", "his", "how", "if", "its", "may", "old",
+    "pet", "net", "set", "let", "the", "and", "for", "are", "but",
+    "you", "all", "had", "her", "was", "one", "our", "out",
+    "day", "get", "has", "him", "his", "how", "its", "may", "old",
     "see", "two", "way", "who", "boy", "did", "new", "now", "put", "too",
     "fun", "lot", "mom", "dad", "yes", "no", "go", "so", "me", "we"
 ]
 
-# Grade 3-4: Blends, digraphs, common patterns
+# Grade 3-4: Blends, digraphs, common patterns (4-7 letters)
 GRADE_3_4_WORDS = [
     "black", "block", "brick", "bring", "clock", "crank", "drink", "frank",
     "grand", "plant", "print", "skunk", "spring", "stand", "string", "think",
@@ -64,12 +64,19 @@ GRADE_3_4_WORDS = [
     "could", "every", "first", "friend", "great", "house", "large", "later",
     "learn", "never", "often", "other", "people", "place", "please", "right",
     "school", "should", "small", "start", "still", "study", "their", "there",
-    "these", "think", "three", "through", "today", "under", "until", "where",
+    "these", "three", "through", "today", "under", "until", "where",
     "which", "while", "world", "would", "write", "young", "happy", "party",
-    "funny", "lucky", "penny", "puppy", "sorry", "story", "study", "carry"
+    "funny", "lucky", "penny", "puppy", "sorry", "story", "carry",
+    "column", "ancient", "anxiety", "citizen",
+    "abhor", "banal", "covet", "accede", "acumen", "adroit", "apathy",
+    "arcane", "ardent", "astute", "benign", "candid", "cogent",
+    "abscond", "adamant", "adverse", "affable", "amiable", "anarchy",
+    "anomaly", "appease", "archaic", "arduous", "ascetic", "assuage",
+    "austere", "avarice", "blatant", "bolster", "brusque", "burgeon",
+    "caustic", "censure", "concede", "copious"
 ]
 
-# Grade 5-6: Multisyllabic, prefixes/suffixes
+# Grade 5-6: Multisyllabic, prefixes/suffixes (7-12 letters)
 GRADE_5_6_WORDS = [
     "adventure", "beautiful", "beginning", "business", "calendar", "character",
     "chocolate", "community", "dangerous", "delicious", "different", "difficult",
@@ -81,50 +88,51 @@ GRADE_5_6_WORDS = [
     "necessary", "neighborhood", "ordinary", "otherwise", "paragraph", "particular",
     "passenger", "personality", "photograph", "pollution", "popular", "population",
     "possible", "probably", "professor", "recognize", "recommend", "remember",
-    "restaurant", "ridiculous", "ScheduleError", "separate", "similar", "skyscraper",
+    "restaurant", "ridiculous", "separate", "similar", "skyscraper",
     "stereotype", "substitute", "surprise", "technology", "temperature", "terrible",
-    "together", "tomorrow", "treasure", "uncomfortable", "understand", "universe",
+    "together", "tomorrow", "treasure", "understand", "universe",
     "unnecessary", "unusual", "vacation", "vegetable", "volunteer", "wednesday",
-    "wonderful", "yesterday", "accomplishment", "achievement", "advertisement"
+    "wonderful", "yesterday", "achievement"
 ]
 
-# Middle School: Academic vocabulary
+# Middle School: Academic vocabulary (8-14 letters)
 MIDDLE_SCHOOL_WORDS = [
-    "abundance", "accelerate", "accommodate", "accomplish", "accumulate", "achievement",
+    "abundance", "accelerate", "accommodate", "accomplish", "accumulate",
     "acknowledge", "adolescent", "affectionate", "aggressive", "allergic", "ambassador",
-    "analysis", "ancient", "Antarctica", "anxiety", "appreciate", "appropriate",
+    "analysis", "Antarctica", "appreciate", "appropriate",
     "approximate", "argument", "artificial", "assessment", "astronaut", "atmosphere",
     "attendance", "attorney", "audience", "authentic", "authority", "automatic",
     "bankruptcy", "beneficial", "boundary", "calculating", "campaign", "candidate",
     "capacity", "capitalism", "catastrophe", "celebration", "challenge", "chemical",
-    "citizen", "civilization", "classify", "colleague", "collision", "column",
+    "civilization", "classify", "colleague", "collision",
     "commercial", "commitment", "communicate", "community", "comparison", "compassion",
     "compatible", "competition", "complement", "complexity", "comprehend", "compromise",
     "concentrate", "conclusion", "condition", "conference", "confidence", "congratulate",
     "conscience", "conscious", "consequence", "conservation", "consideration", "consistent",
     "constitution", "construction", "contemporary", "continent", "continuous", "contribution",
     "controversial", "convenient", "conversation", "cooperation", "coordinate", "correspond",
-    "courageous", "criticism", "curiosity", "currency", "curriculum", "cylinder"
+    "courageous", "criticism", "curiosity", "currency", "curriculum",
+    "uncomfortable", "advertisement", "accomplishment"
 ]
 
-# High School: Advanced, SAT-level words
+# High School: Advanced, SAT-level words (8-16 letters)
 HIGH_SCHOOL_WORDS = [
-    "abdicate", "aberration", "abhor", "abscond", "abstemious", "accede",
-    "accolade", "acquiesce", "acrimonious", "acumen", "adamant", "admonish",
-    "adroit", "adverse", "aesthetic", "affable", "aggrandize", "alacrity",
+    "abdicate", "aberration", "abstemious",
+    "accolade", "acquiesce", "acrimonious", "admonish",
+    "aesthetic", "aggrandize", "alacrity",
     "alleviate", "altruistic", "ambiguous", "ambivalent", "ameliorate", "amenable",
-    "amiable", "amorphous", "anachronistic", "analogous", "anarchy", "anomaly",
-    "antagonize", "antecedent", "antipathy", "apathy", "appease", "arbitrary",
-    "arcane", "archaic", "ardent", "arduous", "articulate", "ascertain",
-    "ascetic", "assuage", "astute", "audacious", "austere", "avarice",
-    "banal", "bellicose", "belligerent", "benevolent", "benign", "blatant",
-    "bolster", "bombastic", "brusque", "burgeon", "cacophony", "camaraderie",
-    "candid", "capricious", "castigate", "catalyst", "caustic", "censure",
-    "chastise", "chicanery", "circumspect", "clandestine", "coalesce", "cogent",
+    "amorphous", "anachronistic", "analogous",
+    "antagonize", "antecedent", "antipathy", "arbitrary",
+    "articulate", "ascertain",
+    "audacious",
+    "bellicose", "belligerent", "benevolent",
+    "bombastic", "cacophony", "camaraderie",
+    "capricious", "castigate", "catalyst",
+    "chastise", "chicanery", "circumspect", "clandestine", "coalesce",
     "coherent", "collaborate", "commemorate", "commensurate", "compelling", "complacent",
-    "complement", "comprehensive", "comprise", "concede", "conciliatory", "congenial",
+    "complement", "comprehensive", "comprise", "conciliatory", "congenial",
     "conscientious", "consensus", "conspicuous", "contemplate", "contentious", "conventional",
-    "copious", "corroborate", "cosmopolitan", "covet", "credible", "criterion"
+    "corroborate", "cosmopolitan", "credible", "criterion"
 ]
 
 
