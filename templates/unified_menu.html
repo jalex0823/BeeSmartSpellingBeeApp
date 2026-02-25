@@ -5060,20 +5060,24 @@ function showRestoreDialog(title, message, isSuccess) {
                                         if(!r.ok) return;
                                         const d = await r.json();
                                         const done = Number(d.completed_lists_count||0);
+                                        const started = Number(d.started_lists_count||0);
                                         const total = Number(d.total_lists||26);
                                         const remaining = total - done;
+                                        const completedWords = Number(d.completed_words_count||0);
                                         const cnt = document.getElementById('cb-menu-count');
                                         const bar = document.getElementById('cb-menu-bar');
                                         const lbl = document.getElementById('cb-menu-label');
                                         const hint = document.getElementById('cb-menu-hint');
-                                        if(cnt) cnt.textContent = done+' / '+total+' letters';
-                                        if(bar) bar.style.width = Math.round((done/total)*100)+'%';
+                                        if(cnt) cnt.textContent = done+' / '+total+' letters complete';
+                                        if(bar) bar.style.width = (total > 0 ? Math.round((done/total)*100) : 0)+'%';
                                         if(lbl){
                                             if(done>=total){
                                                 lbl.textContent='🏆 All 26 letters complete! Check your avatars!';
                                                 lbl.style.color='#4CAF50';
                                             } else {
-                                                lbl.textContent = remaining+' letter'+(remaining===1?'':'s')+' remaining to unlock the surprise avatar';
+                                                lbl.textContent = started > 0
+                                                    ? (started+' started • '+remaining+' letter'+(remaining===1?'':'s')+' remaining • '+completedWords+' words checked off')
+                                                    : (remaining+' letter'+(remaining===1?'':'s')+' remaining to unlock the surprise avatar');
                                             }
                                         }
                                         if(hint){
@@ -5081,7 +5085,7 @@ function showRestoreDialog(title, message, isSuccess) {
                                             hint.style.color = done>=total ? '#4CAF50' : '#8B4513';
                                         }
                                         // Hide banner entirely if user has 0 coloring book lists (never scanned a QR)
-                                        if(done===0 && !d.completed_set_ids){
+                                        if(done===0 && started===0){
                                             const banner = document.getElementById('cb-banner');
                                             if(banner) banner.style.display='none';
                                         }

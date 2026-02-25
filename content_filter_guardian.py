@@ -105,7 +105,7 @@ class ContentViolationTracker:
 ENHANCED_INAPPROPRIATE_WORDS = {
     # Original list + new additions
     'profanity': {
-        "damn", "damned", "hell", "hells", "crap", "sucks", "piss", "pissed",
+        "dam", "dams", "damn", "damned", "hell", "hells", "crap", "sucks", "piss", "pissed",
         "shit", "fuck", "bitch", "asshole", "bastard", "dumbass"
     },
     'sexual_content': {
@@ -125,6 +125,7 @@ ENHANCED_INAPPROPRIATE_WORDS = {
     'violence': {
         "kill", "killing", "killer", "murder", "murderer", "suicide", "weapon", 
         "gun", "shoot", "shooting", "bomb", "explosive", "stab", "stabbing",
+        "offing", "offed", "slay", "slaying", "slaughter", "harm", "harming", "harmful",
         "violence", "violent", "assault", "assaults", "assaulting", "assaulted",
         "attack", "terrorism", "terrorist", "harass", "harassment", "harassing"
     },
