@@ -5579,16 +5579,26 @@ class BeeSoundboard {
 
             osc.start(start);
             osc.stop(start + duration + 0.01);
-
             start += __nn(step.delay, duration);
         });
     }
 
-    speakWord(word, onEndCallback = null, rate = 0.92) {
+    getPronunciationRate(word) {
+        // Slower rate for longer words so every syllable is clearly articulated.
+        // Tuned to ~125-145 wpm for multi-syllabic words.
+        const syllables = (word.match(/[aeiouy]+/gi) || []).length || 1;
+        if (syllables >= 4) return 0.78;   // long words: slow and deliberate
+        if (syllables === 3) return 0.84;  // medium words: moderate
+        return 0.90;                       // short words: near natural pace
+    }
+
+    speakWord(word, onEndCallback = null, rate = null) {
         if (!word) {
             if (onEndCallback) onEndCallback();
             return;
         }
+        // Use dynamic syllable-based rate if caller did not supply one explicitly
+        const effectiveRate = (rate !== null && rate !== undefined) ? rate : this.getPronunciationRate(word);
         var isAndroid = /Android/i.test(navigator.userAgent) || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
         var finish = () => { if (onEndCallback) onEndCallback(); };
         var visualizer = document.getElementById('voiceVisualizer');
@@ -5596,18 +5606,18 @@ class BeeSoundboard {
         var showSpeaking = () => { if (visualizer) visualizer.classList.add('speaking'); if (statusEl) { statusEl.textContent = '🔊 Speaking...'; statusEl.style.display = ''; } };
         var showReady = () => { if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing'); if (statusEl) { statusEl.textContent = '🐝 Ready'; statusEl.style.display = ''; } };
         if (isAndroid && typeof window.BeeSmartTryNativeTTS === 'function') {
-            window.BeeSmartTryNativeTTS(word, { rate: rate }).then(function(ok) {
+            window.BeeSmartTryNativeTTS(word, { rate: effectiveRate }).then(function(ok) {
                 if (ok) {
                     showSpeaking();
                     showReady();
                     finish();
                 } else {
-                    this._speakWordWeb(word, onEndCallback, rate);
+                    this._speakWordWeb(word, onEndCallback, effectiveRate);
                 }
-            }.bind(this)).catch(function() { this._speakWordWeb(word, onEndCallback, rate); }.bind(this));
+            }.bind(this)).catch(function() { this._speakWordWeb(word, onEndCallback, effectiveRate); }.bind(this));
             return;
         }
-        this._speakWordWeb(word, onEndCallback, rate);
+        this._speakWordWeb(word, onEndCallback, effectiveRate);
     }
     _speakWordWeb(word, onEndCallback, rate) {
         if (!('speechSynthesis' in window)) {
@@ -5619,8 +5629,8 @@ class BeeSoundboard {
         var isAndroid = /Android/i.test(navigator.userAgent) || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
         const speak = () => {
             const utterance = new SpeechSynthesisUtterance(word);
-            utterance.pitch = 1.35;
-            utterance.rate = rate; // Use provided rate instead of fixed 0.92
+            utterance.pitch = 1.1;  // Natural adult voice — 1.35 was too high and reduced clarity
+            utterance.rate = rate;  // Dynamic syllable-based rate from getPronunciationRate()
             utterance.volume = 0.9;
             utterance.text = word;
             
