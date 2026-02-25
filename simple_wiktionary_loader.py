@@ -5,6 +5,39 @@ Loads dictionary from simple-wiktionary.jsonl (Simple English Wiktionary dump)
 import json
 import os
 
+
+BLOCKED_WORDS = {
+    "dam", "dams", "damn", "damned", "hell", "crap", "piss", "shit", "fuck", "bitch", "asshole", "bastard",
+    "sex", "porn", "penis", "vagina", "rape", "molest", "abuse", "predator", "grooming",
+    "kill", "killing", "killer", "murder", "murderer", "offing", "offed", "shoot", "shooting", "gun", "weapon",
+    "suicide", "violent", "violence", "slay", "slaughter", "harm", "harming", "harmful",
+}
+
+
+def _contains_blocked_content(text: str) -> bool:
+    s = (text or "").strip().lower()
+    if not s:
+        return False
+    if "sex" in s:
+        return True
+    tokens = []
+    token = []
+    for ch in s:
+        if 'a' <= ch <= 'z':
+            token.append(ch)
+        elif token:
+            tokens.append("".join(token))
+            token = []
+    if token:
+        tokens.append("".join(token))
+    for t in tokens:
+        if t in BLOCKED_WORDS:
+            return True
+    for bad in BLOCKED_WORDS:
+        if len(bad) > 4 and bad in s:
+            return True
+    return False
+
 def load_simple_wiktionary(jsonl_path="data/simple-wiktionary.jsonl"):
     """
     Load Simple English Wiktionary from JSONL file
@@ -27,6 +60,10 @@ def load_simple_wiktionary(jsonl_path="data/simple-wiktionary.jsonl"):
                 # Extract word (normalize to lowercase)
                 word = entry.get("word", "").strip().lower()
                 if not word:
+                    skipped_count += 1
+                    continue
+
+                if _contains_blocked_content(word):
                     skipped_count += 1
                     continue
                 
@@ -52,6 +89,9 @@ def load_simple_wiktionary(jsonl_path="data/simple-wiktionary.jsonl"):
                 
                 # Get definition (first gloss)
                 definition = glosses[0].strip()
+                if _contains_blocked_content(definition):
+                    skipped_count += 1
+                    continue
                 
                 # Get example sentence (from first sense examples)
                 examples = first_sense.get("examples", [])
@@ -64,6 +104,10 @@ def load_simple_wiktionary(jsonl_path="data/simple-wiktionary.jsonl"):
                             if ex_text and word in ex_text.lower():
                                 example_sentence = ex_text
                                 break
+
+                if _contains_blocked_content(example_sentence):
+                    skipped_count += 1
+                    continue
                 
                 # If no example with the word, create one
                 if not example_sentence:

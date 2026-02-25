@@ -266,9 +266,22 @@ def status():
     try:
         _ensure_coloring_book_schema()
 
-        completed = ColoringBookList.query.filter_by(user_id=current_user.id, status='completed').all()
+        all_lists = ColoringBookList.query.filter_by(user_id=current_user.id).all()
+        completed = [lst for lst in (all_lists or []) if str(getattr(lst, 'status', '') or '').lower() == 'completed']
         completed_set_ids = [c.source_set_id for c in (completed or []) if getattr(c, 'source_set_id', None)]
         completed_lists_count = len(completed_set_ids)
+        started_lists_count = len(all_lists or [])
+        in_progress_lists_count = max(started_lists_count - completed_lists_count, 0)
+
+        completed_words_count = (
+            ColoringBookListItem.query
+            .join(ColoringBookList, ColoringBookListItem.list_id == ColoringBookList.id)
+            .filter(
+                ColoringBookList.user_id == current_user.id,
+                ColoringBookListItem.is_completed == True,
+            )
+            .count()
+        )
 
         key = 'avatar.spelling_champion'
         ent = UserEntitlement.query.filter_by(
@@ -280,7 +293,11 @@ def status():
 
         return jsonify({
             "completed_lists_count": int(completed_lists_count),
+            "started_lists_count": int(started_lists_count),
+            "in_progress_lists_count": int(in_progress_lists_count),
+            "completed_words_count": int(completed_words_count),
             "total_lists": 26,
+            "total_words": 130,
             "completed_set_ids": completed_set_ids,
             "unlocked_avatars": unlocked_avatars,
         }), 200

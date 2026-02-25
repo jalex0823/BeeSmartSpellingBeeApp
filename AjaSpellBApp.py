@@ -209,11 +209,21 @@ def load_simple_wiktionary():
                     try:
                         entry = json.loads(line.strip())
                         word = entry.get('word', '').lower().strip()
+                        if not word:
+                            continue
+
+                        try:
+                            is_safe_word, _ = is_kid_friendly(word)
+                            if not is_safe_word:
+                                continue
+                        except Exception:
+                            pass
 
                         # Extract definition and example
                         senses = entry.get('senses', [])
                         if senses and word:
                             first_sense = senses[0]
+
                             glosses = first_sense.get('glosses', [])
                             examples = first_sense.get('examples', [])
 
@@ -221,11 +231,15 @@ def load_simple_wiktionary():
                             example_obj = examples[0] if examples else {}
                             example = example_obj.get('text', '') if isinstance(example_obj, dict) else ""
                             if definition:  # Only store words with definitions
+                                has_bad_text, _ = _text_contains_inappropriate_content(f"{definition} {example}")
+                                if has_bad_text:
+                                    continue
                                 words[word] = {
                                     "definition": definition,
                                     "example": example,
                                     "source": "simple-wiktionary"
                                 }
+
                     except json.JSONDecodeError:
                         continue  # Skip malformed lines
                     except Exception:
@@ -1253,8 +1267,46 @@ def load_dictionary_cache():
             with open(DICTIONARY_CACHE_FILE, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 words = data.get('words', {})
-                print(f" Loaded dictionary cache with {len(words)} words from {DICTIONARY_CACHE_FILE}")
-                return words
+                sanitized_words = {}
+                dropped = 0
+                for key, payload in (words or {}).items():
+                    word_key = str(key or '').strip().lower()
+                    if not word_key:
+                        dropped += 1
+                        continue
+
+                    try:
+                        is_safe_word, _ = is_kid_friendly(word_key)
+                    except Exception:
+                        is_safe_word = True
+                    if not is_safe_word:
+                        dropped += 1
+                        continue
+
+                    if isinstance(payload, dict):
+                        definition = str(payload.get('definition') or '').strip()
+                        example = str(payload.get('example') or '').strip()
+                        source = str(payload.get('source') or 'cache').strip() or 'cache'
+                    else:
+                        definition = str(payload or '').strip()
+                        example = ''
+                        source = 'cache'
+
+                    has_bad_text, _ = _text_contains_inappropriate_content(f"{definition} {example}")
+                    if has_bad_text:
+                        dropped += 1
+                        continue
+
+                    sanitized_words[word_key] = {
+                        'definition': definition,
+                        'example': example,
+                        'source': source,
+                    }
+
+                if dropped:
+                    print(f" Sanitized dictionary cache: removed {dropped} unsafe entries")
+                print(f" Loaded dictionary cache with {len(sanitized_words)} safe words from {DICTIONARY_CACHE_FILE}")
+                return sanitized_words
         else:
             print(f"️ Dictionary cache file not found: {DICTIONARY_CACHE_FILE}")
     except Exception as e:
@@ -2366,7 +2418,8 @@ def get_word_info(word):
     if word_lower in WORD_INFO_CACHE:
         global _WORD_INFO_HITS
         _WORD_INFO_HITS += 1
-        return WORD_INFO_CACHE[word_lower]
+        cached = WORD_INFO_CACHE[word_lower]
+        return _enforce_safe_prompt_text(cached)
     global _WORD_INFO_MISSES
     _WORD_INFO_MISSES += 1
 
@@ -2391,6 +2444,7 @@ def get_word_info(word):
                 definition = sanitize_kid_friendly_text(_filter_definition(definition, word))
                 formatted = f"{definition}. Fill in the blank: Can you spell _____ correctly?"
                 print(f" (indexed) '{word}' → wiktionary (no example)")
+            formatted = _enforce_safe_prompt_text(formatted)
             _cache_word_info(word_lower, formatted)
             return formatted
 
@@ -2408,6 +2462,7 @@ def get_word_info(word):
                 definition = sanitize_kid_friendly_text(_filter_definition(definition, word))
                 formatted = f"{definition}. Fill in the blank: Can you spell _____ correctly?"
             print(f" Cache hit '{word}'")
+            formatted = _enforce_safe_prompt_text(formatted)
             _cache_word_info(word_lower, formatted)
             return formatted
     
@@ -2418,6 +2473,7 @@ def get_word_info(word):
         example = sanitize_kid_friendly_text(_blank_word(fb.get("example", "Can you spell _____ correctly?"), word))
         formatted = f"{definition}. Fill in the blank: {example}"
         print(f" Fallback '{word}' ({fb.get('source','fallback')})")
+        formatted = _enforce_safe_prompt_text(formatted)
         _cache_word_info(word_lower, formatted)
         return formatted
     except Exception as _e:
@@ -2425,6 +2481,19 @@ def get_word_info(word):
         _cache_word_info(word_lower, formatted)
         print(f"️ Fallback failed for '{word}': {_e}")
         return formatted
+
+def _enforce_safe_prompt_text(text: str) -> str:
+    """Guarantee no inappropriate text leaks into quiz prompts."""
+    candidate = str(text or '').strip()
+    if not candidate:
+        return "Listen carefully and spell _____ correctly."
+    try:
+        contains_bad, _ = _text_contains_inappropriate_content(candidate)
+        if contains_bad:
+            return "Listen carefully and spell _____ correctly."
+    except Exception:
+        pass
+    return candidate
 
 def get_word_of_the_day():
     """
@@ -3809,7 +3878,7 @@ def normalize(s: str) -> str:
 # Kid-Friendly Word Filter - Blocks inappropriate content for children
 INAPPROPRIATE_WORDS = {
     # Profanity and vulgar terms
-    "damn", "damned", "hell", "hells", "crap", "sucks", "piss", "pissed",
+    "dam", "dams", "damn", "damned", "hell", "hells", "crap", "sucks", "piss", "pissed",
     "shit", "shits", "fuck", "fucks", "fucker", "fuckers", "fuckhead", "fuckheads", "motherfucker", "motherfuckers",
     "bitch", "bitches", "asshole", "assholes", "bastard", "bastards", "dumbass", "dumbasses",
     # Sexual/adult content - CRITICAL: Block all adult/child abuse terms
@@ -3828,7 +3897,8 @@ INAPPROPRIATE_WORDS = {
     "erotic", "sexuality", "genitals", "genital",
     # Violence/weapons
     "kill", "killing", "killer", "murder", "murderer", "suicide", "weapon", 
-    "gun", "shoot", "shooting", "bomb", "explosive",
+    "gun", "shoot", "shooting", "bomb", "explosive", "offing", "offed", "violent", "violence",
+    "slay", "slaying", "slaughter", "harm", "harming", "harmful",
     # Drugs/alcohol
     "drug", "drugs", "cocaine", "marijuana", "heroin", "meth", "drunk", "alcohol",
     # Hate speech
@@ -3838,6 +3908,49 @@ INAPPROPRIATE_WORDS = {
     # Disturbing / age-inappropriate concepts
     "sadism", "sadist", "sadistic"
 }
+
+STRICT_BLOCKED_PHRASES = {
+    "offing someone",
+    "kill someone",
+    "murder someone",
+    "shoot someone",
+    "hurt someone",
+}
+
+def _collect_all_inappropriate_words():
+    """Return merged blocklist from local + guardian filters."""
+    blocked = set(INAPPROPRIATE_WORDS)
+    try:
+        from content_filter_guardian import ALL_INAPPROPRIATE_WORDS as _ALL
+        blocked.update({str(w or '').strip().lower() for w in (_ALL or set()) if str(w or '').strip()})
+    except Exception:
+        pass
+    return {w for w in blocked if w}
+
+def _text_contains_inappropriate_content(text: str):
+    """Check free-form text for profanity/violent/inappropriate content."""
+    value = (text or '').strip().lower()
+    if not value:
+        return False, ''
+
+    if "sex" in value:
+        return True, "contains restricted substring 'sex'"
+
+    for phrase in STRICT_BLOCKED_PHRASES:
+        if phrase in value:
+            return True, f"contains blocked phrase '{phrase}'"
+
+    blocked_words = _collect_all_inappropriate_words()
+    tokens = re.findall(r"[a-z]+", value)
+    for token in tokens:
+        if token in blocked_words:
+            return True, f"contains blocked word '{token}'"
+
+    for bad in blocked_words:
+        if len(bad) > 4 and bad in value:
+            return True, f"contains blocked substring '{bad}'"
+
+    return False, ''
 
 def is_kid_friendly(word: str) -> tuple[bool, str]:
     """
@@ -3931,40 +4044,32 @@ def _filter_records_excluding_inappropriate_text(records: List[Dict[str, str]]):
       - Block if any token matches an inappropriate word exactly (case-insensitive)
       - Block if any inappropriate word of length > 4 appears as a substring
     """
-    # Acquire inappropriate vocabulary from enhanced filter if available, else fallback
-    try:
-        from content_filter_guardian import ALL_INAPPROPRIATE_WORDS as _ALL
-        inappropriate_words = set(_ALL)
-    except Exception:
-        # Fallback to base set already in this module
-        inappropriate_words = set(INAPPROPRIATE_WORDS)
-
     filtered: List[Dict[str, str]] = []
     blocked: List[Dict[str, str]] = []
 
     for r in records:
+        word = (r.get("word") or "").strip()
+        if not word:
+            blocked.append({"word": "", "reason": "missing word value"})
+            continue
+
+        is_safe_word, word_reason = is_kid_friendly(word)
+        if not is_safe_word:
+            blocked.append({"word": word, "reason": word_reason})
+            continue
+
         sentence = (r.get("sentence") or "")
         hint = (r.get("hint") or "")
-        combined = f"{sentence} {hint}".lower()
-
-        # Rule 1: special-case substring 'sex'
-        if "sex" in combined:
-            blocked.append({"word": r.get("word", ""), "reason": "definition/hint contains restricted substring 'sex'"})
+        contains_bad_text, text_reason = _text_contains_inappropriate_content(f"{sentence} {hint}")
+        if contains_bad_text:
+            blocked.append({"word": word, "reason": f"definition/hint {text_reason}"})
             continue
 
-        # Tokenize to check exact matches (avoid false positives like 'class')
-        tokens = re.findall(r"[a-z]+", combined)
-        token_set = set(tokens)
-        if any(tok in inappropriate_words for tok in token_set):
-            blocked.append({"word": r.get("word", ""), "reason": "definition/hint contains profanity or inappropriate words"})
-            continue
-
-        # Substring rule for longer inappropriate words (>4 chars)
-        if any(len(bad) > 4 and bad in combined for bad in inappropriate_words):
-            blocked.append({"word": r.get("word", ""), "reason": "definition/hint contains inappropriate content"})
-            continue
-
-        filtered.append(r)
+        filtered.append({
+            "word": word,
+            "sentence": sentence,
+            "hint": hint,
+        })
 
     return filtered, blocked
 
@@ -4100,7 +4205,7 @@ def parse_csv(file_bytes: bytes, filename: str) -> List[Dict[str, str]]:
             hint = (rec.get("hint") or rec.get("Hint") or "").strip()
             records.append({"word": word, "sentence": sentence, "hint": hint})
     else:
-        # No headerΓÇötreat columns positionally
+        # No header—treat columns positionally
         row0 = peek
         if row0:
             records.append({
@@ -4217,7 +4322,7 @@ def api_upload_image():
             # Kid-friendly filter
             filtered_records, blocked = [], []
             if deduped_records:
-                print(f"️ Running enhanced kid-friendly filter on {len(deduped_records)} words...")
+                print(f" Running enhanced kid-friendly filter on {len(deduped_records)} words...")
                 filtered_records, blocked = _filter_records_excluding_inappropriate_text(deduped_records)
                 print(f" {len(filtered_records)} words passed kid-friendly filter")
             
@@ -4392,17 +4497,45 @@ def get_wordbank() -> List[Dict[str, str]]:
     try:
         words = WordBankStorage.load_wordbank(storage_id)
         if words:
-            print(f" get_wordbank: Loaded {len(words)} words from PostgreSQL database (storage_id={storage_id})")
-            session["wordbank_count"] = len(words)
-            return list(words)  # Return copy to prevent modification
+            words = list(words)
+            sanitized_words, blocked_rows = _sanitize_wordbank_rows(words)
+            if blocked_rows:
+                print(f" get_wordbank: Removed {len(blocked_rows)} unsafe row(s) from active library")
+                try:
+                    owner_id = current_user.id if getattr(current_user, 'is_authenticated', False) else None
+                except Exception:
+                    owner_id = None
+                try:
+                    WordBankStorage.save_wordbank(storage_id, sanitized_words, owner_id)
+                except Exception as persist_err:
+                    print(f" get_wordbank: failed to persist sanitized rows: {persist_err}")
+
+            print(f" get_wordbank: Loaded {len(sanitized_words)} words from PostgreSQL database (storage_id={storage_id})")
+            session["wordbank_count"] = len(sanitized_words)
+            return list(sanitized_words)  # Return copy to prevent modification
         else:
-            print(f"️ get_wordbank: storage_id={storage_id} not found in PostgreSQL database")
+            print(f" get_wordbank: storage_id={storage_id} not found in PostgreSQL database")
             session["wordbank_count"] = 0
             return []
     except Exception as e:
         print(f" get_wordbank: Database error: {e}")
         session["wordbank_count"] = 0
         return []
+
+def _sanitize_wordbank_rows(rows: List[Dict[str, str]]):
+    """Normalize + kid-safe sanitize rows before save/readback."""
+    prepared = rows or []
+    try:
+        prepared = deduplicate_words(prepared)
+    except Exception:
+        pass
+
+    try:
+        sanitized, blocked = _filter_records_excluding_inappropriate_text(prepared)
+        return sanitized, blocked
+    except Exception as e:
+        print(f" _sanitize_wordbank_rows fallback due to filter error: {e}")
+        return list(prepared), []
 
 def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
     """Save wordbank to PostgreSQL database (ONLY storage location).
@@ -4419,6 +4552,10 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
         print(f"DEBUG set_wordbank: Created new storage_id={storage_id}")
     else:
         print(f"DEBUG set_wordbank: Reusing existing storage_id={storage_id}")
+
+    rows, blocked_rows = _sanitize_wordbank_rows(rows or [])
+    if blocked_rows:
+        print(f" set_wordbank: Filtered {len(blocked_rows)} unsafe row(s) before save")
     
     # CRITICAL FIX: Ensure old data is completely deleted before writing new data
     # This prevents race conditions where quiz reads old data during upload
@@ -4426,7 +4563,7 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
         # If storage_id already exists, delete it first to ensure clean slate
         existing_wordbank = WordBankStorage.query.filter_by(storage_id=storage_id).first()
         if existing_wordbank:
-            print(f"️ set_wordbank: Deleting existing wordbank for storage_id={storage_id}")
+            print(f" set_wordbank: Deleting existing wordbank for storage_id={storage_id}")
             db.session.delete(existing_wordbank)
             db.session.flush()  # Ensure delete happens before insert
     except Exception as e:

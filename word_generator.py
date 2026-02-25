@@ -16,7 +16,7 @@ def _is_word_safe(word):
     # This list MUST stay in sync with the main filter
     INAPPROPRIATE_WORDS = {
         # Profanity and vulgar terms
-        "damn", "damned", "hell", "hells", "crap", "sucks", "piss", "pissed",
+        "dam", "dams", "damn", "damned", "hell", "hells", "crap", "sucks", "piss", "pissed",
         # Sexual/adult content - CRITICAL: Block all adult/child abuse terms
         "sex", "sexy", "porn", "orgasm", "penis", "vagina", "breast", "breasts",
         "ejaculation", "ejaculations", "erection", "masturbate", "prostitute",
@@ -33,7 +33,8 @@ def _is_word_safe(word):
         "erotic", "sexuality", "genitals", "genital",
         # Violence/weapons
         "kill", "killing", "killer", "murder", "murderer", "suicide", "weapon", 
-        "gun", "shoot", "shooting", "bomb", "explosive",
+        "gun", "shoot", "shooting", "bomb", "explosive", "offing", "offed", "violent", "violence",
+        "slay", "slaying", "slaughter", "harm", "harming", "harmful",
         # Drugs/alcohol
         "drug", "drugs", "cocaine", "marijuana", "heroin", "meth", "drunk", "alcohol",
         # Hate speech
