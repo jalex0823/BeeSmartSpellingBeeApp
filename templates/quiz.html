@@ -6084,7 +6084,8 @@ class BeeDelightManager {
         if (data && data.word) {
             // Speak a friendly prompt and say the word once (the old double-say sounded like a glitch)
             const phrase = `Spell the word ${data.word}.`;
-            const rate = data.rate || 0.92; // Use provided rate or default
+            // Pass null when no explicit override so speakWord uses getPronunciationRate() dynamically
+            const rate = (data.rate != null && data.rate !== 1.0) ? data.rate : null;
             this.soundboard.speakWord(phrase, onEndCallback, rate);
         } else if (onEndCallback) {
             onEndCallback();
@@ -9443,7 +9444,7 @@ class QuizManager {
         letterHintElement.classList.add('hidden');
     }
 
-    async pronounceWord({ refresh = false, rate = 1.0 } = {}) {
+    async pronounceWord({ refresh = false, rate = null } = {}) {
         try {
             try { if (typeof playThemedSound === 'function') playThemedSound('pronounce-word'); } catch (_) {}
             
@@ -9512,15 +9513,19 @@ class QuizManager {
     }
 
     // Direct speech synthesis fallback
-    speakDirectly(text, onDone, rate = 1.0) {
+    speakDirectly(text, onDone, rate = null) {
         const self = this;
+        // Compute dynamic syllable-based rate if caller did not supply one
+        const effectiveRate = (rate !== null && rate !== undefined)
+            ? rate
+            : (() => { const s = (text.match(/[aeiouy]+/gi) || []).length || 1; return s >= 4 ? 0.78 : s === 3 ? 0.84 : 0.90; })();
         // Android: try native TTS first; if it fails or plugin missing, fall back to Web Speech so we never get silence
         if (this.isAndroid && text && typeof window.BeeSmartTryNativeTTS === 'function') {
             var viz = document.getElementById('voiceVisualizer');
             var st = document.getElementById('voiceStatus');
             if (viz) viz.classList.add('speaking');
             if (st) st.textContent = '🗣️ Speaking...';
-            window.BeeSmartTryNativeTTS(text, { rate: rate, pitch: 1.0 }).then(function(ok) {
+            window.BeeSmartTryNativeTTS(text, { rate: effectiveRate, pitch: 1.1 }).then(function(ok) {
                 if (ok) {
                     if (onDone) onDone();
                     if (viz) viz.classList.remove('speaking', 'word-pulse', 'pausing');
@@ -9528,9 +9533,9 @@ class QuizManager {
                     return;
                 }
                 // Native TTS not available or failed – use Web Speech so user still hears audio
-                self._speakDirectlyWebSpeech(text, onDone, rate, viz, st);
+                self._speakDirectlyWebSpeech(text, onDone, effectiveRate, viz, st);
             }).catch(function() {
-                self._speakDirectlyWebSpeech(text, onDone, rate, viz, st);
+                self._speakDirectlyWebSpeech(text, onDone, effectiveRate, viz, st);
             });
             setTimeout(function() {
                 if (viz) viz.classList.remove('speaking', 'word-pulse', 'pausing');
@@ -9538,7 +9543,7 @@ class QuizManager {
             }, Math.min(15000, 500 + (String(text).length * 80)));
             return;
         }
-        this._speakDirectlyWebSpeech(text, onDone, rate, null, null);
+        this._speakDirectlyWebSpeech(text, onDone, effectiveRate, null, null);
     }
 
     _speakDirectlyWebSpeech(text, onDone, rate, vizEl, statusEl) {
@@ -9550,7 +9555,7 @@ class QuizManager {
                 var doSpeak = () => {
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.rate = rate;
-                utterance.pitch = 1.0;
+                utterance.pitch = 1.1;  // Consistent with all other TTS paths — natural adult voice
                 utterance.volume = 0.9;
                 
                 // Use single session voice (British/standard English) - same as announcements
@@ -11393,20 +11398,26 @@ function pronounceWordFromReport(word) {
     if (!word) return;
     
     if ('speechSynthesis' in window) {
-        // Cancel any ongoing speech
         speechSynthesis.cancel();
         
         const utterance = new SpeechSynthesisUtterance(word);
         const voices = speechSynthesis.getVoices();
         
-        // Prefer US English voice
-        const enUSVoice = voices.find(v => v.lang === 'en-US') || 
-                         voices.find(v => v && v.lang && String(v.lang).toLowerCase().indexOf('en') === 0) || 
-                         null;
-        if (enUSVoice) utterance.voice = enUSVoice;
+        // Use session voice for consistency; fall back to best available en voice
+        const sessionVoice = typeof getQuizSessionVoice === 'function' ? getQuizSessionVoice() : null;
+        if (sessionVoice) {
+            utterance.voice = sessionVoice;
+        } else {
+            const enUSVoice = voices.find(v => v.lang === 'en-US') ||
+                             voices.find(v => v && v.lang && String(v.lang).toLowerCase().indexOf('en') === 0) ||
+                             null;
+            if (enUSVoice) utterance.voice = enUSVoice;
+        }
         
-        utterance.rate = 0.85;  // Slow for clarity
-        utterance.pitch = 1.0;
+        // Dynamic syllable-based rate — same logic as BeeSoundboard.getPronunciationRate()
+        const syllables = (word.match(/[aeiouy]+/gi) || []).length || 1;
+        utterance.rate = syllables >= 4 ? 0.78 : syllables === 3 ? 0.84 : 0.90;
+        utterance.pitch = 1.1;  // Consistent with all other TTS paths
         utterance.volume = 1.0;
         
         speechSynthesis.speak(utterance);
