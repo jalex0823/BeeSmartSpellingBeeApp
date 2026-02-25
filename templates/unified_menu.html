@@ -5025,6 +5025,8 @@ function showRestoreDialog(title, message, isSuccess) {
                             </div>
 
                             <!-- Coloring Book Challenge Progress Banner -->
+                            <!-- HIDDEN UNTIL COLORING BOOK LAUNCH — remove the comment tags below to re-enable -->
+                            {# COLORING_BOOK_LAUNCH_START
                             {% if current_user.is_authenticated and current_user.role not in ('guest', None) %}
                             <div id="cb-banner" style="
                                 background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
@@ -5098,6 +5100,7 @@ function showRestoreDialog(title, message, isSuccess) {
                             })();
                             </script>
                             {% endif %}
+                            COLORING_BOOK_LAUNCH_END #}
 
                             <!-- Kid-Friendly Explanation for Apple Reviewers (shown when stats are zero) -->
                             {% if (current_user.total_quizzes_completed or 0) == 0 %}
