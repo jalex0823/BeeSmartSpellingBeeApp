@@ -104,7 +104,9 @@ class ContentViolationTracker:
 # Enhanced inappropriate words list with categories
 ENHANCED_INAPPROPRIATE_WORDS = {
     'profanity': {
-        "dam", "dams", "damn", "damned", "hell", "hells", "crap", "crappy", "sucks", "piss", "pissed",
+        # NOTE: "dam"/"dams" removed — legitimate geography/engineering word
+        # NOTE: "hell"/"hells" removed — legitimate in literature/geography
+        "damn", "damned", "crap", "crappy", "sucks", "piss", "pissed",
         "shit", "shits", "shitty", "bullshit",
         "fuck", "fucks", "fucker", "fuckers", "fucked", "fucking", "fuckhead", "fuckheads",
         "motherfucker", "motherfuckers", "motherfucking",
@@ -118,7 +120,7 @@ ENHANCED_INAPPROPRIATE_WORDS = {
         "arse", "arses",
         "douche", "douchebag", "douchebags",
         "turd", "turds", "fart", "farts",
-        "screw", "screwed", "screwing",
+        # NOTE: "screw"/"screwed"/"screwing" removed — primary meaning is hardware/mechanics
     },
     'sexual_content': {
         "sex", "sexy", "porn", "pornography", "pornographic",
@@ -127,10 +129,11 @@ ENHANCED_INAPPROPRIATE_WORDS = {
         "ejaculation", "ejaculations", "erection", "masturbate", "masturbation",
         "prostitute", "prostitution", "prostitutes",
         "nude", "nudity", "naked",
-        "horny", "arousal", "aroused", "climax",
+        "horny", "arousal", "aroused",
+        # NOTE: "climax" removed — literary term (plot climax)
         "intercourse", "erotic", "erotica",
         "sexuality", "genitals", "genital",
-        "lust", "lustful", "lusty",
+        # NOTE: "lust"/"lustful"/"lusty" removed — archaic/literary vocabulary
         "fetish", "fetishes", "pervert", "perverts", "perverted",
         "fornicate", "fornication",
         "seduce", "seduction", "seducing",
@@ -142,30 +145,32 @@ ENHANCED_INAPPROPRIATE_WORDS = {
         "rape", "rapist", "rapists", "raping", "rapes", "raped",
         "incest", "incestuous",
         "abuse", "abuser", "abusers", "abusive", "abusing",
-        "predator", "predators",
+        # NOTE: "predator"/"predators" removed — biology (predator/prey) vocabulary
         "groom", "grooming", "groomer", "groomers",
         "statutory", "underage", "preteen", "preteens", "tweener", "tweeners",
-        "victim", "victims",
+        # NOTE: "victim"/"victims" removed — standard legal/social vocabulary
         "exploit", "exploitation", "exploiting", "exploiter", "exploiters",
     },
     'violence': {
         "kill", "killing", "killer", "killers",
         "murder", "murderer", "murderers", "murdering",
         "suicide", "suicidal",
-        "weapon", "weapons",
-        "gun", "guns", "rifle", "rifles", "pistol", "pistols", "shotgun", "shotguns",
+        # NOTE: "weapon"/"weapons" removed — history/social studies vocabulary
+        # NOTE: "gun"/"guns" removed — legitimate uses (starter gun, spray gun)
+        # NOTE: "knife"/"knives" removed — cooking/kitchen vocabulary
+        "rifle", "rifles", "pistol", "pistols", "shotgun", "shotguns",
         "shoot", "shooting", "shootings", "shooter", "shooters",
         "stab", "stabbing", "stabbings", "stabbed",
-        "knife", "knives",
         "bomb", "bombs", "bombing", "bombings", "explosive", "explosives",
         "grenade", "grenades",
         "offing", "offed",
         "violent", "violence",
         "slay", "slaying", "slayings", "slaughter", "slaughtered", "slaughtering",
-        "harm", "harming", "harmful",
+        # NOTE: "harm"/"harming"/"harmful" removed — standard vocabulary
         "torture", "torturing", "tortured", "torturous",
         "massacre", "massacred", "massacring",
-        "execute", "execution", "executions", "executing",
+        # NOTE: "execute"/"executing" removed — computing vocabulary; keep direct execution refs
+        "execution", "executions",
         "behead", "beheading", "beheadings",
         "mutilate", "mutilation", "mutilating",
         "decapitate", "decapitation",
@@ -177,31 +182,35 @@ ENHANCED_INAPPROPRIATE_WORDS = {
         "harass", "harassment", "harassing", "harasser",
     },
     'drugs_alcohol': {
-        "drug", "drugs",
-        "cocaine", "coke",
+        # NOTE: "drug"/"drugs" removed — medical/pharmacy vocabulary
+        # NOTE: "coke" removed — common soda name
+        # NOTE: "weed"/"pot" removed — gardening vocabulary
+        # NOTE: "stoned" removed — stones context
+        "cocaine",
         "marijuana", "cannabis",
         "heroin", "meth", "methamphetamine",
-        "weed", "pot",
-        "stoned", "overdose", "overdosed", "overdosing",
+        "overdose", "overdosed", "overdosing",
         "addiction", "addicted", "addictive",
         "hallucinate", "hallucination", "hallucinations",
         "drunk", "drunken", "drunkenness",
         "alcohol", "alcoholic", "alcoholism",
         "beer", "liquor", "whiskey", "vodka", "tequila",
-        "cigarette", "cigarettes", "smoking", "smoked",
+        "cigarette", "cigarettes",
+        # NOTE: "smoking"/"smoked" removed — BBQ/cooking vocabulary
         "tobacco",
         "vape", "vaping", "vaper",
         "narcotic", "narcotics",
         "opium", "opioid", "opioids",
-        "crack",
+        # NOTE: "crack" removed — crack in wall, crack of dawn
+        # NOTE: "acid" removed — chemistry/science vocabulary
         "ecstasy",
-        "lsd", "acid",
+        "lsd",
     },
     'hate_speech': {
         "racist", "racism",
         "sexist", "sexism",
         "nazi", "nazis",
-        "hate",
+        # NOTE: "hate" removed — standard vocabulary word
         "nigger", "niggers", "nigga", "niggas",
         "chink", "chinks",
         "spic", "spics",
@@ -213,9 +222,7 @@ ENHANCED_INAPPROPRIATE_WORDS = {
         "fag", "fags", "faggot", "faggots",
         "dyke", "dykes",
         "retard", "retards", "retarded",
-        "moron", "morons",
-        "idiot", "idiots",
-        "imbecile", "imbeciles",
+        # NOTE: "moron"/"idiot"/"imbecile" removed — common informal vocabulary
         "cripple", "cripples",
         "bigot", "bigots", "bigoted", "bigotry",
         "extremist", "extremists", "extremism",
@@ -225,15 +232,17 @@ ENHANCED_INAPPROPRIATE_WORDS = {
         "xenophobic", "xenophobia",
     },
     'disturbing_content': {
-        "death", "die", "dying",
-        "blood", "bloody", "bloodshed",
+        # NOTE: "death"/"die"/"dying" removed — standard vocabulary
+        # NOTE: "blood"/"bloody" removed — biology/medicine; "bloodshed" kept
+        # NOTE: "skull"/"skulls" removed — anatomy/biology vocabulary
+        "bloodshed",
         "corpse", "corpses",
-        "skull", "skulls",
         "sadism", "sadist", "sadistic",
         "gore", "gory",
         "cannibal", "cannibalism",
         "necrophilia",
-        "self-harm", "selfharm", "cutting",
+        "self-harm", "selfharm",
+        # NOTE: "cutting" removed — common vocabulary (cutting paper, haircut, etc.)
     },
     'spam_patterns': {
         "wtf", "stfu", "gtfo", "omfg",
