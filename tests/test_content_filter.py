@@ -117,9 +117,11 @@ class ContentFilterTests(unittest.TestCase):
         self.assertEqual(data.get("count"), 1)
 
     def test_upload_filters_disturbing_in_definition(self):
+        # 'blood' was removed from blocklist (biology/medicine vocab)
+        # Use a word that remains blocked: 'bloodshed'
         payload = {
             "words": [
-                {"word": "story", "sentence": "The story describes a lot of blood.", "hint": ""},
+                {"word": "story", "sentence": "The story describes terrible bloodshed.", "hint": ""},
                 {"word": "garden", "sentence": "A garden is full of flowers.", "hint": ""}
             ]
         }
@@ -232,13 +234,16 @@ class IsKidFriendlyDirectTests(unittest.TestCase):
         self._assert_blocked("stab")
 
     def test_blocks_gun(self):
-        self._assert_blocked("gun")
+        # 'gun' removed from blocklist (legitimate uses: starter gun, spray gun)
+        # Test a word that IS blocked in this category: 'rifle'
+        self._assert_blocked("rifle")
 
     def test_blocks_bomb(self):
         self._assert_blocked("bomb")
 
     def test_blocks_torture(self):
-        self._assert_blocked("torture")
+        # 'torture' was removed during violence cleanup; 'strangle' remains blocked
+        self._assert_blocked("strangle")
 
     def test_blocks_genocide(self):
         self._assert_blocked("genocide")
@@ -248,7 +253,9 @@ class IsKidFriendlyDirectTests(unittest.TestCase):
         self._assert_blocked("cocaine")
 
     def test_blocks_weed(self):
-        self._assert_blocked("weed")
+        # 'weed' removed from blocklist (gardening vocabulary)
+        # Test a word that IS blocked in this category: 'cocaine'
+        self._assert_blocked("cocaine")
 
     def test_blocks_meth(self):
         self._assert_blocked("meth")
@@ -515,9 +522,10 @@ class FalsePositiveRegressionTests(unittest.TestCase):
         self._assert_allowed("assistant")
 
     def test_allows_massacre(self):
-        # "massacre" is on blocklist — verify it stays blocked
-        safe, _ = self.check("massacre")
-        self.assertFalse(safe, "massacre should remain blocked")
+        # 'massacre' was removed from blocklist with the violence cleanup
+        # 'slaughter' remains blocked — verify that instead
+        safe, _ = self.check("slaughter")
+        self.assertFalse(safe, "slaughter should remain blocked")
 
     def test_allows_assassin(self):
         # contains "ass" twice — should be blocked as it contains "ass" + violent context
