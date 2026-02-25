@@ -6,12 +6,23 @@ import json
 import os
 
 
-BLOCKED_WORDS = {
-    "dam", "dams", "damn", "damned", "hell", "crap", "piss", "shit", "fuck", "bitch", "asshole", "bastard",
-    "sex", "porn", "penis", "vagina", "rape", "molest", "abuse", "predator", "grooming",
-    "kill", "killing", "killer", "murder", "murderer", "offing", "offed", "shoot", "shooting", "gun", "weapon",
-    "suicide", "violent", "violence", "slay", "slaughter", "harm", "harming", "harmful",
-}
+def _get_blocked_words() -> set:
+    """Return the authoritative kid-safe blocklist from AjaSpellBApp.
+    Falls back to a minimal inline set if the import is unavailable (e.g. during isolated testing).
+    """
+    try:
+        from AjaSpellBApp import INAPPROPRIATE_WORDS as _IW
+        return set(_IW)
+    except Exception:
+        pass
+    return {
+        "dam", "dams", "damn", "damned", "hell", "crap", "piss", "shit", "fuck", "bitch", "asshole", "bastard",
+        "sex", "porn", "penis", "vagina", "rape", "molest", "abuse", "predator", "grooming",
+        "kill", "killing", "killer", "murder", "murderer", "offing", "offed", "shoot", "shooting", "gun", "weapon",
+        "suicide", "violent", "violence", "slay", "slaughter", "harm", "harming", "harmful",
+        "nigger", "nigga", "faggot", "retard", "cock", "dick", "cunt", "slut", "whore",
+        "cocaine", "heroin", "meth", "weed", "drunk", "alcohol", "nazi",
+    }
 
 
 def _contains_blocked_content(text: str) -> bool:
@@ -20,6 +31,7 @@ def _contains_blocked_content(text: str) -> bool:
         return False
     if "sex" in s:
         return True
+    blocked = _get_blocked_words()
     tokens = []
     token = []
     for ch in s:
@@ -31,9 +43,9 @@ def _contains_blocked_content(text: str) -> bool:
     if token:
         tokens.append("".join(token))
     for t in tokens:
-        if t in BLOCKED_WORDS:
+        if t in blocked:
             return True
-    for bad in BLOCKED_WORDS:
+    for bad in blocked:
         if len(bad) > 4 and bad in s:
             return True
     return False

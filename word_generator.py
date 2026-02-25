@@ -9,57 +9,34 @@ import random
 
 def _is_word_safe(word):
     """
-    Internal function to check if word is kid-friendly.
-    This avoids circular import by duplicating the filter logic.
+    Check if word is kid-friendly.
+    Delegates to the authoritative is_kid_friendly() in AjaSpellBApp.
+    Falls back to a minimal inline check if the import fails (e.g. circular import at startup).
     """
-    # Import the INAPPROPRIATE_WORDS set from AjaSpellBApp
-    # This list MUST stay in sync with the main filter
-    INAPPROPRIATE_WORDS = {
-        # Profanity and vulgar terms
-        "dam", "dams", "damn", "damned", "hell", "hells", "crap", "sucks", "piss", "pissed",
-        # Sexual/adult content - CRITICAL: Block all adult/child abuse terms
-        "sex", "sexy", "porn", "orgasm", "penis", "vagina", "breast", "breasts",
-        "ejaculation", "ejaculations", "erection", "masturbate", "prostitute",
-        "pedophile", "pedophiles", "pedophilia", "pedophilic", "paedophile", "paedophilia",
-        "molest", "molestation", "molester", "molesting", "molesters",
-        "rape", "rapist", "raping", "rapes", "raped",
-        "incest", "incestuous", "abuse", "abuser", "abusive", "abusing",
-        "predator", "predators", "groom", "grooming", "groomer", "groomers",
-        "statutory", "underage", "preteen", "preteens", "tweener", "tweeners",
-        "victim", "victims", "exploit", "exploitation", "exploiting",
-        "assault", "assaulting", "assaults", "assaulted",
-        "harass", "harassment", "harassing",
-        "nude", "naked", "horny", "arousal", "climax", "intercourse",
-        "erotic", "sexuality", "genitals", "genital",
-        # Violence/weapons
-        "kill", "killing", "killer", "murder", "murderer", "suicide", "weapon", 
-        "gun", "shoot", "shooting", "bomb", "explosive", "offing", "offed", "violent", "violence",
-        "slay", "slaying", "slaughter", "harm", "harming", "harmful",
-        # Drugs/alcohol
-        "drug", "drugs", "cocaine", "marijuana", "heroin", "meth", "drunk", "alcohol",
-        # Hate speech
-        "racist", "sexist", "nazi", "hate",
-        # Other inappropriate
-        "death", "die", "dying", "blood", "bloody", "torture",
-        # Disturbing / age-inappropriate concepts
-        "sadism", "sadist", "sadistic"
-    }
-    
     word_lower = word.lower().strip()
-    
-    # Check against inappropriate words list
-    if word_lower in INAPPROPRIATE_WORDS:
-        return False, f"Word '{word}' is not appropriate for children"
-    
-    # Check for partial matches (longer words containing inappropriate substrings)
-    for inappropriate in INAPPROPRIATE_WORDS:
-        if len(inappropriate) > 4 and inappropriate in word_lower:
-            return False, f"Word '{word}' contains inappropriate content"
-    
-    # Special rule: block "sex" substring
+
+    # Fast-path: always block "sex" substring
     if "sex" in word_lower:
         return False, f"Word '{word}' contains restricted substring 'sex'"
-    
+
+    try:
+        from AjaSpellBApp import is_kid_friendly as _ikf
+        return _ikf(word)
+    except Exception:
+        pass
+
+    # Minimal fallback blocklist (only used if import fails)
+    _FALLBACK_BLOCKED = {
+        "kill", "murder", "suicide", "rape", "porn", "fuck", "shit", "damn",
+        "hell", "crap", "bitch", "cock", "dick", "cunt", "ass", "slut", "whore",
+        "cocaine", "heroin", "meth", "weed", "drunk", "alcohol", "nazi",
+        "nigger", "nigga", "faggot", "retard",
+    }
+    if word_lower in _FALLBACK_BLOCKED:
+        return False, f"Word '{word}' is not appropriate for children"
+    for bad in _FALLBACK_BLOCKED:
+        if len(bad) > 4 and bad in word_lower:
+            return False, f"Word '{word}' contains inappropriate content"
     return True, "OK"
 
 

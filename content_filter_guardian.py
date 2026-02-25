@@ -103,54 +103,156 @@ class ContentViolationTracker:
 
 # Enhanced inappropriate words list with categories
 ENHANCED_INAPPROPRIATE_WORDS = {
-    # Original list + new additions
     'profanity': {
-        "dam", "dams", "damn", "damned", "hell", "hells", "crap", "sucks", "piss", "pissed",
-        "shit", "fuck", "bitch", "asshole", "bastard", "dumbass"
+        "dam", "dams", "damn", "damned", "hell", "hells", "crap", "crappy", "sucks", "piss", "pissed",
+        "shit", "shits", "shitty", "bullshit",
+        "fuck", "fucks", "fucker", "fuckers", "fucked", "fucking", "fuckhead", "fuckheads",
+        "motherfucker", "motherfuckers", "motherfucking",
+        "bitch", "bitches", "bitchy",
+        "ass", "asses", "asshole", "assholes", "jackass", "smartass", "dumbass", "dumbasses",
+        "bastard", "bastards",
+        "dick", "dicks", "cock", "cocks", "prick", "pricks",
+        "cunt", "cunts", "twat", "twats",
+        "slut", "sluts", "slutty", "whore", "whores", "whorish",
+        "boob", "boobs", "tit", "tits", "titty", "titties",
+        "arse", "arses",
+        "douche", "douchebag", "douchebags",
+        "turd", "turds", "fart", "farts",
+        "screw", "screwed", "screwing",
     },
     'sexual_content': {
-        "sex", "sexy", "porn", "orgasm", "penis", "vagina", "breast", "breasts",
-        "ejaculation", "ejaculations", "erection", "masturbate", "prostitute",
-        "nude", "naked", "horny", "arousal", "climax", "intercourse",
-        # CRITICAL: Child safety - block all pedophilia/abuse terms
-        "pedophile", "pedophiles", "pedophilia", "pedophilic", "paedophile", "paedophilia",
+        "sex", "sexy", "porn", "pornography", "pornographic",
+        "orgasm", "orgasms", "penis", "vagina", "vulva",
+        "breast", "breasts", "nipple", "nipples",
+        "ejaculation", "ejaculations", "erection", "masturbate", "masturbation",
+        "prostitute", "prostitution", "prostitutes",
+        "nude", "nudity", "naked",
+        "horny", "arousal", "aroused", "climax",
+        "intercourse", "erotic", "erotica",
+        "sexuality", "genitals", "genital",
+        "lust", "lustful", "lusty",
+        "fetish", "fetishes", "pervert", "perverts", "perverted",
+        "fornicate", "fornication",
+        "seduce", "seduction", "seducing",
+        "obscene", "obscenity",
+        "sexting",
+        # Child safety terms
+        "pedophile", "pedophiles", "pedophilia", "pedophilic", "paedophile", "paedophiles", "paedophilia",
         "molest", "molestation", "molester", "molesting", "molesters",
-        "rape", "rapist", "raping", "rapes", "raped",
-        "incest", "incestuous", "abuse", "abuser", "abusive", "abusing",
-        "predator", "predators", "groom", "grooming", "groomer", "groomers",
+        "rape", "rapist", "rapists", "raping", "rapes", "raped",
+        "incest", "incestuous",
+        "abuse", "abuser", "abusers", "abusive", "abusing",
+        "predator", "predators",
+        "groom", "grooming", "groomer", "groomers",
         "statutory", "underage", "preteen", "preteens", "tweener", "tweeners",
-        "victim", "victims", "exploit", "exploitation", "exploiting",
-        "erotic", "sexuality", "genitals", "genital"
+        "victim", "victims",
+        "exploit", "exploitation", "exploiting", "exploiter", "exploiters",
     },
     'violence': {
-        "kill", "killing", "killer", "murder", "murderer", "suicide", "weapon", 
-        "gun", "shoot", "shooting", "bomb", "explosive", "stab", "stabbing",
-        "offing", "offed", "slay", "slaying", "slaughter", "harm", "harming", "harmful",
-        "violence", "violent", "assault", "assaults", "assaulting", "assaulted",
-        "attack", "terrorism", "terrorist", "harass", "harassment", "harassing"
+        "kill", "killing", "killer", "killers",
+        "murder", "murderer", "murderers", "murdering",
+        "suicide", "suicidal",
+        "weapon", "weapons",
+        "gun", "guns", "rifle", "rifles", "pistol", "pistols", "shotgun", "shotguns",
+        "shoot", "shooting", "shootings", "shooter", "shooters",
+        "stab", "stabbing", "stabbings", "stabbed",
+        "knife", "knives",
+        "bomb", "bombs", "bombing", "bombings", "explosive", "explosives",
+        "grenade", "grenades",
+        "offing", "offed",
+        "violent", "violence",
+        "slay", "slaying", "slayings", "slaughter", "slaughtered", "slaughtering",
+        "harm", "harming", "harmful",
+        "torture", "torturing", "tortured", "torturous",
+        "massacre", "massacred", "massacring",
+        "execute", "execution", "executions", "executing",
+        "behead", "beheading", "beheadings",
+        "mutilate", "mutilation", "mutilating",
+        "decapitate", "decapitation",
+        "strangle", "strangling", "strangled",
+        "terrorism", "terrorist", "terrorists",
+        "hostage", "hostages",
+        "genocide",
+        "assault", "assaults", "assaulting", "assaulted",
+        "harass", "harassment", "harassing", "harasser",
     },
     'drugs_alcohol': {
-        "drug", "drugs", "cocaine", "marijuana", "heroin", "meth", "drunk", "alcohol",
-        "weed", "pot", "high", "stoned", "overdose", "addiction"
+        "drug", "drugs",
+        "cocaine", "coke",
+        "marijuana", "cannabis",
+        "heroin", "meth", "methamphetamine",
+        "weed", "pot",
+        "stoned", "overdose", "overdosed", "overdosing",
+        "addiction", "addicted", "addictive",
+        "hallucinate", "hallucination", "hallucinations",
+        "drunk", "drunken", "drunkenness",
+        "alcohol", "alcoholic", "alcoholism",
+        "beer", "liquor", "whiskey", "vodka", "tequila",
+        "cigarette", "cigarettes", "smoking", "smoked",
+        "tobacco",
+        "vape", "vaping", "vaper",
+        "narcotic", "narcotics",
+        "opium", "opioid", "opioids",
+        "crack",
+        "ecstasy",
+        "lsd", "acid",
     },
     'hate_speech': {
-        "racist", "sexist", "nazi", "hate", "terrorism", "terrorist", "extremist"
+        "racist", "racism",
+        "sexist", "sexism",
+        "nazi", "nazis",
+        "hate",
+        "nigger", "niggers", "nigga", "niggas",
+        "chink", "chinks",
+        "spic", "spics",
+        "kike", "kikes",
+        "gook", "gooks",
+        "wetback", "wetbacks",
+        "cracker",
+        "honky", "honkies",
+        "fag", "fags", "faggot", "faggots",
+        "dyke", "dykes",
+        "retard", "retards", "retarded",
+        "moron", "morons",
+        "idiot", "idiots",
+        "imbecile", "imbeciles",
+        "cripple", "cripples",
+        "bigot", "bigots", "bigoted", "bigotry",
+        "extremist", "extremists", "extremism",
+        "supremacist", "supremacists",
+        "homophobic", "homophobia",
+        "transphobic", "transphobia",
+        "xenophobic", "xenophobia",
     },
     'disturbing_content': {
-        "death", "die", "dying", "blood", "bloody", "torture", "pain", "suffering",
-        "corpse", "suicide", "self-harm",
-        "sadism", "sadist", "sadistic"
+        "death", "die", "dying",
+        "blood", "bloody", "bloodshed",
+        "corpse", "corpses",
+        "skull", "skulls",
+        "sadism", "sadist", "sadistic",
+        "gore", "gory",
+        "cannibal", "cannibalism",
+        "necrophilia",
+        "self-harm", "selfharm", "cutting",
     },
     'spam_patterns': {
-        # Common spam/inappropriate patterns
-        "wtf", "omg", "lol", "rofl", "stfu", "gtfo", "af", "thot"
-    }
+        "wtf", "stfu", "gtfo", "omfg",
+        "thot",
+        "simp",
+    },
 }
 
-# Flatten all inappropriate words
+# Flatten all inappropriate words from the categories above
 ALL_INAPPROPRIATE_WORDS = set()
 for category_words in ENHANCED_INAPPROPRIATE_WORDS.values():
     ALL_INAPPROPRIATE_WORDS.update(category_words)
+
+# Also merge from AjaSpellBApp authoritative list when available
+try:
+    from AjaSpellBApp import INAPPROPRIATE_WORDS as _APP_WORDS
+    ALL_INAPPROPRIATE_WORDS.update({str(w).strip().lower() for w in _APP_WORDS if str(w or '').strip()})
+except Exception:
+    pass
 
 # Global violation tracker instance
 violation_tracker = ContentViolationTracker()
