@@ -274,61 +274,117 @@ class BeeSoundboard {
         });
     }
 
-    speakWord(word, onEndCallback = null, rate = 0.92) {
-        if (!word || !('speechSynthesis' in window)) {
+    getPronunciationRate(word) {
+        // Dynamic syllable-based rate: slower for longer words so every syllable is clear.
+        const syllables = (word.match(/[aeiouy]+/gi) || []).length || 1;
+        if (syllables >= 4) return 0.78;
+        if (syllables === 3) return 0.84;
+        return 0.90;
+    }
+
+    speakWord(word, onEndCallback = null, rate = null) {
+        if (!word) {
             if (onEndCallback) onEndCallback();
             return;
         }
-        
+        // Compute dynamic rate from syllable count if caller did not supply one
+        const effectiveRate = (rate !== null && rate !== undefined) ? rate : this.getPronunciationRate(word);
+        const isAndroid = /Android/i.test(navigator.userAgent) ||
+            (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
+
+        // Android: try native TTS first for reliable on-device audio
+        if (isAndroid && typeof window.BeeSmartTryNativeTTS === 'function') {
+            window.BeeSmartTryNativeTTS(word, { rate: effectiveRate, pitch: 1.1 }).then((ok) => {
+                if (!ok) this._speakWordWeb(word, onEndCallback, effectiveRate);
+                else if (onEndCallback) onEndCallback();
+            }).catch(() => this._speakWordWeb(word, onEndCallback, effectiveRate));
+            return;
+        }
+
+        this._speakWordWeb(word, onEndCallback, effectiveRate);
+    }
+
+    _speakWordWeb(word, onEndCallback, rate) {
+        if (!('speechSynthesis' in window)) {
+            if (window.BeeSmartAudioFallback) {
+                window.BeeSmartAudioFallback.play(word, onEndCallback);
+            } else if (onEndCallback) onEndCallback();
+            return;
+        }
+
         speechSynthesis.cancel();
-        
+
         const speak = () => {
             const utterance = new SpeechSynthesisUtterance(word);
-            utterance.pitch = 1.35;
-            utterance.rate = rate; // Use provided rate instead of fixed 0.92
+            utterance.pitch = 1.1;  // Natural adult voice — 1.35 was too high
+            utterance.rate = rate;
             utterance.volume = 0.9;
             utterance.text = word;
-            
-            // Visualizer elements
+
             const visualizer = document.getElementById('voiceVisualizer');
             const statusEl = document.getElementById('voiceStatus');
-            
-            // Add event listeners for voice visualizer
+
+            var done = false;
+            const isAndroid = /Android/i.test(navigator.userAgent) ||
+                (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
+            var safetyTimer = isAndroid ? setTimeout(() => { if (!done) { done = true; if (onEndCallback) onEndCallback(); } }, 10000) : null;
+            const finish = () => {
+                if (done) return;
+                done = true;
+                if (safetyTimer) clearTimeout(safetyTimer);
+                if (onEndCallback) onEndCallback();
+            };
+
             if (onEndCallback) {
-                utterance.addEventListener('end', onEndCallback);
-                utterance.addEventListener('error', onEndCallback);
+                utterance.addEventListener('end', finish);
+                utterance.addEventListener('error', finish);
             }
-            
-            // Use enhanced voice selection for natural-sounding female voices
+
+            // Use enhanced voice selection for natural-sounding voices
             if (!this.cachedVoice) {
                 this.cachedVoice = this.selectBestFemaleVoice();
-                
                 if (this.cachedVoice) {
-                    console.log('🎤 speakWord using enhanced voice:', this.cachedVoice.name, this.cachedVoice.lang, 
-                               'Quality:', this.cachedVoice.quality || 'default', 
+                    console.log('🎤 speakWord using enhanced voice:', this.cachedVoice.name, this.cachedVoice.lang,
+                               'Quality:', this.cachedVoice.quality || 'default',
                                'Local:', this.cachedVoice.localService);
                 } else {
                     console.warn('⚠️ speakWord: No suitable voice found, using browser default');
                 }
             }
-            
-            if (this.cachedVoice) {
-                utterance.voice = this.cachedVoice;
+            if (this.cachedVoice) utterance.voice = this.cachedVoice;
+
+            if (isAndroid) {
+                utterance.volume = 1.0;
+                utterance.lang = utterance.lang || 'en';
+                try { speechSynthesis.resume && speechSynthesis.resume(); } catch (_) {}
             }
-            
-            // Sync visual display with announcer + morph to voice visualizer
+
             utterance.onstart = () => {
                 if (visualizer) visualizer.classList.add('speaking');
-                if (statusEl) statusEl.textContent = this.cachedVoice
-                    ? `🎙️ Speaking (${this.cachedVoice.lang} • ${this.cachedVoice.name})`
-                    : '🎙️ Speaking';
-                
-                // ⚠️ NO morphing here - only morph after "timer starts now" announcement
+                if (statusEl) {
+                    statusEl.textContent = '🔊 Speaking...';
+                    statusEl.style.display = '';
+                }
+                try { window.dispatchEvent(new CustomEvent('quiz-speech-start')); } catch (e) {}
             };
-            
+
             utterance.onboundary = (event) => {
-                // Word-level micro pauses for natural cadence
-                if (event.name === 'word' || event.charLength > 0) {
+                try { window.dispatchEvent(new CustomEvent('quiz-speech-boundary')); } catch (e) {}
+                const char = (utterance.text || '').charAt(event.charIndex || 0);
+                const isPunct = char === ',' || char === ';' || char === '.' || char === '!' || char === '?';
+
+                // True audio micro-pause via AudioContext suspend/resume (~80ms word, ~250ms punctuation)
+                const ctx = this.ctx;
+                if (ctx && ctx.state === 'running') {
+                    if (isPunct) {
+                        try { ctx.suspend().then(() => setTimeout(() => { try { ctx.resume(); } catch (_) {} }, 250)).catch(() => {}); } catch (_) {}
+                    } else if (event.name === 'word') {
+                        try { ctx.suspend().then(() => setTimeout(() => { try { ctx.resume(); } catch (_) {} }, 80)).catch(() => {}); } catch (_) {}
+                    }
+                }
+
+                // Visual feedback mirrors the audio pause
+                if (event.name === 'word' && !isPunct) {
                     if (visualizer) {
                         visualizer.classList.remove('speaking');
                         visualizer.classList.add('pausing', 'word-pulse');
@@ -338,9 +394,7 @@ class BeeSoundboard {
                         }, 150);
                     }
                 }
-                // Longer pause at sentence punctuation
-                const char = (utterance.text || '').charAt(event.charIndex || 0);
-                if (char === ',' || char === ';' || char === '.' || char === '!' || char === '?') {
+                if (isPunct) {
                     if (visualizer) {
                         visualizer.classList.remove('speaking');
                         visualizer.classList.add('pausing');
@@ -351,43 +405,42 @@ class BeeSoundboard {
                     }
                 }
             };
-            
+
             utterance.onend = () => {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
-                if (statusEl) statusEl.textContent = '🐝 Ready';
-                
-                // ⚠️ NO morphing here - only morph after "timer starts now" announcement
+                if (statusEl) { statusEl.textContent = '🐝 Ready'; statusEl.style.display = ''; }
+                try { window.dispatchEvent(new CustomEvent('quiz-speech-end')); } catch (e) {}
             };
-            
+
             utterance.onerror = () => {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
-                if (statusEl) statusEl.textContent = '⚠️ Voice error';
-                
-                // ⚠️ NO morphing here - only morph after "timer starts now" announcement
+                if (statusEl) { statusEl.textContent = '⚠️ Voice error'; statusEl.style.display = ''; }
+                try { window.dispatchEvent(new CustomEvent('quiz-speech-end')); } catch (e) {}
             };
 
             try {
                 speechSynthesis.speak(utterance);
             } catch (err) {
                 console.error('speechSynthesis.speak failed:', err);
-                if (onEndCallback) onEndCallback();
+                finish();
             }
         };
-        
-        // iOS Safari fix: Better voice loading with timeout
+
+        // iOS Safari fix: wait for voices to load, with a 2s safety timeout
+        const isAndroid = /Android/i.test(navigator.userAgent) ||
+            (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
+        const runSpeak = () => { if (isAndroid) setTimeout(speak, 80); else speak(); };
         const voices = speechSynthesis.getVoices();
         if (voices.length > 0) {
-            speak();
+            runSpeak();
         } else {
-            // iOS often needs a delay
             let timeout = setTimeout(() => {
                 console.warn('⚠️ Voice loading timeout - speaking anyway');
-                speak();
+                runSpeak();
             }, 2000);
-            
             speechSynthesis.addEventListener('voiceschanged', () => {
                 clearTimeout(timeout);
-                speak();
+                runSpeak();
             }, { once: true });
         }
     }
@@ -682,7 +735,10 @@ class BeeDelightManager {
         if (data?.word) {
             // Speak a friendly prompt and the word twice
             const phrase = `Spell the word ${data.word}. ${data.word}.`;
-            const rate = data.rate || 0.92; // Use provided rate or default
+            // Use caller-supplied rate, or compute dynamically from syllable count
+            const rate = data.rate || (typeof this.soundboard.getPronunciationRate === 'function'
+                ? this.soundboard.getPronunciationRate(data.word)
+                : null);
             this.soundboard.speakWord(phrase, onEndCallback, rate);
         } else if (onEndCallback) {
             onEndCallback();
@@ -3188,13 +3244,17 @@ class QuizManager {
     }
 
     // Direct speech synthesis fallback
-    speakDirectly(text, onDone, rate = 1.0) {
+    speakDirectly(text, onDone, rate = null) {
+        // Compute dynamic syllable-based rate if caller did not supply one
+        const effectiveRate = (rate !== null && rate !== undefined)
+            ? rate
+            : (() => { const s = (text.match(/[aeiouy]+/gi) || []).length || 1; return s >= 4 ? 0.78 : s === 3 ? 0.84 : 0.90; })();
         if ('speechSynthesis' in window) {
             try {
                 speechSynthesis.cancel(); // Cancel any ongoing speech
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.rate = rate;
-                utterance.pitch = 1.0;
+                utterance.rate = effectiveRate;
+                utterance.pitch = 1.1;
                 utterance.volume = 0.9;
                 
                 // Use the same female voice selection as other speech methods
@@ -4713,8 +4773,9 @@ function pronounceWordFromReport(word) {
                          null;
         if (enUSVoice) utterance.voice = enUSVoice;
         
-        utterance.rate = 0.85;  // Slow for clarity
-        utterance.pitch = 1.0;
+        const syllables = (word.match(/[aeiouy]+/gi) || []).length || 1;
+        utterance.rate = syllables >= 4 ? 0.78 : syllables === 3 ? 0.84 : 0.90;
+        utterance.pitch = 1.1;
         utterance.volume = 1.0;
         
         speechSynthesis.speak(utterance);

@@ -104,98 +104,170 @@ window.initializeGlobalVoice = function() {
     if ('speechSynthesis' in window) {
         const voices = speechSynthesis.getVoices();
         if (voices.length > 0) {
-            window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(voices);
+            const preferFemale = (function() {
+                try { return localStorage.getItem('beesmart_voice_gender') !== 'male'; } catch (_) { return true; }
+            })();
+            window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(voices, preferFemale);
             window.QUIZ_VOICE_INITIALIZED = true;
             console.log(
-                '🎤 Global voice initialized:',
+                '🎤 Global voice initialized (' + (preferFemale ? 'female' : 'male') + ' preferred):',
                 (window.QUIZ_CACHED_VOICE && window.QUIZ_CACHED_VOICE.name) ? window.QUIZ_CACHED_VOICE.name : 'Default'
             );
         }
     }
 };
 
-// Global function to select best natural female voice - British/standard English preferred
-function selectBestFemaleVoiceGlobal(voices) {
+// Global function to select best natural voice - preferFemale=true (default) scores female voices higher;
+// set preferFemale=false to prefer male voices. Falls back to opposite gender if no match found.
+function selectBestFemaleVoiceGlobal(voices, preferFemale) {
     if (!voices || voices.length === 0) return null;
-    
-    const scoredVoices = voices
-        .filter(v => v && v.lang && String(v.lang).toLowerCase().indexOf('en') === 0)
-        .map(voice => {
-            let score = 0;
-            const name = voice.name.toLowerCase();
-            const lang = voice.lang.toLowerCase();
-            
-            // Prefer British English first, then standard English (educational standard)
-            if (lang.includes('en-gb') || lang.includes('en-uk')) score += 70;
-            else if (lang.includes('en-us')) score += 50;
-            else if (lang.includes('en-au')) score += 40;
-            else if (lang.includes('en')) score += 30;
-            
-            // Local voices sound better
-            if (voice.localService) score += 30;
-            
-            // Premium natural-sounding female voices (British/standard preferred)
-            const premiumVoices = {
-                'kate': 110, 'serena': 105, 'samantha': 100, 'ava': 95, 'emma': 92,
-                'joanna': 90, 'karen': 88, 'moira': 87, 'salli': 85, 'kendra': 85,
-                'susan': 80, 'victoria': 82, 'nova': 78, 'allison': 76, 'zira': 75
-            };
-            
-            for (const [voiceName, points] of Object.entries(premiumVoices)) {
-                if (name.includes(voiceName)) {
-                    score += points;
-                    break;
-                }
-            }
-            
-            return { voice, score };
-        })
-        .sort((a, b) => b.score - a.score);
-    
-    return scoredVoices.length > 0 ? scoredVoices[0].voice : null;
+    if (preferFemale === undefined) preferFemale = true;
+
+    const femaleNames = ['kate','serena','samantha','ava','emma','joanna','karen','moira','salli',
+                         'kendra','susan','victoria','nova','allison','zira','aria','jenny'];
+    const maleNames   = ['daniel','david','alex','thomas','oliver','fred','ralph','bruce',
+                         'matthew','mark','ryan','james','guy','luca','aaron'];
+
+    const scoreVoice = (voice) => {
+        let score = 0;
+        const name = voice.name.toLowerCase();
+        const lang = voice.lang.toLowerCase();
+
+        // Language preference — US English first (National Spelling Bee standard)
+        if (lang.includes('en-us')) score += 70;
+        else if (lang.includes('en-gb') || lang.includes('en-uk')) score += 50;
+        else if (lang.includes('en-au')) score += 40;
+        else if (lang.startsWith('en')) score += 30;
+
+        // Local voices sound better
+        if (voice.localService) score += 30;
+
+        // Quality hints
+        if (name.includes('natural') || name.includes('premium') || name.includes('neural')) score += 60;
+
+        // Gender scoring — preferred gender gets a big boost, opposite gets a fallback bonus
+        const isFemaleNamed = femaleNames.some(n => name.includes(n)) || name.includes('female') || name.includes('woman');
+        const isMaleNamed   = maleNames.some(n => name.includes(n))   || name.includes('male');
+        if (preferFemale) {
+            if (isFemaleNamed) score += 120;
+            else if (isMaleNamed) score += 10;  // fallback
+        } else {
+            if (isMaleNamed)   score += 120;
+            else if (isFemaleNamed) score += 10;  // fallback
+        }
+
+        return score;
+    };
+
+    const enVoices = voices.filter(v => v && v.lang && String(v.lang).toLowerCase().startsWith('en'));
+    if (enVoices.length === 0) return null;
+
+    return enVoices
+        .map(v => ({ voice: v, score: scoreVoice(v) }))
+        .sort((a, b) => b.score - a.score)[0].voice;
 }
 
-// Android: Try native Capacitor TTS when Web Speech API fails (WebView often has no sound)
-// Requires @capacitor-community/text-to-speech and "npx cap sync android" from mobile/ so the plugin is in the build.
-// Retries once after 400ms if plugin not ready. Uses en-US (Android/plugin default); falls back to 'en' if unsupported.
+// Native Capacitor TTS — works on Android and iOS Capacitor builds.
+// Priority order:
+//   1. @capawesome-team/capacitor-speech-synthesis  (SpeechSynthesis plugin — supports pitch/rate/volume/voiceId)
+//   2. @capacitor-community/text-to-speech          (TextToSpeech plugin — legacy fallback)
+//   3. returns false  -> caller falls back to Web Speech API
+// Run "npx cap sync" from the mobile/ directory after adding either plugin.
 window.BeeSmartTryNativeTTS = async function(text, opts) {
-    if (!text || !/Android/i.test(navigator.userAgent)) return false;
-    function getTTS() {
-        var cap = window.Capacitor;
-        if (!cap || !cap.Plugins) return null;
-        return cap.Plugins.TextToSpeech || cap.Plugins['TextToSpeech'] || null;
+    if (!text) return false;
+    var isNative = window.Capacitor && typeof window.Capacitor.getPlatform === 'function';
+    if (!isNative && !/Android/i.test(navigator.userAgent)) return false;
+
+    var rate  = (opts && opts.rate  != null) ? opts.rate  : 0.90;
+    var pitch = (opts && opts.pitch != null) ? opts.pitch : 1.1;
+    var cap   = window.Capacitor;
+    var Plugins = cap && cap.Plugins;
+    if (!Plugins) return false;
+
+    // ── Path 1: @capawesome-team/capacitor-speech-synthesis ──────────────────
+    // Plugin key is 'CapacitorSpeechSynthesis'. Supports pitch, rate, volume, language, voiceURI.
+    var SS = Plugins.CapacitorSpeechSynthesis || Plugins['CapacitorSpeechSynthesis'] || null;
+    if (SS && typeof SS.speak === 'function') {
+        try {
+            // Resolve best voiceURI from cached native voices if available
+            var voiceURI = null;
+            try {
+                if (typeof SS.getVoices === 'function') {
+                    var vRes = await SS.getVoices();
+                    var nVoices = (vRes && vRes.voices) || [];
+                    var preferFemale = true;
+                    try { preferFemale = localStorage.getItem('beesmart_voice_gender') !== 'male'; } catch (_) {}
+                    // Score and pick best matching voice
+                    var femaleKws = ['samantha','kate','serena','ava','emma','karen','victoria','aria','jenny','zira','nova'];
+                    var maleKws   = ['daniel','david','thomas','oliver','fred','matthew','mark','guy','aaron'];
+                    var scored = nVoices
+                        .filter(v => v && v.language && String(v.language).toLowerCase().startsWith('en'))
+                        .map(v => {
+                            var n = (v.name || '').toLowerCase();
+                            var s = 0;
+                            if (v.language && v.language.toLowerCase().includes('en-us')) s += 50;
+                            var isFem = femaleKws.some(k => n.includes(k));
+                            var isMal = maleKws.some(k => n.includes(k));
+                            s += preferFemale ? (isFem ? 120 : isMal ? 10 : 0) : (isMal ? 120 : isFem ? 10 : 0);
+                            return { v, s };
+                        })
+                        .sort((a, b) => b.s - a.s);
+                    if (scored.length > 0) voiceURI = scored[0].v.voiceURI || scored[0].v.identifier || null;
+                }
+            } catch (_) {}
+
+            var speakOpts = {
+                text:     String(text),
+                language: 'en-US',
+                pitch:    pitch,
+                rate:     rate,
+                volume:   0.9,
+                queueStrategy: 1  // QueueStrategy.Add = 1
+            };
+            if (voiceURI) speakOpts.voiceURI = voiceURI;
+
+            await SS.speak(speakOpts);
+            console.log('✅ CapacitorSpeechSynthesis spoke:', text);
+            return true;
+        } catch (e) {
+            console.warn('CapacitorSpeechSynthesis.speak failed, trying TextToSpeech fallback:', e);
+        }
     }
-    function trySpeak(TTS, locale) {
+
+    // ── Path 2: @capacitor-community/text-to-speech (legacy) ─────────────────
+    function getLegacyTTS() {
+        return (Plugins.TextToSpeech || Plugins['TextToSpeech']) || null;
+    }
+    function tryLegacySpeak(TTS, locale) {
         if (!TTS || typeof TTS.speak !== 'function') return Promise.resolve(false);
-        var rate = (opts && opts.rate) != null ? opts.rate : 0.95;
-        var pitch = (opts && opts.pitch) != null ? opts.pitch : 1.0;
         return TTS.speak({
-            text: String(text),
-            lang: locale || 'en-US',
-            rate: rate,
-            pitch: pitch,
+            text:   String(text),
+            lang:   locale || 'en-US',
+            rate:   rate,
+            pitch:  pitch,
             volume: 1.0
-        }).then(function() { return true; }).catch(function(e) { console.warn('Native TTS speak failed:', e); return false; });
+        }).then(() => true).catch(e => { console.warn('TextToSpeech speak failed:', e); return false; });
     }
     try {
-        var TTS = getTTS();
-        if (TTS && typeof TTS.speak === 'function') {
-            var ok = await trySpeak(TTS, 'en-US');
+        var TTS = getLegacyTTS();
+        if (TTS) {
+            var ok = await tryLegacySpeak(TTS, 'en-US');
             if (ok) return true;
-            ok = await trySpeak(TTS, 'en');
-            return ok;
-        }
-        await new Promise(function(r) { setTimeout(r, 400); });
-        TTS = getTTS();
-        if (TTS && typeof TTS.speak === 'function') {
-            var ok = await trySpeak(TTS, 'en-US');
+            ok = await tryLegacySpeak(TTS, 'en');
             if (ok) return true;
-            return await trySpeak(TTS, 'en');
         }
-        console.warn('Android TTS: Plugin not found after retry. Run "npx cap sync android" from mobile/.');
+        // One retry after 400ms (plugin may not be ready immediately)
+        await new Promise(r => setTimeout(r, 400));
+        TTS = getLegacyTTS();
+        if (TTS) {
+            var ok = await tryLegacySpeak(TTS, 'en-US');
+            if (ok) return true;
+            return await tryLegacySpeak(TTS, 'en');
+        }
+        console.warn('Native TTS: no plugin found. Run "npx cap sync" from mobile/.');
         return false;
     } catch (e) {
-        console.warn('Native TTS failed:', e);
+        console.warn('Native TTS fallback failed:', e);
         return false;
     }
 };
@@ -238,18 +310,21 @@ window.BeeSmartTTSSmokeTest = async function() {
 };
 
 // Single session voice - use everywhere so only one voice is heard
+// Reads beesmart_voice_gender from localStorage ('female'|'male'); defaults to female.
 function getQuizSessionVoice() {
     if (window.QUIZ_CACHED_VOICE) return window.QUIZ_CACHED_VOICE;
     if ('speechSynthesis' in window && speechSynthesis.getVoices().length > 0) {
         const isAndroid = /Android/i.test(navigator.userAgent) || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
         const voices = speechSynthesis.getVoices();
+        const preferFemale = (function() {
+            try { return localStorage.getItem('beesmart_voice_gender') !== 'male'; } catch (_) { return true; }
+        })();
         // Android: STRONGLY prefer LOCAL (on-device) voices - remote voices often fail silently, no sound
         if (isAndroid) {
             const localEn = voices.filter(v => v.localService && v.lang && String(v.lang).toLowerCase().indexOf('en') === 0);
             window.QUIZ_CACHED_VOICE = localEn.length > 0 ? localEn[0] : null;
-            // If no local voice, leave null - browser default often works better than remote
         } else {
-            window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(voices);
+            window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(voices, preferFemale);
         }
         return window.QUIZ_CACHED_VOICE;
     }
@@ -285,19 +360,46 @@ if ('speechSynthesis' in window) {
     // Try immediate initialization
     setTimeout(window.initializeGlobalVoice, 100);
 }
+
+// Pre-recorded audio fallback — used when neither Web Speech API nor Capacitor TTS is available.
+// Clips live in /static/audio/words/<word>.mp3 (lowercase, spaces->underscores).
+// Falls back to a generic "listen.mp3" prompt if the word clip is missing.
+// Usage: BeeSmartAudioFallback.play('elephant', onDoneCallback)
+window.BeeSmartAudioFallback = (function() {
+    function _slug(word) {
+        return String(word || '').toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    }
+    function _play(src, onDone) {
+        try {
+            var audio = new Audio(src);
+            audio.volume = 1.0;
+            audio.onended = function() { if (onDone) onDone(); };
+            audio.onerror = function() { if (onDone) onDone(); };
+            audio.play().catch(function() { if (onDone) onDone(); });
+        } catch (_) { if (onDone) onDone(); }
+    }
+    return {
+        play: function(word, onDone) {
+            if (!word) { if (onDone) onDone(); return; }
+            var slug = _slug(word);
+            var primary  = '/static/audio/words/' + slug + '.mp3';
+            var fallback = '/static/audio/words/listen.mp3';
+            try {
+                var audio = new Audio(primary);
+                audio.volume = 1.0;
+                audio.onended = function() { if (onDone) onDone(); };
+                audio.onerror = function() {
+                    console.warn('BeeSmartAudioFallback: no clip for "' + word + '", using generic prompt');
+                    _play(fallback, onDone);
+                };
+                audio.play().catch(function() { _play(fallback, onDone); });
+            } catch (_) { _play(fallback, onDone); }
+        }
+    };
+})();
 </script>
 
 <style>
-    /* BeeSmart theme (style guide): #FFF4C6 light yellow, #EE9323 orange, #5B311A dark brown, #3DB4A4 teal, #F3F5F5 cream */
-    :root {
-        --page-gutter: 10px;
-        --beesmart-light-yellow: #FFF4C6;
-        --beesmart-orange: #EE9323;
-        --beesmart-dark-brown: #5B311A;
-        --beesmart-teal: #3DB4A4;
-        --beesmart-cream: #F3F5F5;
-    }
-
     /* B) Page scroll (preferred): allow full-page scroll to bottom */
     html, body {
         height: 100%;
@@ -5621,7 +5723,9 @@ class BeeSoundboard {
     }
     _speakWordWeb(word, onEndCallback, rate) {
         if (!('speechSynthesis' in window)) {
-            if (onEndCallback) onEndCallback();
+            if (window.BeeSmartAudioFallback) {
+                window.BeeSmartAudioFallback.play(word, onEndCallback);
+            } else if (onEndCallback) onEndCallback();
             return;
         }
         speechSynthesis.cancel();
@@ -5681,11 +5785,24 @@ class BeeSoundboard {
                 }
                 try { window.dispatchEvent(new CustomEvent('quiz-speech-start')); } catch (e) {}
             };
-            
+
             utterance.onboundary = (event) => {
                 try { window.dispatchEvent(new CustomEvent('quiz-speech-boundary')); } catch (e) {}
-                // Word-level micro pauses for natural cadence
-                if (event.name === 'word' || event.charLength > 0) {
+                const char = (utterance.text || '').charAt(event.charIndex || 0);
+                const isPunct = char === ',' || char === ';' || char === '.' || char === '!' || char === '?';
+
+                // True audio micro-pause via AudioContext suspend/resume (~80ms word, ~250ms punctuation)
+                const ctx = this.ctx;
+                if (ctx && ctx.state === 'running') {
+                    if (isPunct) {
+                        try { ctx.suspend().then(() => setTimeout(() => { try { ctx.resume(); } catch (_) {} }, 250)).catch(() => {}); } catch (_) {}
+                    } else if (event.name === 'word') {
+                        try { ctx.suspend().then(() => setTimeout(() => { try { ctx.resume(); } catch (_) {} }, 80)).catch(() => {}); } catch (_) {}
+                    }
+                }
+
+                // Visual feedback mirrors the audio pause
+                if (event.name === 'word' && !isPunct) {
                     if (visualizer) {
                         visualizer.classList.remove('speaking');
                         visualizer.classList.add('pausing', 'word-pulse');
@@ -5695,9 +5812,7 @@ class BeeSoundboard {
                         }, 150);
                     }
                 }
-                // Longer pause at sentence punctuation
-                const char = (utterance.text || '').charAt(event.charIndex || 0);
-                if (char === ',' || char === ';' || char === '.' || char === '!' || char === '?') {
+                if (isPunct) {
                     if (visualizer) {
                         visualizer.classList.remove('speaking');
                         visualizer.classList.add('pausing');
@@ -5708,13 +5823,13 @@ class BeeSoundboard {
                     }
                 }
             };
-            
+
             utterance.onend = () => {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                 if (statusEl) { statusEl.textContent = '🐝 Ready'; statusEl.style.display = ''; }
                 try { window.dispatchEvent(new CustomEvent('quiz-speech-end')); } catch (e) {}
             };
-            
+
             utterance.onerror = () => {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                 if (statusEl) { statusEl.textContent = '⚠️ Voice error'; statusEl.style.display = ''; }
@@ -9602,8 +9717,10 @@ class QuizManager {
                 if (onDone) onDone();
             }
         } else {
-            console.warn('Speech synthesis not supported');
-            if (onDone) onDone();
+            console.warn('Speech synthesis not supported — trying audio fallback');
+            if (window.BeeSmartAudioFallback) {
+                window.BeeSmartAudioFallback.play(text, onDone);
+            } else if (onDone) onDone();
         }
     }
 
