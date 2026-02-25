@@ -5414,9 +5414,33 @@ function showRestoreDialog(title, message, isSuccess) {
                 </div>
             </section>
 
+            {% set _is_student_role = is_student|default(false) %}
+
+            {% if _is_student_role %}
+            <!-- Student info banner: word library is teacher/parent-approved only -->
+            <section style="margin-top: 0; margin-bottom: 0.5rem; padding: 0 0.5rem;">
+                <div style="
+                    background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+                    border: 2px solid rgba(33, 150, 243, 0.4);
+                    border-radius: 16px;
+                    padding: 1rem 1.25rem;
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 0.75rem;
+                    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.15);
+                ">
+                    <span style="font-size: 1.8rem; flex-shrink: 0;">🐝</span>
+                    <div>
+                        <div style="font-weight: 800; color: #1565C0; font-size: 1rem; margin-bottom: 0.25rem;">You can type or upload your own words!</div>
+                        <div style="color: #1976D2; font-size: 0.88rem; line-height: 1.45;">Type words manually or upload a list. Dictionary Search and Random Play use the word library — those are available through your teacher or parent. ✨</div>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
             <!-- Menu options - SAME FOR ALL USERS (Authenticated & Guest) -->
             <section class="menu-container" style="margin-top: 0;">
-                <!-- Upload Text File -->
+                <!-- Upload Text File (open to all users) -->
                 <div class="menu-option theme-berry" onclick="kidSounds.playRandomEffect(); selectOption('text', this)" onmouseover="kidSounds.playBuzz()" title=" Upload your word list from a text file, CSV, or paste words directly!">
                     <div class="option-icon"></div>
                     <div class="option-title">Upload Word List</div>
@@ -5424,7 +5448,7 @@ function showRestoreDialog(title, message, isSuccess) {
                     <div class="kid-tip"> Perfect for spelling lists from school!</div>
                 </div>
 
-                <!-- Type Words Manually -->
+                <!-- Type Words Manually (open to all users) -->
                 <div class="menu-option" style="background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); border-color: rgba(129, 199, 132, 0.5);" onclick="kidSounds.playRandomEffect(); selectOption('manual', this)" onmouseover="kidSounds.playPop()" title=" Type or paste your spelling words directly!">
                     <div class="option-icon"></div>
                     <div class="option-title">Type Words Manually</div>
@@ -5447,12 +5471,25 @@ function showRestoreDialog(title, message, isSuccess) {
                 </div>
 
                 <!-- Dictionary Search -->
+                {% if _is_student_role %}
+                <div id="tileDictionary" class="menu-option theme-sunshine locked-tile" title="Word lists are managed by your teacher or parent." style="cursor: default;">
+                    <div class="lock-overlay">
+                        <div class="lock-icon">🔒</div>
+                        <div class="lock-text">Managed by Teacher/Parent</div>
+                    </div>
+                    <div class="option-icon"></div>
+                    <div class="option-title">Dictionary Search</div>
+                    <div class="option-description">Look up word definitions</div>
+                    <div class="kid-tip">Ask your teacher or parent to add words!</div>
+                </div>
+                {% else %}
                 <div id="tileDictionary" class="menu-option theme-sunshine" onclick="kidSounds.playRandomEffect(); selectOption('dictionary', this)" onmouseover="kidSounds.playHappyDing()" title=" Look up any word to learn its meaning and add it to your spelling practice!">
                     <div class="option-icon"></div>
                     <div class="option-title">Dictionary Search</div>
                     <div class="option-description">Look up word definitions</div>
                     <div class="kid-tip"> Discover new words to learn!</div>
                 </div>
+                {% endif %}
 
                 <!-- Avatars Shop - Clear entry point for IAP purchases -->
                 <div id="tileAvatars" class="menu-option theme-gold" onclick="kidSounds.playRandomEffect(); selectOption('avatars', this)" onmouseover="kidSounds.playHappyDing()" title=" Browse and unlock adorable bee avatars! Purchase new characters to customize your spelling experience.">
@@ -5478,12 +5515,25 @@ function showRestoreDialog(title, message, isSuccess) {
                 </div>
 
                 <!-- Random Play -->
+                {% if _is_student_role %}
+                <div id="tileRandom" class="menu-option theme-random locked-tile" title="Random play uses the word library — available for teachers and parents." style="cursor: default;">
+                    <div class="lock-overlay">
+                        <div class="lock-icon">🔒</div>
+                        <div class="lock-text">Managed by Teacher/Parent</div>
+                    </div>
+                    <div class="option-icon"></div>
+                    <div class="option-title">Random Play</div>
+                    <div class="option-description">AI picks 10 words by difficulty level</div>
+                    <div class="kid-tip">Ask your teacher or parent to assign words!</div>
+                </div>
+                {% else %}
                 <div id="tileRandom" class="menu-option theme-random" onclick="kidSounds.playRandomEffect(); selectOption('random', this)" onmouseover="kidSounds.playPop()" title=" Let the app pick random words for you based on difficulty!">
                     <div class="option-icon"></div>
                     <div class="option-title">Random Play</div>
                     <div class="option-description">AI picks 10 words by difficulty level</div>
                     <div class="kid-tip"> Challenge yourself with surprise words!</div>
                 </div>
+                {% endif %}
 
                 <!-- Speed Round Challenge (Premium) -->
                 <div id="tileSpeedRound" class="menu-option theme-lightning {% if _is_premium != 'true' %}locked-tile{% endif %}" data-feature="speed" data-requires-premium="true" data-lockmsg="BeeSmart Premium" onmouseover="kidSounds.playSoftClick()" title="{% if _is_auth != 'true' %} Sign in to unlock speed challenges!{% elif _is_premium != 'true' %} Subscribe to BeeSmart Premium to unlock speed challenges!{% else %} Race against time in a fast-paced spelling challenge!{% endif %}">

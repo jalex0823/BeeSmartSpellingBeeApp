@@ -575,6 +575,23 @@ def api_wordbank_get():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+def _block_student_library_access():
+    """Return a 403 JSON response if the current user is a student role attempting
+    to access the word library (Dictionary Search / Random Play).
+    Students enter their own words via upload or manual entry instead.
+    Returns None if access is allowed.
+    """
+    try:
+        if current_user.is_authenticated and getattr(current_user, 'role', '') == 'student':
+            return jsonify({
+                'status': 'error',
+                'error': 'student_library_restricted',
+                'message': 'Dictionary Search and Random Play use the word library. Ask your teacher or parent to assign words, or type/upload your own!'
+            }), 403
+    except Exception:
+        pass
+    return None
+
 @app.route('/api/wordbank', methods=['POST'])
 def api_wordbank_set():
     try:
@@ -621,7 +638,7 @@ def api_wordbank_clear():
     try:
         clear_wordbank()
     except Exception as e:
-        print(f"️ api_wordbank_clear: non-fatal error: {e}")
+        print(f" api_wordbank_clear: non-fatal error: {e}")
     return jsonify({'status': 'success'})
 
 @app.route('/api/wordbank/import-text', methods=['POST'])
@@ -1029,6 +1046,11 @@ def home_root_direct():
     except Exception:
         avatar_product_ids = {}
     show_groups_join_tiles = current_app.config.get('ENABLE_SCHOOL_TILES', False)
+    try:
+        _role = str(getattr(current_user, 'role', '') or '')
+        is_student = current_user.is_authenticated and _role == 'student'
+    except Exception:
+        is_student = False
     return render_template(
         'unified_menu.html',
         user_avatar=user_avatar_data,
@@ -1040,6 +1062,7 @@ def home_root_direct():
         is_premium=is_premium,
         avatar_product_ids=avatar_product_ids,
         show_groups_join_tiles=show_groups_join_tiles,
+        is_student=is_student,
     )
 
 # Favicon route to prevent 404 errors
@@ -7514,6 +7537,9 @@ def api_random_words():
     Generate a random word list based on difficulty level.
     Expects JSON: {"difficulty": 1-5, "count": 10}
     """
+    blocked = _block_student_library_access()
+    if blocked is not None:
+        return blocked
     try:
         data = request.get_json(silent=True)
         if not data or not isinstance(data, dict):
