@@ -8574,6 +8574,8 @@ function showRestoreDialog(title, message, isSuccess) {
                     border: 3px solid rgba(255, 107, 157, 0.4);
                     position: relative;
                     animation: slideUp 0.3s ease;
+                    overflow-y: auto;
+                    overflow-x: hidden;
                 ">
                     <div style="font-size: 3rem; margin-bottom: 1rem;"></div>
                     <h2 style="
@@ -8830,8 +8832,119 @@ function showRestoreDialog(title, message, isSuccess) {
             }, 120);
         }
 
+        const RANDOM_PLAY_PREPARING_MIN_VISIBLE_MS = 500;
+        let randomPlayPreparingHideTimer = null;
+
+        function showRandomPlayPreparingOverlay(primaryMessage, secondaryMessage) {
+            let styleEl = document.getElementById('randomPlayPreparingStyles');
+            if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = 'randomPlayPreparingStyles';
+                styleEl.textContent = `
+                    @keyframes randomPlaySpinnerSpin {
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+                    }
+                `;
+                document.head.appendChild(styleEl);
+            }
+
+            let overlay = document.getElementById('randomPlayPreparingOverlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'randomPlayPreparingOverlay';
+                overlay.style.cssText = `
+                    position: fixed;
+                    inset: 0;
+                    z-index: 10040;
+                    background: rgba(255, 248, 235, 0.95);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 1rem;
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                `;
+
+                overlay.innerHTML = `
+                    <div style="
+                        width: min(460px, 92vw);
+                        border-radius: 22px;
+                        padding: clamp(1rem, 4vw, 1.6rem);
+                        background: linear-gradient(135deg, #FFF8DC 0%, #FFF0F6 100%);
+                        border: 2px solid rgba(255, 107, 157, 0.35);
+                        box-shadow: 0 16px 40px rgba(139, 69, 19, 0.18);
+                        text-align: center;
+                    ">
+                        <div style="
+                            width: 44px;
+                            height: 44px;
+                            margin: 0 auto 0.85rem auto;
+                            border: 4px solid rgba(255, 107, 157, 0.2);
+                            border-top-color: #FF6B9D;
+                            border-radius: 50%;
+                            animation: randomPlaySpinnerSpin 0.9s linear infinite;
+                        "></div>
+                        <div id="randomPlayPreparingPrimary" style="
+                            font-size: 1.1rem;
+                            font-weight: 700;
+                            color: #5A2C15;
+                            margin-bottom: 0.35rem;
+                        ">Preparing your quiz...</div>
+                        <div id="randomPlayPreparingSecondary" style="
+                            font-size: 0.92rem;
+                            color: #8B4513;
+                            line-height: 1.45;
+                        ">Picking the best words for your level.</div>
+                    </div>
+                `;
+
+                document.body.appendChild(overlay);
+            }
+
+            const primary = document.getElementById('randomPlayPreparingPrimary');
+            const secondary = document.getElementById('randomPlayPreparingSecondary');
+            if (primary) primary.textContent = primaryMessage || 'Preparing your quiz...';
+            if (secondary) secondary.textContent = secondaryMessage || 'Picking the best words for your level.';
+
+            if (randomPlayPreparingHideTimer) {
+                clearTimeout(randomPlayPreparingHideTimer);
+                randomPlayPreparingHideTimer = null;
+            }
+
+            overlay.dataset.shownAt = String(Date.now());
+
+            overlay.style.display = 'flex';
+            requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+        }
+
+        function hideRandomPlayPreparingOverlay() {
+            const overlay = document.getElementById('randomPlayPreparingOverlay');
+            if (!overlay) return;
+
+            if (randomPlayPreparingHideTimer) {
+                clearTimeout(randomPlayPreparingHideTimer);
+                randomPlayPreparingHideTimer = null;
+            }
+
+            const shownAt = Number(overlay.dataset.shownAt || '0');
+            const elapsed = shownAt > 0 ? (Date.now() - shownAt) : RANDOM_PLAY_PREPARING_MIN_VISIBLE_MS;
+            const waitMs = Math.max(0, RANDOM_PLAY_PREPARING_MIN_VISIBLE_MS - elapsed);
+
+            randomPlayPreparingHideTimer = setTimeout(() => {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    if (overlay) {
+                        overlay.style.display = 'none';
+                    }
+                }, 200);
+                randomPlayPreparingHideTimer = null;
+            }, waitMs);
+        }
+
         function generateRandomWords(difficulty) {
             console.log(` Generating random words at difficulty level ${difficulty}`);
+            showRandomPlayPreparingOverlay('Preparing your quiz...', 'Connecting to the word hive now.');
             
             // Show loading with bee animation (check if loadingSystem exists and is ready)
             if (window.loadingSystem && typeof window.loadingSystem.show === 'function') {
@@ -8842,7 +8955,7 @@ function showRestoreDialog(title, message, isSuccess) {
                     console.warn('Loading system not ready:', e);
                 }
             }
-
+            
             // Call API to generate random words
             fetch('/api/random-words', {
                 method: 'POST',
@@ -8870,6 +8983,7 @@ function showRestoreDialog(title, message, isSuccess) {
                 const count = (data.count != null) ? Number(data.count) : 10;
                 const diffLevel = (data.difficulty != null) ? Number(data.difficulty) : difficulty;
                 console.log('Random words generated:', data);
+                showRandomPlayPreparingOverlay('Words found!', `${count} words are being arranged for your quiz.`);
                 
                 if (window.loadingSystem && typeof window.loadingSystem.updateProgress === 'function') {
                     try {
@@ -8939,6 +9053,8 @@ function showRestoreDialog(title, message, isSuccess) {
                                 }
                             }
 
+                            hideRandomPlayPreparingOverlay();
+
                             if (_randomPlayAutoStartFired) {
                                 return;
                             }
@@ -8957,6 +9073,7 @@ function showRestoreDialog(title, message, isSuccess) {
                         if (window.loadingSystem && typeof window.loadingSystem.hide === 'function') {
                             try { window.loadingSystem.hide(); } catch (_) {}
                         }
+                        hideRandomPlayPreparingOverlay();
                         if (typeof openFriendlyInfoModal === 'function') {
                             openFriendlyInfoModal({
                                 title: ' Something went wrong',
@@ -8977,6 +9094,8 @@ function showRestoreDialog(title, message, isSuccess) {
                         console.warn('Loading system hide failed:', e);
                     }
                 }
+
+                hideRandomPlayPreparingOverlay();
 
                 const msg = (error && error.message) ? String(error.message) : 'Something went wrong. Please try again!';
                 if (typeof openFriendlyInfoModal === 'function') {
