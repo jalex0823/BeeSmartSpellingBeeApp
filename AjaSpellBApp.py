@@ -7185,36 +7185,44 @@ def migrate_avatar_columns():
             "error": str(e)
         }), 500
 
-#  TEST ENDPOINT REMOVED - No external dictionary API
 # The app now uses only Simple English Wiktionary (50K+ words built-in)
 # For testing definitions, use /api/wordbank or Random Words feature
 
 # --- Random Play Helper Functions -------------------------------------------
 def calculate_word_difficulty(word: str) -> int:
     """
-    Calculate difficulty level (1-5) for a word based on multiple factors.
-    Enhanced algorithm for unique and challenging spelling experience.
-    
-    1 = Easy (3-4 letters, common patterns, phonetic)
-    2 = Medium-Easy (5-6 letters, mostly phonetic)
-    3 = Medium (7-8 letters, some tricky patterns)
-    4 = Medium-Hard (9-11 letters, complex patterns, silent letters)
-    5 = Hard (12+ letters, very complex, multiple tricks)
+    Calculate difficulty level (1-8) for a word based on length and complexity.
+    Grade-aligned scale matching the 8-tier word pool system.
+
+    1 = Kindergarten        (1-3 letters, CVC patterns)
+    2 = Grades 1-2          (4 letters, phonetic)
+    3 = Grades 3-4          (5 letters, blends/digraphs)
+    4 = Grades 5-6          (6-7 letters, multisyllabic)
+    5 = Grades 7-8          (8 letters, academic vocab)
+    6 = Grades 9-10         (9-11 letters, AWL Tier 1-5)
+    7 = Grades 11-12        (12-14 letters, AP/AWL advanced)
+    8 = SAT / College Prep  (complex patterns at any length)
     """
     word_lower = word.lower()
     length = len(word_lower)
-    
-    # Base difficulty from length (revised scale)
-    if length <= 4:
+
+    # Base difficulty from length (8-tier grade-aligned scale)
+    if length <= 3:
         base_difficulty = 1.0
-    elif length <= 6:
+    elif length <= 4:
         base_difficulty = 2.0
-    elif length <= 8:
+    elif length <= 5:
         base_difficulty = 3.0
-    elif length <= 11:
+    elif length <= 7:
         base_difficulty = 4.0
-    else:
+    elif length <= 8:
         base_difficulty = 5.0
+    elif length <= 11:
+        base_difficulty = 6.0
+    elif length <= 14:
+        base_difficulty = 7.0
+    else:
+        base_difficulty = 8.0
     
     # Complexity scoring system
     complexity_score = 0.0
@@ -7334,8 +7342,8 @@ def calculate_word_difficulty(word: str) -> int:
     elif complexity_score >= 0.5:
         final_difficulty += 0.5
     
-    # Cap at 1-5 range
-    final_difficulty = max(1.0, min(5.0, final_difficulty))
+    # Cap at 1-8 range
+    final_difficulty = max(1.0, min(8.0, final_difficulty))
     
     # Round to nearest integer
     return int(round(final_difficulty))
@@ -7345,9 +7353,9 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
     """
     Get random words from Simple Wiktionary filtered by difficulty level.
     Enhanced with quality filters for unique, challenging spelling experience.
-    
+
     Args:
-        difficulty: Level 1-5 (1=easy, 5=hard)
+        difficulty: Level 1-8 (1=Kindergarten … 8=SAT/College Prep)
         count: Number of words to return (default 10)
     
     Returns:
@@ -7390,12 +7398,31 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
         # SKIP CONDITIONS (quality filters)
         # ══════════════════════════════════════════════════════════════
         
-        # Difficulty 1 should be only 2-3 letter words; higher difficulties require >=3 letters
-        if difficulty == 1:
-            if len(word) < 2 or len(word) > 3:
+        # Length gates per grade band
+        wlen = len(word)
+        if difficulty == 1:        # K: 1-3 letters
+            if wlen < 1 or wlen > 3:
                 continue
-        else:
-            if len(word) < 3:
+        elif difficulty == 2:      # Gr 1-2: 4 letters
+            if wlen < 4 or wlen > 4:
+                continue
+        elif difficulty == 3:      # Gr 3-4: 5 letters
+            if wlen < 5 or wlen > 5:
+                continue
+        elif difficulty == 4:      # Gr 5-6: 6-7 letters
+            if wlen < 6 or wlen > 7:
+                continue
+        elif difficulty == 5:      # Gr 7-8: 8 letters
+            if wlen < 8 or wlen > 8:
+                continue
+        elif difficulty == 6:      # Gr 9-10: 9-11 letters
+            if wlen < 9 or wlen > 11:
+                continue
+        elif difficulty == 7:      # Gr 11-12: 12-14 letters
+            if wlen < 12 or wlen > 14:
+                continue
+        else:                      # SAT (8): any length, complexity drives selection
+            if wlen < 5:
                 continue
         
         # Skip words with non-alphabetic characters
@@ -7424,7 +7451,7 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
         word_difficulty = calculate_word_difficulty(word)
         
         # For difficulty 1-2: Accept exact match only (keep it simple)
-        # For difficulty 3-5: Accept ±1 level for variety
+        # For difficulty 3-8: Accept ±1 level for variety
         tolerance = 1 if difficulty >= 3 else 0
         
         if abs(word_difficulty - difficulty) <= tolerance:
@@ -7515,7 +7542,7 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
 def api_random_words():
     """
     Generate a random word list based on difficulty level.
-    Expects JSON: {"difficulty": 1-5, "count": 10}
+    Expects JSON: {"difficulty": 1-8, "count": 10}
     """
     blocked = _block_student_library_access()
     if blocked is not None:
@@ -7525,7 +7552,7 @@ def api_random_words():
         if not data or not isinstance(data, dict):
             return jsonify({
                 "status": "error",
-                "message": "Invalid or missing JSON body. Send {\"difficulty\": 1-5, \"count\": 10}"
+                "message": "Invalid or missing JSON body. Send {\"difficulty\": 1-8, \"count\": 10}"
             }), 400
         try:
             difficulty = data.get("difficulty", 3)
@@ -7537,14 +7564,14 @@ def api_random_words():
         except (TypeError, ValueError):
             return jsonify({
                 "status": "error",
-                "message": "difficulty and count must be numbers (1-5 and 1-50)"
+                "message": "difficulty and count must be numbers (1-8 and 1-50)"
             }), 400
         difficulty = difficulty if difficulty is not None else 3
         count = count if count is not None else 10
-        if difficulty < 1 or difficulty > 5:
+        if difficulty < 1 or difficulty > 8:
             return jsonify({
                 "status": "error",
-                "message": "Difficulty must be between 1 and 5"
+                "message": "Difficulty must be between 1 and 8"
             }), 400
         if count < 1 or count > 50:
             return jsonify({
