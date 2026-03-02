@@ -17883,6 +17883,94 @@ def admin_create_school():
         return redirect(url_for('admin_schools'))
 
 
+@app.route('/admin/schools/<int:school_id>/update', methods=['POST'])
+@login_required
+def admin_update_school(school_id: int):
+    """Admin: update school fields shown in schools manager."""
+    if (getattr(current_user, 'role', None) or '').lower() != 'admin':
+        flash('Access denied: Admins only', 'error')
+        return redirect(url_for('home'))
+
+    from models import School
+    from sqlalchemy.exc import IntegrityError
+
+    school = School.query.get(school_id)
+    if not school:
+        flash('School not found.', 'error')
+        return redirect(url_for('admin_schools'))
+
+    name = (request.form.get('name') or '').strip()
+    school_code = (request.form.get('school_code') or '').strip().upper()
+    mascot_asset_key = (request.form.get('mascot_asset_key') or '').strip() or None
+    theme_primary = (request.form.get('theme_primary') or '').strip() or None
+    theme_secondary = (request.form.get('theme_secondary') or '').strip() or None
+
+    if not name:
+        flash('School name is required.', 'error')
+        return redirect(url_for('admin_schools'))
+    if not school_code:
+        flash('School code is required.', 'error')
+        return redirect(url_for('admin_schools'))
+
+    exists = School.query.filter(School.school_code == school_code, School.id != school.id).first()
+    if exists:
+        flash(f"School code '{school_code}' is already in use.", 'error')
+        return redirect(url_for('admin_schools'))
+
+    try:
+        school.name = name
+        school.school_code = school_code
+        school.mascot_asset_key = mascot_asset_key
+        school.theme_primary = theme_primary
+        school.theme_secondary = theme_secondary
+        db.session.add(school)
+        db.session.commit()
+        flash(f"Updated school '{school.name}'.", 'success')
+        return redirect(url_for('admin_schools'))
+    except IntegrityError:
+        db.session.rollback()
+        flash('Could not update school due to a uniqueness conflict.', 'error')
+        return redirect(url_for('admin_schools'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating school: {e}', 'error')
+        return redirect(url_for('admin_schools'))
+
+
+@app.route('/admin/schools/<int:school_id>/delete', methods=['POST'])
+@login_required
+def admin_delete_school(school_id: int):
+    """Admin: delete a school when safe (no linked users)."""
+    if (getattr(current_user, 'role', None) or '').lower() != 'admin':
+        flash('Access denied: Admins only', 'error')
+        return redirect(url_for('home'))
+
+    from models import School, SchoolKey, Avatar, User
+
+    school = School.query.get(school_id)
+    if not school:
+        flash('School not found.', 'error')
+        return redirect(url_for('admin_schools'))
+
+    linked_users = User.query.filter_by(school_id=school.id).count()
+    if linked_users > 0:
+        flash(f"Cannot delete '{school.name}': {linked_users} user(s) are still assigned to this school.", 'error')
+        return redirect(url_for('admin_schools'))
+
+    try:
+        removed_keys = SchoolKey.query.filter_by(school_id=school.id).delete(synchronize_session=False)
+        removed_avatars = Avatar.query.filter_by(school_id=school.id).delete(synchronize_session=False)
+        school_name = school.name
+        db.session.delete(school)
+        db.session.commit()
+        flash(f"Deleted school '{school_name}' (removed {removed_keys} key(s), {removed_avatars} avatar(s)).", 'success')
+        return redirect(url_for('admin_schools'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting school: {e}', 'error')
+        return redirect(url_for('admin_schools'))
+
+
 @app.route('/admin/schools/<int:school_id>/avatar/upload', methods=['POST'])
 @login_required
 def admin_upload_school_avatar(school_id: int):

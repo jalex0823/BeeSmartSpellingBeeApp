@@ -42,6 +42,13 @@
   .school-top { display:flex; align-items:flex-start; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.65rem; }
   .school-name { margin:0; font-size:1rem; color:#F7F9FF; }
   .school-code { margin-top:0.35rem; }
+  .school-actions { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
+  .btn-inline { width:auto; padding:0.45rem 0.72rem; font-size:0.82rem; border-radius:9px; }
+  .btn-danger { background: linear-gradient(135deg, rgba(255,77,77,0.26), rgba(255,77,77,0.12)); border-color: rgba(255,77,77,0.34); color:#FFD9D9; }
+  .edit-panel { margin:0.35rem 0 0.75rem; border-top:1px solid rgba(255,255,255,0.08); padding-top:0.7rem; }
+  .edit-grid { display:grid; grid-template-columns:1fr; gap:0.6rem; }
+  @media (min-width: 760px){ .edit-grid { grid-template-columns:1.4fr 1fr 1fr 1fr; } }
+  .edit-grid .form-row { margin-bottom:0; }
   .meta-grid { display:grid; grid-template-columns: 1fr; gap:0.7rem; }
   @media (min-width: 720px){ .meta-grid { grid-template-columns: 1.1fr 1.4fr 1fr; } }
   .meta-block { background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:0.62rem; }
@@ -157,9 +164,44 @@
                   <h3 class="school-name">{{ s.name }}</h3>
                   <div class="school-code"><span class="pill">{{ s.school_code }}</span></div>
                 </div>
-                {% if s.mascot_asset_key %}
-                  <span class="pill">Default avatar: {{ s.mascot_asset_key }}</span>
-                {% endif %}
+                <div class="school-actions">
+                  {% if s.mascot_asset_key %}
+                    <span class="pill">Default avatar: {{ s.mascot_asset_key }}</span>
+                  {% endif %}
+                  <details>
+                    <summary class="btn btn-inline" style="list-style:none;">Edit</summary>
+                    <form class="edit-panel" method="post" action="{{ url_for('admin_update_school', school_id=s.id) }}">
+                      <div class="edit-grid">
+                        <div class="form-row">
+                          <label for="edit_name_{{ s.id }}">School name</label>
+                          <input id="edit_name_{{ s.id }}" name="name" value="{{ s.name }}" required>
+                        </div>
+                        <div class="form-row">
+                          <label for="edit_code_{{ s.id }}">School code</label>
+                          <input id="edit_code_{{ s.id }}" name="school_code" value="{{ s.school_code }}" required>
+                        </div>
+                        <div class="form-row">
+                          <label for="edit_mascot_{{ s.id }}">Default avatar slug</label>
+                          <input id="edit_mascot_{{ s.id }}" name="mascot_asset_key" value="{{ s.mascot_asset_key or '' }}" placeholder="optional">
+                        </div>
+                        <div class="form-row">
+                          <label for="edit_theme1_{{ s.id }}">Theme primary</label>
+                          <input id="edit_theme1_{{ s.id }}" name="theme_primary" value="{{ s.theme_primary or '' }}" placeholder="#E6A800">
+                        </div>
+                        <div class="form-row">
+                          <label for="edit_theme2_{{ s.id }}">Theme secondary</label>
+                          <input id="edit_theme2_{{ s.id }}" name="theme_secondary" value="{{ s.theme_secondary or '' }}" placeholder="#8B6914">
+                        </div>
+                      </div>
+                      <div style="margin-top:0.6rem;">
+                        <button class="btn btn-inline" type="submit" data-action-sfx="success">Save</button>
+                      </div>
+                    </form>
+                  </details>
+                  <form method="post" action="{{ url_for('admin_delete_school', school_id=s.id) }}" onsubmit="return confirm('Delete school {{ s.name|e }}? This cannot be undone.');">
+                    <button class="btn btn-inline btn-danger" type="submit" data-action-sfx="error">Delete</button>
+                  </form>
+                </div>
               </div>
 
               <div class="meta-grid">
