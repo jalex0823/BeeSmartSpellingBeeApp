@@ -17,28 +17,41 @@
   body.admin-portal main.container { max-width: 1180px; padding: 1.25rem 1rem 2.5rem; }
 
   .admin-wrap { max-width: 1180px; margin: 0 auto; }
-  .admin-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom: 1rem; }
+  .admin-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom: 1.2rem; }
   .admin-brand { display:flex; align-items:center; gap:0.85rem; }
   .admin-brand img { width: 70px; height: 70px; object-fit: contain; filter: drop-shadow(0 10px 28px rgba(255,215,0,0.25)); }
-  .admin-header h1 { margin:0; font-size:1.55rem; color:#F8FAFF; letter-spacing: 0.02em; }
+  .admin-header h1 { margin:0; font-size:1.55rem; color:#F8FAFF; letter-spacing: 0.02em; line-height:1.15; }
   .admin-sub { margin: 0.2rem 0 0; color: rgba(232,238,247,0.78); font-weight: 600; }
-  .admin-card { background: rgba(10, 10, 14, 0.62); border: 1px solid rgba(255, 215, 0, 0.18); border-radius: 18px; box-shadow: 0 14px 45px rgba(0,0,0,0.35); padding: 1rem; backdrop-filter: blur(10px); }
+  .admin-card { background: rgba(10, 10, 14, 0.62); border: 1px solid rgba(255, 215, 0, 0.16); border-radius: 16px; box-shadow: 0 14px 45px rgba(0,0,0,0.35); padding: 1.15rem; backdrop-filter: blur(10px); }
+  .card-title { margin:0 0 0.9rem 0; font-size:1.12rem; color:#F8FAFF; letter-spacing: 0.01em; }
   .grid { display:grid; grid-template-columns: 1fr; gap: 1rem; }
   @media (min-width: 980px){ .grid { grid-template-columns: 420px 1fr; } }
-  .form-row { display:flex; flex-direction:column; gap:0.35rem; margin-bottom:0.85rem; }
+  .form-row { display:flex; flex-direction:column; gap:0.35rem; margin-bottom:0.9rem; }
   .form-row label { font-weight:800; color:#F3F6FF; }
-  .form-row input { padding:0.65rem 0.85rem; border-radius:12px; border:1px solid rgba(255, 215, 0, 0.18); background: rgba(255,255,255,0.06); color:#E8EEF7; font-size:1rem; }
+  .form-row input { padding:0.68rem 0.85rem; border-radius:10px; border:1px solid rgba(255, 215, 0, 0.18); background: rgba(255,255,255,0.06); color:#E8EEF7; font-size:0.98rem; }
+  .form-row input:focus { outline:none; border-color: rgba(255,215,0,0.38); box-shadow: 0 0 0 2px rgba(255,215,0,0.12); }
   .hint { font-size:0.85rem; color: rgba(232,238,247,0.70); }
-  .btn { display:inline-block; padding:0.85rem 1rem; border-radius: 12px; border:1px solid rgba(255,215,0,0.22); cursor:pointer; font-weight:900; background: linear-gradient(135deg, rgba(255,215,0,0.22), rgba(255,193,7,0.12)); color:#FFF6CC; width:100%; }
-  .btn:hover { transform: translateY(-1px); }
+  .btn { display:inline-block; padding:0.82rem 1rem; border-radius: 11px; border:1px solid rgba(255,215,0,0.22); cursor:pointer; font-weight:900; background: linear-gradient(135deg, rgba(255,215,0,0.24), rgba(255,193,7,0.12)); color:#FFF6CC; width:100%; transition: transform .15s ease, box-shadow .15s ease; }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(0,0,0,0.26); }
   .radio-row { display:flex; gap:0.75rem; flex-wrap:wrap; }
   .radio-pill { display:inline-flex; align-items:center; gap:0.45rem; padding:0.45rem 0.7rem; border-radius:999px; border:1px solid rgba(255,215,0,0.18); background: rgba(255,255,255,0.05); color:#E8EEF7; font-weight:800; }
-  .table { width:100%; border-collapse: collapse; }
-  .table th, .table td { text-align:left; padding:0.65rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.10); vertical-align: top; }
-  .table th { font-size:0.85rem; text-transform: uppercase; letter-spacing:0.04em; color: rgba(232,238,247,0.70); }
-  .pill { display:inline-block; padding:0.25rem 0.5rem; border-radius:999px; background: rgba(255,215,0,0.14); border: 1px solid rgba(255,215,0,0.22); font-weight:900; color:#FFF6CC; margin-right:0.35rem; margin-bottom:0.35rem; }
+  .pill { display:inline-flex; align-items:center; padding:0.22rem 0.52rem; border-radius:999px; background: rgba(255,215,0,0.14); border: 1px solid rgba(255,215,0,0.2); font-weight:800; color:#FFF6CC; margin-right:0.35rem; margin-bottom:0.35rem; font-size:0.79rem; white-space:nowrap; }
   .keys { display:flex; flex-wrap:wrap; gap:0.35rem; }
+  .school-list { display:grid; grid-template-columns: 1fr; gap:0.9rem; }
+  .school-item { border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:0.9rem; background: rgba(8,8,12,0.62); }
+  .school-top { display:flex; align-items:flex-start; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.65rem; }
+  .school-name { margin:0; font-size:1rem; color:#F7F9FF; }
+  .school-code { margin-top:0.35rem; }
+  .meta-grid { display:grid; grid-template-columns: 1fr; gap:0.7rem; }
+  @media (min-width: 720px){ .meta-grid { grid-template-columns: 1.1fr 1.4fr 1fr; } }
+  .meta-block { background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:0.62rem; }
+  .meta-label { display:block; margin-bottom:0.35rem; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; color: rgba(232,238,247,0.62); font-weight:800; }
+  .upload-wrap { margin-top:0.75rem; }
+  .upload-wrap details { border-top:1px solid rgba(255,255,255,0.08); padding-top:0.65rem; }
+  .upload-wrap summary { cursor:pointer; font-weight:800; color:#FFF6CC; }
   .small { font-size:0.9rem; }
+  .back-link { color: rgba(232,238,247,0.8); text-decoration:none; border-bottom:1px dashed rgba(255,255,255,0.3); }
+  .back-link:hover { color:#FFF6CC; border-bottom-color: rgba(255,215,0,0.5); }
 </style>
 
 <div class="admin-wrap">
@@ -50,12 +63,12 @@
         <div class="admin-sub">Schools</div>
       </div>
     </div>
-    <div class="small"><a href="{{ url_for('admin_dashboard') }}">← Back to Admin Portal</a></div>
+    <div class="small"><a class="back-link" href="{{ url_for('admin_dashboard') }}">← Back to Admin Portal</a></div>
   </div>
 
   <div class="grid" style="margin-top: 1rem;">
     <div class="admin-card">
-      <h2 style="margin:0 0 0.75rem 0; font-size:1.15rem; color:#F8FAFF;">Create a School</h2>
+      <h2 class="card-title">Create a School</h2>
       <form method="post" action="{{ url_for('admin_create_school') }}" enctype="multipart/form-data">
         <div class="form-row">
           <label for="name">School name *</label>
@@ -131,47 +144,47 @@
     </div>
 
     <div class="admin-card">
-      <h2 style="margin:0 0 0.75rem 0; font-size:1.15rem; color:#F8FAFF;">Existing Schools</h2>
+      <h2 class="card-title">Existing Schools</h2>
       {% if not rows %}
         <p class="hint">No schools found yet.</p>
       {% else %}
-      <table class="table">
-        <thead>
-          <tr>
-            <th>School</th>
-            <th>Code</th>
-            <th>Default Avatar</th>
-            <th>Login</th>
-            <th>Keys (active)</th>
-            <th>Mascot GLB</th>
-          </tr>
-        </thead>
-        <tbody>
+      <div class="school-list">
           {% for row in rows %}
             {% set s = row['school'] %}
-            <tr>
-              <td><strong>{{ s.name }}</strong></td>
-              <td><span class="pill">{{ s.school_code }}</span></td>
-              <td>{{ s.mascot_asset_key or '' }}</td>
-              <td>
-                <div class="hint">
-                  Portal: <span class="pill">/school</span><br>
-                  Use SCHOOL/TEACHER/STUDENT key to choose role
+            <article class="school-item">
+              <div class="school-top">
+                <div>
+                  <h3 class="school-name">{{ s.name }}</h3>
+                  <div class="school-code"><span class="pill">{{ s.school_code }}</span></div>
                 </div>
-              </td>
-              <td>
-                <div class="keys">
-                  {% for ktype, codes in (row['keys'] or {}).items() %}
-                    {% for code in codes %}
-                      <span class="pill">{{ ktype }}: {{ code }}</span>
+                {% if s.mascot_asset_key %}
+                  <span class="pill">Default avatar: {{ s.mascot_asset_key }}</span>
+                {% endif %}
+              </div>
+
+              <div class="meta-grid">
+                <div class="meta-block">
+                  <span class="meta-label">School Portal</span>
+                  <div class="hint">Path: <span class="pill">/school</span></div>
+                  <div class="hint">Use SCHOOL / TEACHER / STUDENT key to choose role.</div>
+                </div>
+                <div class="meta-block">
+                  <span class="meta-label">Active Keys</span>
+                  <div class="keys">
+                    {% for ktype, codes in (row['keys'] or {}).items() %}
+                      {% for code in codes %}
+                        <span class="pill">{{ ktype }}: {{ code }}</span>
+                      {% endfor %}
+                    {% else %}
+                      <span class="hint">No active keys.</span>
                     {% endfor %}
-                  {% endfor %}
+                  </div>
                 </div>
-              </td>
-              <td>
-                <details>
-                  <summary style="cursor:pointer; font-weight:900; color:#FFF6CC;">Upload</summary>
-                  <form method="post" action="{{ url_for('admin_upload_school_avatar', school_id=s.id) }}" enctype="multipart/form-data" style="margin-top:0.75rem;">
+                <div class="meta-block upload-wrap">
+                  <span class="meta-label">Mascot GLB</span>
+                  <details>
+                    <summary>Upload</summary>
+                    <form method="post" action="{{ url_for('admin_upload_school_avatar', school_id=s.id) }}" enctype="multipart/form-data" style="margin-top:0.75rem;">
                     <div class="form-row">
                       <label for="glb_{{ s.id }}">GLB file</label>
                       <input id="glb_{{ s.id }}" name="glb_file" type="file" accept=".glb" required>
@@ -191,12 +204,12 @@
                     </div>
                     <button class="btn" type="submit" data-action-sfx="success">Upload GLB</button>
                   </form>
-                </details>
-              </td>
-            </tr>
+                  </details>
+                </div>
+              </div>
+            </article>
           {% endfor %}
-        </tbody>
-      </table>
+      </div>
       {% endif %}
     </div>
   </div>
