@@ -5746,43 +5746,6 @@ function showRestoreDialog(title, message, isSuccess) {
                 <button type="button" class="action-btn secondary js-import-list" onclick="event.stopPropagation(); importWordList();" title=" Load a previously saved word list (CSV, TXT, JSON, DOCX, PDF)">
                      Import Word List
                 </button>
-                <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); refreshCurrentWords();" title=" Refresh current word list and update counts">
-                     Refresh Words
-                </button>
-                <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); clearAll();" title=" Start fresh with a new word list">
-                     Start Fresh
-                </button>
-                
-                <!-- Help & Documentation Section (hidden for Student role — managed by Parent/Teacher) -->
-                {% if (current_user.role|default('')) != 'student' %}
-                <div class="help-links">
-                    <a href="/help" class="action-btn info" title=" Quick help and tips" style="text-decoration: none; font-size: 0.95rem; padding: 12px 18px;">
-                         Quick Help
-                    </a>
-                    <a href="/guide" class="action-btn info info-blue" title=" Complete user guide with detailed instructions" style="text-decoration: none; font-size: 0.95rem; padding: 12px 18px;">
-                         User Guide
-                    </a>
-                    <a href="/admin-guide" class="action-btn info info-purple" title=" Technical administrator guide" style="text-decoration: none; font-size: 0.95rem; padding: 12px 18px;">
-                         Admin Guide
-                    </a>
-                </div>
-                
-                {% set _monthly_usd_for_display = subscription_monthly_usd|default(3.99) %}
-                <a href="/subscription" class="action-btn upgrade-premium-btn" data-premium-source="upgrade_button" style="
-                    text-decoration: none; 
-                    display: inline-block; 
-                    margin-bottom: 15px;
-                    background: linear-gradient(135deg, #FFB300 0%, #FF8F00 100%);
-                    border: 3px solid rgba(255, 179, 0, 0.3);
-                    box-shadow: 0 6px 20px rgba(255, 179, 0, 0.4);
-                    font-size: 1.1rem;
-                    font-weight: 700;
-                    padding: 16px 24px;
-                    transition: all 0.3s ease;
-                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 24px rgba(255, 143, 0, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(255, 179, 0, 0.4)';" title="⭐ Unlock all 41 avatars, unlimited quizzes, and ad-free learning!">
-                    ⭐ Upgrade to Premium - ${{ '%.2f'|format(_monthly_usd_for_display) }}/month
-                </a>
-                {% endif %}
                 
                 <!-- My Word Lists button removed - use tile instead -->
                 
