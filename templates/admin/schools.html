@@ -148,7 +148,7 @@
         </thead>
         <tbody>
           {% for row in rows %}
-            {% set s = row.school %}
+            {% set s = row['school'] %}
             <tr>
               <td><strong>{{ s.name }}</strong></td>
               <td><span class="pill">{{ s.school_code }}</span></td>
@@ -161,7 +161,7 @@
               </td>
               <td>
                 <div class="keys">
-                  {% for ktype, codes in (row.keys or {}).items() %}
+                  {% for ktype, codes in (row['keys'] or {}).items() %}
                     {% for code in codes %}
                       <span class="pill">{{ ktype }}: {{ code }}</span>
                     {% endfor %}
