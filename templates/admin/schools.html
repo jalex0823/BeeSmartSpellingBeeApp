@@ -56,7 +56,7 @@
   <div class="grid" style="margin-top: 1rem;">
     <div class="admin-card">
       <h2 style="margin:0 0 0.75rem 0; font-size:1.15rem; color:#F8FAFF;">Create a School</h2>
-      <form method="post" action="{{ url_for('admin_create_school') }}">
+      <form method="post" action="{{ url_for('admin_create_school') }}" enctype="multipart/form-data">
         <div class="form-row">
           <label for="name">School name *</label>
           <input id="name" name="name" required placeholder="e.g. Scanlan Oak Elementary">
@@ -100,6 +100,29 @@
           <input id="make_keys" name="make_keys" type="checkbox" value="1" checked>
           <label for="make_keys" style="margin:0;">Generate SCHOOL / TEACHER / STUDENT keys</label>
         </div>
+
+        <details style="margin: 0.5rem 0 0.85rem;">
+          <summary style="cursor:pointer; font-weight:900; color:#FFF6CC;">School Avatar GLB (optional)</summary>
+          <div style="margin-top: 0.75rem;">
+            <div class="form-row">
+              <label for="create_glb_file">GLB file</label>
+              <input id="create_glb_file" name="glb_file" type="file" accept=".glb">
+              <div class="hint">Upload a GLB now to auto-associate it with this school at creation.</div>
+            </div>
+            <div class="form-row">
+              <label for="create_avatar_slug">Avatar slug (optional)</label>
+              <input id="create_avatar_slug" name="avatar_slug" placeholder="e.g. scanlan-bee">
+            </div>
+            <div class="form-row">
+              <label for="create_avatar_name">Avatar name (optional)</label>
+              <input id="create_avatar_name" name="avatar_name" placeholder="e.g. Scanlan Bee">
+            </div>
+            <div class="form-row" style="flex-direction:row; align-items:center; gap:0.5rem;">
+              <input id="create_set_default_avatar" name="set_default_avatar" type="checkbox" value="1" checked>
+              <label for="create_set_default_avatar" style="margin:0;">Set uploaded GLB as default school avatar</label>
+            </div>
+          </div>
+        </details>
         <button class="btn" type="submit" data-action-sfx="success">Create School</button>
       </form>
       <div class="hint" style="margin-top:0.75rem;">

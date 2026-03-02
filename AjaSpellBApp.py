@@ -17456,8 +17456,10 @@ def admin_create_school():
     if (getattr(current_user, 'role', None) or '').lower() != 'admin':
         flash('Access denied: Admins only', 'error')
         return redirect(url_for('home'))
-    from models import School, SchoolKey
+    from models import School, SchoolKey, Avatar
     import re
+    import os as _os
+    import time as _time
     import datetime
     from sqlalchemy.exc import IntegrityError
 
@@ -17532,10 +17534,68 @@ def admin_create_school():
             _ensure_key(f"BEE-{datetime.datetime.utcnow().year}-{_slug_base(name)[:10]}-TEACH-{_rand(4)}", "TEACHER")
             _ensure_key(f"BEE-{datetime.datetime.utcnow().year}-{_slug_base(name)[:10]}-STUD-{_rand(4)}", "STUDENT")
 
+        uploaded_avatar_slug = None
+        f = request.files.get('glb_file')
+        if f and getattr(f, 'filename', ''):
+            filename = (f.filename or '').strip()
+            if not filename.lower().endswith('.glb'):
+                flash('Only .glb files are supported for school avatar upload.', 'error')
+                db.session.rollback()
+                return redirect(url_for('admin_schools'))
+
+            avatar_slug_in = (request.form.get('avatar_slug') or '').strip()
+            avatar_name_in = (request.form.get('avatar_name') or '').strip()
+            set_default_avatar = (request.form.get('set_default_avatar') or '').strip() in ('1', 'true', 'yes', 'on')
+
+            def _slugify(s: str) -> str:
+                s = (s or '').strip().lower()
+                s = re.sub(r'[^a-z0-9]+', '-', s).strip('-')
+                s = re.sub(r'-{2,}', '-', s)
+                return s[:50] if s else ''
+
+            base_from_file = _os.path.splitext(_os.path.basename(filename))[0]
+            slug_base = _slugify(avatar_slug_in) or _slugify(base_from_file) or _slugify(school.school_code) or 'school-avatar'
+            slug = slug_base
+            n = 0
+            while Avatar.query.filter_by(slug=slug).first():
+                n += 1
+                slug = f"{slug_base}-{n}"
+                if n > 50:
+                    slug = f"{slug_base}-{int(_time.time())}"
+                    break
+
+            data = f.read()
+            if not data:
+                flash('Uploaded school GLB file was empty.', 'error')
+                db.session.rollback()
+                return redirect(url_for('admin_schools'))
+
+            avatar = Avatar(
+                slug=slug,
+                name=avatar_name_in or (base_from_file.replace('_', ' ').replace('-', ' ').title()[:100] or slug),
+                description=f"School avatar for {school.name}.",
+                category='school',
+                folder_path='glb_files',
+                obj_file=filename,
+                glb_data=data,
+                glb_file_size=len(data),
+                school_id=school.id,
+                is_active=True,
+                sort_order=0,
+            )
+            db.session.add(avatar)
+            uploaded_avatar_slug = slug
+
+            if set_default_avatar:
+                school.mascot_asset_key = slug
+                db.session.add(school)
+
         db.session.commit()
         msg = f"Created school '{name}' (code: {school_code})."
         if created_keys:
             msg += " Keys: " + ", ".join([f"{k}={v}" for k, v in created_keys.items()])
+        if uploaded_avatar_slug:
+            msg += f" Uploaded school GLB avatar: {uploaded_avatar_slug}."
         flash(msg, 'success')
         return redirect(url_for('admin_schools'))
     except IntegrityError:
