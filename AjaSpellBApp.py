@@ -20837,7 +20837,7 @@ def api_get_my_avatar():
                             'variant': 'default',
                             'name': avatar.name or 'School Mascot',
                             'urls': {
-                                'glb': f"{base_path}/{glb_filename}",
+                                'glb': url_for('api_get_avatar_glb', avatar_id=avatar.slug) if getattr(avatar, 'glb_data', None) else f"{base_path}/{glb_filename}",
                                 'thumbnail': thumbnail_path
                             }
                         }
