@@ -83,13 +83,6 @@
             border-color: #E6A800;
             box-shadow: 0 0 0 3px rgba(230,168,0,0.2);
         }
-        .pw-toggle {
-            font-size: 0.85rem;
-            color: #6b5b3d;
-            cursor: pointer;
-            margin-top: 0.25rem;
-        }
-        .pw-toggle:hover { text-decoration: underline; }
         .btn {
             width: 100%;
             padding: 1rem;
@@ -128,18 +121,9 @@
          onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/BeeSmartSpellingBeeApplication.png') }}'; this.className='logo';">
     <div class="card">
         <h1>School Portal</h1>
-        <p class="sub">Sign in with your School Key or Teacher/Student Key</p>
+        <p class="sub">Enter your School Key or Teacher/Student Key to open your school experience</p>
         <div id="alert" class="alert alert-error"></div>
         <form id="schoolLoginForm">
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" required placeholder="you@school.edu" autocomplete="email">
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required placeholder="••••••••" autocomplete="current-password">
-                <span class="pw-toggle" id="pwToggle" role="button" tabindex="0">Show password</span>
-            </div>
             <div class="form-group">
                 <label for="key_code">School Key</label>
                 <input type="text" id="key_code" name="key_code" required placeholder="e.g. BEE-2026-TEACH-XXXX" autocomplete="off">
@@ -147,7 +131,7 @@
             </div>
             <button type="submit" class="btn" id="submitBtn">Enter School Portal</button>
         </form>
-        <p class="help">Contact your teacher or school admin if you don't have a key.</p>
+        <p class="help">After entering your key, you can sign into your personal teacher/student account from inside the app.</p>
     </div>
     <script defer src="{{ url_for('static', filename='js/action-sfx.js') }}?v=20260218"></script>
     <script>
@@ -155,8 +139,6 @@
             var form = document.getElementById('schoolLoginForm');
             var alertEl = document.getElementById('alert');
             var submitBtn = document.getElementById('submitBtn');
-            var pw = document.getElementById('password');
-            var pwToggle = document.getElementById('pwToggle');
 
             function showError(msg) {
                 alertEl.textContent = msg || '';
@@ -164,20 +146,12 @@
                 try { if (msg && window.BeeSmartActionSfx) window.BeeSmartActionSfx.error(); } catch (_) {}
             }
 
-            pwToggle.addEventListener('click', function() {
-                var isPw = pw.type === 'password';
-                pw.type = isPw ? 'text' : 'password';
-                pwToggle.textContent = isPw ? 'Hide password' : 'Show password';
-            });
-
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 showError('');
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner"></span> Signing in...';
+                submitBtn.innerHTML = '<span class="spinner"></span> Entering school...';
                 var payload = {
-                    email: document.getElementById('email').value.trim(),
-                    password: pw.value,
                     key_code: document.getElementById('key_code').value.trim()
                 };
                 fetch('{{ url_for("school_login") }}', {

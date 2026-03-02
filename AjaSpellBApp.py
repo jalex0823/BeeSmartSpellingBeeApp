@@ -14472,7 +14472,7 @@ def school_landing_page():
 
 @app.route('/school/login', methods=['POST'])
 def school_login():
-    """Validate email, password, key_code; set school context and redirect to teacher/student dashboard."""
+    """Validate school key, set school context, and redirect to main menu."""
     from school_edition import is_school_edition
     from models import School, SchoolKey
     from datetime import datetime as dt
@@ -14482,8 +14482,8 @@ def school_login():
     email = (data.get('email') or data.get('username') or '').strip()
     password = data.get('password', '')
     key_code = (data.get('key_code') or data.get('key') or '').strip()
-    if not email or not password or not key_code:
-        return jsonify({"success": False, "error": "Email, password, and School Key are required"}), 400
+    if not key_code:
+        return jsonify({"success": False, "error": "School Key is required"}), 400
     try:
         _ensure_db_initialized()
         from sqlalchemy import inspect
@@ -14493,12 +14493,18 @@ def school_login():
                 "success": False,
                 "error": "School tables are not set up. Run: python scripts/migrate_school_tables.py"
             }), 503
-        user = User.query.filter(db.func.lower(User.email) == email.lower()).first() or \
-               User.query.filter(db.func.lower(User.username) == email.lower()).first()
-        if not user or not user.check_password(password):
-            return jsonify({"success": False, "error": "Invalid email or password"}), 401
-        if not user.is_active:
-            return jsonify({"success": False, "error": "Account is disabled"}), 403
+
+        user = current_user if getattr(current_user, 'is_authenticated', False) else None
+        if email and password:
+            auth_user = User.query.filter(db.func.lower(User.email) == email.lower()).first() or \
+                        User.query.filter(db.func.lower(User.username) == email.lower()).first()
+            if not auth_user or not auth_user.check_password(password):
+                return jsonify({"success": False, "error": "Invalid email or password"}), 401
+            if not auth_user.is_active:
+                return jsonify({"success": False, "error": "Account is disabled"}), 403
+            login_user(auth_user, remember=True)
+            user = auth_user
+
         sk = SchoolKey.query.filter_by(key_code=key_code.strip(), is_active=True).first()
         if not sk:
             return jsonify({"success": False, "error": "Invalid or inactive School Key"}), 401
@@ -14507,40 +14513,37 @@ def school_login():
         school = School.query.get(sk.school_id)
         if not school:
             return jsonify({"success": False, "error": "School not found"}), 404
+
         role_context = 'teacher' if sk.key_type.upper() == 'TEACHER' else 'student' if sk.key_type.upper() == 'STUDENT' else None
         if not role_context and sk.key_type.upper() == 'SCHOOL':
-            role_context = (user.role or 'student').lower()
+            role_context = ((getattr(user, 'role', None) or session.get('role_context') or 'student')).lower()
             if role_context not in ('teacher', 'student'):
                 role_context = 'student'
         if not role_context:
-            role_context = (user.role or 'student').lower()
+            role_context = ((getattr(user, 'role', None) or session.get('role_context') or 'student')).lower()
+
         try:
-            if hasattr(user, 'school_id') and user.school_id is None:
+            if user and hasattr(user, 'school_id') and user.school_id != school.id:
                 user.school_id = school.id
                 db.session.commit()
         except Exception as e:
             db.session.rollback()
             app.logger.warning(f"School login: could not set user.school_id: {e}")
-        login_user(user, remember=True)
-        try:
-            user.update_last_login(ip_address=request.remote_addr)
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            app.logger.warning(f"School login: update_last_login failed: {e}")
+
         session['school_id'] = school.id
         session['school_key_type'] = sk.key_type
         session['school_code'] = school.school_code
         session['role_context'] = role_context
+
         try:
-            _ensure_school_default_avatar(user, school)
-            db.session.commit()
+            if user:
+                _ensure_school_default_avatar(user, school)
+                db.session.commit()
         except Exception as e:
             db.session.rollback()
             app.logger.warning(f"School login: ensure_school_default_avatar failed: {e}")
-        if role_context == 'teacher':
-            return jsonify({"success": True, "redirect": url_for('school_teacher_dashboard')})
-        return jsonify({"success": True, "redirect": url_for('school_student_dashboard')})
+
+        return jsonify({"success": True, "redirect": url_for('unified_menu')})
     except Exception as e:
         db.session.rollback()
         import traceback
