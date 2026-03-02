@@ -14425,13 +14425,13 @@ def login():
                     if user.role == 'teacher' or user.role == 'parent':
                         redirect_url = url_for('teacher_dashboard') if user.role == 'teacher' else url_for('parent_dashboard')
                     elif user.role == 'admin':
-                        redirect_url = url_for('admin_dashboard')
+                        redirect_url = url_for('admin_schools')
                     else:
                         redirect_url = url_for('student_dashboard')
                 except Exception as e:
                     app.logger.error(f"Failed to generate redirect URL for role {user.role}: {e}")
                     redirect_url = url_for('home')
-
+        
         # Ensure redirect_url is valid
         if not redirect_url or redirect_url == '':
             app.logger.warning(f"Redirect URL was empty for role {user.role}, using home")
@@ -15048,7 +15048,7 @@ def student_dashboard():
         if role == 'parent':
             return redirect(url_for('parent_dashboard'))
         if role == 'admin':
-            return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('admin_schools'))
     except Exception as e:
         # If anything goes wrong determining role, fall back to student view
         print(f" WARNING student_dashboard role redirect failed: {e}")
@@ -15783,7 +15783,7 @@ def teacher_dashboard():
     if students:
         student_ids = [s.id for s in students]
         
-        # Total quizzes (include both completed and in-progress with answers)
+        # Total quizzes (include both completed and in-progress with attempts)
         class_stats['total_quizzes'] = QuizSession.query.filter(
             QuizSession.user_id.in_(student_ids),
             or_(
@@ -16706,7 +16706,7 @@ def api_teacher_class_students(class_id):
             db.func.coalesce(db.func.max(QuizSession.max_streak), 0).label('best_streak'),
             db.func.coalesce(db.func.sum(points_expr), 0).label('points_total'),
             db.func.max(QuizSession.session_end).label('last_end'),
-            db.func.max(QuizSession.session_start).label('last_start'),
+            db.session.query(db.func.max(QuizSession.session_start)).label('last_start'),
         ).filter(
             QuizSession.roster_student_id.in_(roster_ids),
             attempted
@@ -17366,7 +17366,7 @@ def api_join_select_student():
     import base64
     token = base64.urlsafe_b64encode(secrets.token_bytes(24)).decode('utf-8').rstrip('=')
     session['roster_session_token'] = token
-    # In-memory or Redis store for token -> roster_student_id would go here for stateless; for now session is enough
+    # In-memory or Redis store for token → roster_student_id would go here for stateless; for now session is enough
     return jsonify({
         "status": "ok",
         "student_session_token": token,
@@ -17378,175 +17378,11 @@ def api_join_select_student():
 @app.route('/admin/dashboard')
 @login_required
 def admin_dashboard():
-    """Admin dashboard"""
-    try:
-        if current_user.role != 'admin':
-            flash('Access denied: Admins only', 'error')
-            return redirect(url_for('home'))
-        
-        # Get MY teacher key to find students/family under my supervision
-        # (Admins use teacher_key field for tracking their students)
-        my_key = current_user.teacher_key
-        
-        # Find all students who registered with MY teacher key
-        # Use TeacherStudent link table to find students linked to this admin
-        my_students = []
-        if my_key:
-            # Get student IDs from TeacherStudent link table
-            student_links = TeacherStudent.query.filter_by(
-                teacher_key=my_key,
-                is_active=True
-            ).all()
-            
-            # Get the actual user objects for these students (exclude guests)
-            student_ids = [link.student_id for link in student_links]
-            if student_ids:
-                my_students = filter_non_guest_users(
-                    User.query.filter(User.id.in_(student_ids))
-                ).order_by(User.created_at.desc()).all()
-            
-            # Double-check to filter out any remaining guests
-            my_students = [student for student in my_students if not is_guest_user(student)]
-            
-            # Enrich student data with their stats
-            for student in my_students:
-                # Build a reusable query for sessions with actual activity
-                session_q = QuizSession.query.filter_by(
-                    user_id=student.id
-                ).filter(
-                    or_(
-                        QuizSession.completed == True,
-                        and_(
-                            QuizSession.completed == False,
-                            (QuizSession.correct_count + QuizSession.incorrect_count) > 0
-                        )
-                    )
-                )
-
-                # Count quizzes with activity (completed or in-progress with attempts)
-                student.quiz_count = session_q.count()
-
-                # Prefer robust counts from QuizSession aggregates to avoid gaps when QuizResult rows are missing
-                from sqlalchemy import func
-                total_correct = session_q.with_entities(func.coalesce(func.sum(QuizSession.correct_count), 0)).scalar() or 0
-                total_incorrect = session_q.with_entities(func.coalesce(func.sum(QuizSession.incorrect_count), 0)).scalar() or 0
-
-                student.correct_count = int(total_correct)
-                student.words_practiced = int(total_correct + total_incorrect)
-
-                # Accuracy for parent view should mirror the student's dashboard value
-                # Use the stored per-session average_accuracy field for exact consistency
-                try:
-                    student.accuracy = round(float(student.average_accuracy or 0.0), 1)
-                except Exception:
-                    student.accuracy = round((student.correct_count / student.words_practiced) * 100, 1) if student.words_practiced > 0 else 0
-
-                # Get latest quiz date (including incomplete sessions)
-                latest_quiz = session_q.order_by(
-                    QuizSession.session_end.desc().nullslast(),
-                    QuizSession.session_start.desc()
-                ).first()
-                
-                student.last_active = (
-                    latest_quiz.session_end if (latest_quiz and latest_quiz.session_end)
-                    else latest_quiz.session_start if (latest_quiz and latest_quiz.session_start)
-                    else student.created_at
-                )
-        
-        # System-wide statistics (exclude guest users)
-        stats = {
-            'total_users': get_non_guest_users_query().count(),
-            'total_students': filter_non_guest_users(User.query.filter_by(role='student')).count(),
-            'total_teachers': filter_non_guest_users(User.query.filter_by(role='teacher')).count(),
-            'total_quizzes': QuizSession.query.join(User).filter(
-                and_(
-                    or_(
-                        QuizSession.completed == True,
-                        and_(
-                            QuizSession.completed == False,
-                            (QuizSession.correct_count + QuizSession.incorrect_count) > 0
-                        )
-                    ),
-                    # Exclude guest users from quiz counts
-                    not_(User.username.like('guest_%')),
-                    User.password_hash.isnot(None)
-                )
-            ).count(),
-            'total_words_attempted': QuizResult.query.join(User).filter(
-                and_(
-                    not_(User.username.like('guest_%')),
-                    User.password_hash.isnot(None)
-                )
-            ).count(),
-            'my_students_count': len(my_students)
-        }
-        
-        # Battle Bee Statistics - Query actual battle sessions
-        try:
-            total_battles = BattleSession.query.count()
-            active_battles = BattleSession.query.filter(
-                BattleSession.status.in_(['waiting', 'in_progress'])
-            ).count()
-            completed_battles = BattleSession.query.filter_by(status='completed').count()
-        except Exception as e:
-            print(f"Error loading battle stats: {e}")
-            total_battles = 0
-            active_battles = 0
-            completed_battles = 0
-        
-        # Get top 10 players on the leaderboard (exclude guests)
-        try:
-            leaderboard = get_leaderboard_no_guests(10)
-        except Exception as e:
-            print(f"Error loading leaderboard: {e}")
-            leaderboard = []
-        
-        # Enrich leaderboard with stats (battle stats placeholders until Battle models implemented)
-        for idx, player in enumerate(leaderboard, start=1):
-            player.rank = idx
-            # Placeholder: battle stats not yet implemented
-            player.total_battles_played = getattr(player, 'total_battles_played', 0)
-            player.total_battles_won = getattr(player, 'total_battles_won', 0)
-            player.win_rate = round((player.total_battles_won / player.total_battles_played * 100), 1) if player.total_battles_played > 0 else 0
-            # Use total_lifetime_points as honey_points for now
-            player.honey_points = getattr(player, 'honey_points', player.total_lifetime_points)
-        
-        battle_stats = {
-            'total_battles': total_battles,
-            'active_battles': active_battles,
-            'completed_battles': completed_battles,
-            'total_battle_participants': 0  # Placeholder until Battle models implemented
-        }
-        
-        # Get current user's avatar data for immediate display
-        try:
-            user_avatar_data = current_user.get_avatar_data()
-            use_mascot = current_user.has_selected_avatar() == False
-        except Exception as e:
-            print(f"️ Could not load user avatar data: {e}")
-            user_avatar_data = None
-            use_mascot = True
-        
-        return render_template('admin/dashboard.html', 
-                             user=current_user, 
-                             stats=stats,
-                             battle_stats=battle_stats,
-                             leaderboard=leaderboard,
-                             my_students=my_students,
-                             admin_key=my_key,
-                             BUNDLE_CATALOG=BUNDLE_CATALOG or {},
-                             user_avatar=user_avatar_data,
-                             use_mascot=use_mascot)  # Pass teacher_key as admin_key for template
-    
-    except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        print(f" ADMIN DASHBOARD ERROR: {str(e)}")
-        print(error_details)
-        flash(f'Error loading admin dashboard: {str(e)}', 'error')
-        return render_template('error.html', 
-                             error_message=f"Admin Dashboard Error: {str(e)}",
-                             error_details=error_details if app.debug else None), 500
+    """Legacy admin route. Admin home is now /admin/schools."""
+    if (getattr(current_user, 'role', None) or '').lower() != 'admin':
+        flash('Access denied: Admins only', 'error')
+        return redirect(url_for('home'))
+    return redirect(url_for('admin_schools'))
 
 
 @app.route('/admin/login', methods=['GET', 'POST'])
@@ -17555,7 +17391,7 @@ def admin_login():
     # If already logged in as admin, go straight to admin portal.
     try:
         if getattr(current_user, 'is_authenticated', False) and (getattr(current_user, 'role', '') or '').lower() == 'admin':
-            return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('admin_schools'))
     except Exception:
         pass
 
@@ -17596,7 +17432,7 @@ def admin_login():
 
         # Safe next: only allow internal admin paths
         if not nxt or not nxt.startswith('/admin'):
-            nxt = url_for('admin_dashboard')
+            nxt = url_for('admin_schools')
         return redirect(nxt)
     except Exception as e:
         db.session.rollback()
