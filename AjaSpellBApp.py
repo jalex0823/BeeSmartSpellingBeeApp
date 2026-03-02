@@ -14543,7 +14543,7 @@ def school_login():
             db.session.rollback()
             app.logger.warning(f"School login: ensure_school_default_avatar failed: {e}")
 
-        return jsonify({"success": True, "redirect": url_for('unified_menu')})
+        return jsonify({"success": True, "redirect": url_for('home')})
     except Exception as e:
         db.session.rollback()
         import traceback
@@ -20778,7 +20778,7 @@ def api_get_my_avatar():
         else:
             # Fall back to guest user
             user = get_or_create_guest_user()
-        
+
         if not user:
             # No user found, return default mascot (GLB-only)
             print("️ No user found, returning default mascot")
@@ -20795,20 +20795,25 @@ def api_get_my_avatar():
                 },
                 'use_mascot': True
             })
-        
+
+        school_id = session.get('school_id')
+
         # Check if user has explicitly selected an avatar
         use_mascot = not user.has_selected_avatar()
-        
+        if school_id and not current_user.is_authenticated:
+            # Key-first school entry should show school mascot context on main menu,
+            # regardless of any previous guest avatar selection.
+            use_mascot = True
+
         # Debug logging
         print(f" Avatar API: User {user.id} ({user.username if hasattr(user, 'username') else 'guest'})")
         print(f"   - avatar_id: {user.avatar_id}")
         print(f"   - has_selected_avatar: {user.has_selected_avatar()}")
         print(f"   - preferences: {user.preferences}")
         print(f"   - use_mascot: {use_mascot}")
-        
+
         # If user hasn't selected an avatar, use school default avatar when in school context
         if use_mascot:
-            school_id = session.get('school_id')
             if school_id:
                 from models import School, Avatar
                 school = School.query.get(school_id)
@@ -20838,6 +20843,7 @@ def api_get_my_avatar():
                         }
                         print(f"   → Returning school default avatar: {avatar.slug}")
                         return jsonify({'status': 'success', 'avatar': avatar_data, 'use_mascot': False})
+
             print("   → Returning MascotBee (no avatar selected)")
             return jsonify({
                 'status': 'success',
@@ -20852,7 +20858,7 @@ def api_get_my_avatar():
                 },
                 'use_mascot': True
             })
-        
+
         # User has selected an avatar, return their choice
         avatar_data = user.get_avatar_data()
         print(f"   → Returning selected avatar: {avatar_data.get('avatar_id')} ({avatar_data.get('name')})")
