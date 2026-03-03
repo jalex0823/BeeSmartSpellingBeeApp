@@ -2008,8 +2008,16 @@ function showRestoreDialog(title, message, isSuccess) {
             max-width: 320px;
         }
         
-        :root { --content-max: 800px; }
+        :root { --content-max: min(94vw, 1120px); }
 
+        @media (max-width: 768px) {
+            :root { --content-max: min(92vw, 420px); }
+        }
+
+        @media (min-width: 1400px) {
+            :root { --content-max: min(88vw, 1280px); }
+        }
+        
         /* Menu options container */
         .menu-container {
             padding: 0 0 2rem 0; /* REMOVED horizontal padding */
