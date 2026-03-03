@@ -9216,7 +9216,16 @@ def api_upload():
                     return jsonify({"error": f"Unable to parse file. Tried: {', '.join(tried)}"}), 400
         except RuntimeError as e:
             # e.g., missing dependency for docx/pdf
-            return jsonify({"error": str(e)}), 400
+            err_msg = str(e)
+            if ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".heic", ".heif"]:
+                err_lower = err_msg.lower()
+                if (
+                    "tesseract ocr engine was not found" in err_lower
+                    or "image processing requires tesseract ocr" in err_lower
+                    or "ocr (image upload) is not available on this server" in err_lower
+                ):
+                    return jsonify({"error": err_msg, "error_code": "ocr_unavailable"}), 503
+            return jsonify({"error": err_msg}), 400
         except Exception as e:
             return jsonify({"error": f"Failed to parse file: {e}"}), 400
 
