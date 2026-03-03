@@ -49,7 +49,7 @@ app = Flask(__name__)
 # When enabled, we provide a reviewer-friendly path for Apple App Review to access
 # core premium flows without creating an account or relying on fragile demo creds.
 APP_REVIEW_MODE = os.environ.get('APP_REVIEW_MODE', '0').strip() == '1'
-from PIL import Image
+from PIL import Image, ImageOps
 from sqlalchemy import inspect, exc as sa_exc, or_, and_, not_, text
 from sqlalchemy.exc import DisconnectionError, OperationalError, SQLAlchemyError
 
@@ -3510,7 +3510,10 @@ DEV_RESET_TOKEN_CACHE: Dict[int, str] = {}  # user_id -> last raw token
 # --- Config ------------------------------------------------------------------
 DATA_KEY = "wordbank_v1"
 QUIZ_STATE_KEY = "quiz_state_v1"
-ALLOWED_EXTENSIONS = {".csv", ".txt", ".docx", ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff"}
+ALLOWED_EXTENSIONS = {
+    ".csv", ".txt", ".docx", ".pdf", ".xlsx", ".xls",
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".heic", ".heif",
+}
 MAX_RECORDS = 500  # safety cap; your typical lists are ~50
 
 # Progress tracking for upload processing with bee theme
@@ -4326,6 +4329,64 @@ def parse_csv(file_bytes: bytes, filename: str) -> List[Dict[str, str]]:
             })
     return records
 
+def parse_excel(file_bytes: bytes, filename: str) -> List[Dict[str, str]]:
+    """Parse Excel files (.xlsx/.xls) into word records."""
+    ext = os.path.splitext((filename or "").lower())[1]
+    rows_matrix: List[List[str]] = []
+
+    if ext != ".xls":
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
+            ws = wb.active
+            for row in ws.iter_rows(values_only=True):
+                vals = ["" if v is None else str(v).strip() for v in row]
+                if any(vals):
+                    rows_matrix.append(vals)
+            wb.close()
+        except Exception:
+            rows_matrix = []
+
+    if not rows_matrix:
+        try:
+            import pandas as pd
+            df = pd.read_excel(io.BytesIO(file_bytes), dtype=str)
+            header = [str(c).strip() for c in list(df.columns)]
+            rows_matrix.append(header)
+            for rec in df.fillna("").astype(str).to_dict(orient="records"):
+                rows_matrix.append([str(rec.get(c, "")).strip() for c in header])
+        except Exception:
+            raise RuntimeError("Excel parsing requires openpyxl or pandas. Please upload .xlsx, .csv, or .txt.")
+
+    if not rows_matrix:
+        return []
+
+    header_row = [c.strip().lower() for c in (rows_matrix[0] or [])]
+    has_word_header = "word" in header_row
+    records: List[Dict[str, str]] = []
+
+    if has_word_header:
+        word_idx = header_row.index("word")
+        sentence_idx = header_row.index("sentence") if "sentence" in header_row else None
+        hint_idx = header_row.index("hint") if "hint" in header_row else None
+        for row in rows_matrix[1:]:
+            word = (row[word_idx] if word_idx < len(row) else "").strip()
+            if not word:
+                continue
+            sentence = (row[sentence_idx] if sentence_idx is not None and sentence_idx < len(row) else "").strip()
+            hint = (row[hint_idx] if hint_idx is not None and hint_idx < len(row) else "").strip()
+            records.append({"word": word, "sentence": sentence, "hint": hint})
+    else:
+        for row in rows_matrix:
+            word = (row[0] if len(row) > 0 else "").strip()
+            if not word:
+                continue
+            sentence = (row[1] if len(row) > 1 else "").strip()
+            hint = (row[2] if len(row) > 2 else "").strip()
+            records.append({"word": word, "sentence": sentence, "hint": hint})
+
+    return records
+
 def parse_docx(file_bytes: bytes) -> List[Dict[str, str]]:
     if docx is None:
         raise RuntimeError("DOCX support not installed. Please install python-docx.")
@@ -4363,30 +4424,67 @@ def parse_image_ocr(file_bytes: bytes) -> List[Dict[str, str]]:
     """Extract text from image using OCR and parse as word list"""
     if not TESSERACT_AVAILABLE:
         raise RuntimeError("Image processing requires Tesseract OCR. Please install pytesseract and tesseract-ocr.")
-    
+
     try:
-        # Open image from bytes
-        image = Image.open(io.BytesIO(file_bytes))
-        
-        # Convert to RGB if necessary
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-        
-        # Extract text using OCR
-        text = pytesseract.image_to_string(image)
-        
-        # Process OCR text into word list
+        try:
+            _ = pytesseract.get_tesseract_version()
+        except Exception as e:
+            raise RuntimeError(
+                "Tesseract OCR engine was not found. Install tesseract-ocr and ensure it is on PATH."
+            ) from e
+
+        image = None
+        try:
+            image = Image.open(io.BytesIO(file_bytes))
+            image.load()
+        except Exception:
+            image = None
+
+        if image is None:
+            try:
+                import pillow_heif
+                pillow_heif.register_heif_opener()
+                image = Image.open(io.BytesIO(file_bytes))
+                image.load()
+            except Exception as e:
+                raise RuntimeError(
+                    "Could not decode uploaded image. If this is HEIC/HEIF, install pillow-heif."
+                ) from e
+
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
+        gray = ImageOps.grayscale(image)
+        enhanced = ImageOps.autocontrast(gray)
+
+        text = pytesseract.image_to_string(enhanced, config="--oem 3 --psm 6")
+
         lines = [line.strip() for line in text.splitlines() if line.strip()]
-        
-        # Clean up OCR artifacts
         cleaned_lines = []
         for line in lines:
-            # Remove common OCR artifacts
-            cleaned = re.sub(r'[^\w\s|,-]', '', line)  # Keep word chars, spaces, pipes, commas, hyphens
-            if cleaned.strip() and len(cleaned.strip()) > 1:  # Avoid single character OCR errors
-                cleaned_lines.append(cleaned.strip())
-        
-        return _records_from_lines(cleaned_lines)
+            cleaned = re.sub(r"[^\w\s|,-]", " ", line)
+            cleaned = re.sub(r"\s+", " ", cleaned).strip()
+            if cleaned and len(cleaned) > 1:
+                cleaned_lines.append(cleaned)
+
+        records = _records_from_lines(cleaned_lines)
+        if records:
+            return records
+
+        candidates = re.findall(r"[A-Za-z][A-Za-z'\-]{1,24}", text)
+        seen = set()
+        extracted: List[Dict[str, str]] = []
+        for token in candidates:
+            word = re.sub(r"[^A-Za-z]", "", token).strip()
+            if len(word) < 2:
+                continue
+            key = word.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            extracted.append({"word": word, "sentence": "", "hint": ""})
+
+        return extracted
     except Exception as e:
         raise RuntimeError(f"OCR processing failed: {str(e)}")
 
@@ -6340,11 +6438,13 @@ def upload_to_saved_list():
             words = parse_csv(file_bytes, filename)
         elif filename.endswith('.txt'):
             words = parse_txt(file_bytes)
+        elif filename.endswith('.xlsx') or filename.endswith('.xls'):
+            words = parse_excel(file_bytes, filename)
         elif filename.endswith('.docx'):
             words = parse_docx(file_bytes)
         elif filename.endswith('.pdf'):
             words = parse_pdf(file_bytes)
-        elif any(filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp']):
+        elif any(filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.heic', '.heif']):
             if not TESSERACT_AVAILABLE:
                 return jsonify({"ok": False, "error": "Image processing requires Tesseract OCR installation"}), 400
             words = parse_image_ocr(file_bytes)
@@ -8755,7 +8855,9 @@ def process_upload_with_progress(session_id, request_obj):
                     rows = parse_docx(content)
                 elif ext == ".pdf":
                     rows = parse_pdf(content)
-                elif ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff"]:
+                elif ext in [".xlsx", ".xls"]:
+                    rows = parse_excel(content, filename)
+                elif ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".heic", ".heif"]:
                     update_upload_progress(session_id, "ocr", "Bees are reading text from image...", "bees_reading_image", 25)
                     rows = parse_image_ocr(content)
                 
@@ -9006,10 +9108,9 @@ def api_upload():
                     rows = parse_docx(content)
                 elif ext == ".pdf":
                     rows = parse_pdf(content)
-                elif ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff"]:
-                    # Guests cannot use OCR-based image upload
-                    if not current_user.is_authenticated:
-                        return jsonify({"error": "Login required for image uploads (OCR)", "auth_required": True}), 403
+                elif ext in [".xlsx", ".xls"]:
+                    rows = parse_excel(content, filename)
+                elif ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".heic", ".heif"]:
                     rows = parse_image_ocr(content)
             else:
                 # Fallback: attempt CSV, then TXT, then DOCX, then PDF
