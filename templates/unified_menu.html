@@ -5444,10 +5444,10 @@ function showRestoreDialog(title, message, isSuccess) {
             <!-- Menu options - SAME FOR ALL USERS (Authenticated & Guest) -->
             <section class="menu-container" style="margin-top: 0;">
                 <!-- Upload Text File (open to all users) -->
-                <div class="menu-option theme-berry" onclick="kidSounds.playRandomEffect(); selectOption('text', this)" onmouseover="kidSounds.playBuzz()" title=" Upload your word list from a text file, CSV, or paste words directly!">
+                <div class="menu-option theme-berry" onclick="kidSounds.playRandomEffect(); selectOption('text', this)" onmouseover="kidSounds.playBuzz()" title=" Upload your word list from text, CSV, Excel, or paste words directly!">
                     <div class="option-icon"></div>
                     <div class="option-title">Upload Word List</div>
-                    <div class="option-description">Plain text, CSV, comma/space separated, Word docs</div>
+                    <div class="option-description">Plain text, CSV, Excel, comma/space separated, Word docs</div>
                     <div class="kid-tip"> Perfect for spelling lists from school!</div>
                 </div>
 
@@ -7914,7 +7914,7 @@ function showRestoreDialog(title, message, isSuccess) {
             // Create file input for text files
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
-            fileInput.accept = '.txt,.csv,.doc,.docx,.pdf,text/*,application/pdf';
+            fileInput.accept = '.txt,.csv,.xlsx,.xls,.doc,.docx,.pdf,text/*,application/pdf';
             fileInput.multiple = false;
             fileInput.style.display = 'none';
             fileInput.style.position = 'absolute';
