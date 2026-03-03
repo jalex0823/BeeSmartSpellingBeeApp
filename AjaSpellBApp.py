@@ -1028,6 +1028,9 @@ def home_root_direct():
         avatar_product_ids = AVATAR_SKUS
     except Exception:
         avatar_product_ids = {}
+
+    from school_edition import get_edition_context
+    edition_ctx = get_edition_context()
     
     return render_template(
         'unified_menu.html',
@@ -1039,6 +1042,7 @@ def home_root_direct():
         subscription_product_id=subscription_product_id,
         is_premium=is_premium,
         avatar_product_ids=avatar_product_ids,
+        **edition_ctx,
     )
 
 # Favicon route to prevent 404 errors

@@ -212,20 +212,31 @@
                     headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                     body: JSON.stringify(payload)
                 })
-                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(r) {
+                    return r.text().then(function(raw) {
+                        var data = null;
+                        try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = null; }
+                        return { ok: r.ok, status: r.status, data: data, raw: raw };
+                    });
+                })
                 .then(function(o) {
                     if (o.ok && o.data.success && o.data.redirect) {
                         try { if (window.BeeSmartActionSfx) window.BeeSmartActionSfx.success(); } catch (_) {}
                         setTimeout(function() { window.location.href = o.data.redirect; }, 90);
                         return;
                     }
-                    showError(o.data.error || 'Login failed. Please try again.');
+                    var serverErr = (o.data && (o.data.error || o.data.message)) || '';
+                    if (!serverErr && !o.ok && o.raw) {
+                        serverErr = 'Server returned ' + o.status + '. Please try again.';
+                    }
+                    showError(serverErr || 'Login failed. Please try again.');
                     hideLoading();
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Enter School Portal';
                 })
-                .catch(function() {
-                    showError('Network error. Please try again.');
+                .catch(function(err) {
+                    var msg = (err && err.message) ? ('Network error: ' + err.message) : 'Network error. Please try again.';
+                    showError(msg);
                     hideLoading();
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Enter School Portal';

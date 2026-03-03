@@ -4560,9 +4560,10 @@ function showRestoreDialog(title, message, isSuccess) {
                 window.avatarControlsReady = false;
 
                 (function(){
-                    // Prefer server-rendered avatar data to avoid post-login fetch hangs in iOS WebViews.
-                    // This page is rendered with an authenticated session, so we can embed the GLB URL.
-                    const SERVER_AVATAR = {{ current_user.get_avatar_data()|tojson }};
+                    // Prefer server-rendered avatar data from route context when available.
+                    // In school edition we force a server refresh so school key avatar context wins.
+                    const SERVER_AVATAR = {{ user_avatar|default({}, true)|tojson }};
+                    const FORCE_SERVER_AVATAR = {{ 'true' if edition == 'school' else 'false' }};
                     const SERVER_GLB = (SERVER_AVATAR && SERVER_AVATAR.urls && SERVER_AVATAR.urls.glb)
                         ? SERVER_AVATAR.urls.glb
                         : '/static/assets/avatars/glb_files/MascotBee.glb';
@@ -4591,8 +4592,8 @@ function showRestoreDialog(title, message, isSuccess) {
                             window.avatarControlsInstance = new window.SmartyBee3D('avatarControls3D', {
                                 width: size,
                                 height: size,
-                                // Use server-provided GLB path (stable) and skip the extra avatar API call.
-                                fetchFromServer: false,
+                                // In school mode, refresh from API so session school avatar applies immediately.
+                                fetchFromServer: FORCE_SERVER_AVATAR,
                                 modelPath: SERVER_GLB,
                                 brighterLighting: true,  // Brighter lighting for registered users
                                 autoRotate: false,
