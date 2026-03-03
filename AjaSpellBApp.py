@@ -4426,11 +4426,20 @@ def parse_image_ocr(file_bytes: bytes) -> List[Dict[str, str]]:
         raise RuntimeError("Image processing requires Tesseract OCR. Please install pytesseract and tesseract-ocr.")
 
     try:
+        configured_cmd = (os.environ.get("TESSERACT_CMD") or "").strip()
+        if configured_cmd:
+            pytesseract.pytesseract.tesseract_cmd = configured_cmd
+        else:
+            discovered_cmd = shutil.which("tesseract")
+            if discovered_cmd:
+                pytesseract.pytesseract.tesseract_cmd = discovered_cmd
+
         try:
             _ = pytesseract.get_tesseract_version()
         except Exception as e:
+            configured = getattr(pytesseract.pytesseract, "tesseract_cmd", "<default>")
             raise RuntimeError(
-                "Tesseract OCR engine was not found. Install tesseract-ocr and ensure it is on PATH."
+                f"Tesseract OCR engine was not found (cmd={configured}). Install tesseract-ocr and ensure it is on PATH."
             ) from e
 
         image = None
