@@ -146,6 +146,33 @@
         }
         .loading-title { font-weight: 800; font-size: 1.05rem; margin-bottom: 0.4rem; }
         .loading-copy { font-size: 0.9rem; color: #6b5b3d; line-height: 1.4; margin: 0; }
+        .loading-progress-wrap {
+            margin-top: 0.9rem;
+            text-align: left;
+        }
+        .loading-progress-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #6b5b3d;
+            margin-bottom: 0.35rem;
+            font-weight: 700;
+        }
+        .loading-progress-track {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(59, 43, 4, 0.14);
+            overflow: hidden;
+        }
+        .loading-progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #E6A800 0%, #FFC107 100%);
+            transition: width 0.25s ease;
+        }
     </style>
 </head>
 <body>
@@ -170,6 +197,15 @@
             <span class="spinner" aria-hidden="true"></span>
             <div class="loading-title">Loading Your School Experience</div>
             <p class="loading-copy">We are validating your key, setting your school context, and preparing the main menu.</p>
+            <div class="loading-progress-wrap" aria-hidden="true">
+                <div class="loading-progress-head">
+                    <span>Progress</span>
+                    <span id="loadingPercent">0%</span>
+                </div>
+                <div class="loading-progress-track">
+                    <div id="loadingProgressFill" class="loading-progress-fill"></div>
+                </div>
+            </div>
         </div>
     </div>
     <script defer src="{{ url_for('static', filename='js/action-sfx.js') }}?v=20260218"></script>
@@ -179,17 +215,54 @@
             var alertEl = document.getElementById('alert');
             var submitBtn = document.getElementById('submitBtn');
             var loadingOverlay = document.getElementById('loadingOverlay');
+            var loadingPercentEl = document.getElementById('loadingPercent');
+            var loadingProgressFill = document.getElementById('loadingProgressFill');
+            var progressTimer = null;
+            var progressValue = 0;
+
+            function setProgress(value) {
+                var next = Math.max(0, Math.min(100, Math.round(value || 0)));
+                progressValue = next;
+                if (loadingPercentEl) loadingPercentEl.textContent = next + '%';
+                if (loadingProgressFill) loadingProgressFill.style.width = next + '%';
+            }
+
+            function startProgress() {
+                if (progressTimer) {
+                    clearInterval(progressTimer);
+                    progressTimer = null;
+                }
+                setProgress(8);
+                progressTimer = setInterval(function() {
+                    // Fast at start, slows as it approaches completion while waiting for server redirect.
+                    var step = progressValue < 45 ? 8 : progressValue < 70 ? 5 : progressValue < 88 ? 2 : 1;
+                    var cap = 92;
+                    if (progressValue < cap) {
+                        setProgress(Math.min(cap, progressValue + step));
+                    }
+                }, 260);
+            }
+
+            function stopProgress(resetToZero) {
+                if (progressTimer) {
+                    clearInterval(progressTimer);
+                    progressTimer = null;
+                }
+                if (resetToZero) setProgress(0);
+            }
 
             function showLoading() {
                 if (!loadingOverlay) return;
                 loadingOverlay.style.display = 'flex';
                 loadingOverlay.setAttribute('aria-hidden', 'false');
+                startProgress();
             }
 
             function hideLoading() {
                 if (!loadingOverlay) return;
                 loadingOverlay.style.display = 'none';
                 loadingOverlay.setAttribute('aria-hidden', 'true');
+                stopProgress(true);
             }
 
             function showError(msg) {
@@ -222,6 +295,8 @@
                 .then(function(o) {
                     if (o.ok && o.data.success && o.data.redirect) {
                         try { if (window.BeeSmartActionSfx) window.BeeSmartActionSfx.success(); } catch (_) {}
+                        stopProgress(false);
+                        setProgress(100);
                         setTimeout(function() { window.location.href = o.data.redirect; }, 90);
                         return;
                     }
