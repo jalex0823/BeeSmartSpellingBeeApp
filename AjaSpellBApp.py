@@ -14489,16 +14489,11 @@ def school_login():
     if not key_code:
         return jsonify({"success": False, "error": "School Key is required"}), 400
     try:
-        _ensure_db_initialized()
-        from sqlalchemy import inspect
-        inspector = inspect(db.engine)
-        if not inspector.has_table('schools') or not inspector.has_table('school_keys'):
-            return jsonify({
-                "success": False,
-                "error": "School tables are not set up. Run: python scripts/migrate_school_tables.py"
-            }), 503
+        # Keep this endpoint fast: avoid full schema inspection/init checks on every key submit.
+        # If school tables are unavailable, the queries below will fail and return a handled error.
 
         user = current_user if getattr(current_user, 'is_authenticated', False) else None
+
         if email and password:
             auth_user = User.query.filter(db.func.lower(User.email) == email.lower()).first() or \
                         User.query.filter(db.func.lower(User.username) == email.lower()).first()
