@@ -4457,7 +4457,28 @@ def parse_image_ocr(file_bytes: bytes) -> List[Dict[str, str]]:
         gray = ImageOps.grayscale(image)
         enhanced = ImageOps.autocontrast(gray)
 
-        text = pytesseract.image_to_string(enhanced, config="--oem 3 --psm 6")
+        def _run_ocr_variants(img_obj) -> List[str]:
+            texts: List[str] = []
+            for cfg in ["--oem 3 --psm 6", "--oem 3 --psm 11", "--oem 3 --psm 3"]:
+                try:
+                    candidate = pytesseract.image_to_string(img_obj, config=cfg)
+                    if candidate and candidate.strip():
+                        texts.append(candidate)
+                except Exception:
+                    continue
+            return texts
+
+        ocr_text_candidates: List[str] = []
+        ocr_text_candidates.extend(_run_ocr_variants(enhanced))
+
+        # Retry with a larger image; phone photos often OCR better when upscaled.
+        try:
+            upscaled = enhanced.resize((max(1, enhanced.width * 2), max(1, enhanced.height * 2)), Image.LANCZOS)
+            ocr_text_candidates.extend(_run_ocr_variants(upscaled))
+        except Exception:
+            pass
+
+        text = "\n".join(t for t in ocr_text_candidates if t and t.strip())
 
         lines = [line.strip() for line in text.splitlines() if line.strip()]
         cleaned_lines = []
@@ -9142,7 +9163,11 @@ def api_upload():
         except Exception as e:
             return jsonify({"error": f"Failed to parse file: {e}"}), 400
 
+    is_image_upload = ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".heic", ".heif"]
+
     if not rows:
+        if is_image_upload:
+            return jsonify({"error": "Could not detect readable words in the image.", "error_code": "ocr_no_words"}), 400
         return jsonify({"error": "No words parsed"}), 400
 
     # Trim and deduplicate
@@ -9162,6 +9187,8 @@ def api_upload():
             })
 
     if not deduped:
+        if is_image_upload:
+            return jsonify({"error": "Could not detect readable words in the image.", "error_code": "ocr_no_words"}), 400
         return jsonify({"error": "No valid 'word' entries found"}), 400
 
     # ENHANCED KID-FRIENDLY FILTER: Block inappropriate words with guardian tracking

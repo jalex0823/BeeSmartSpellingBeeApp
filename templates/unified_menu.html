@@ -7965,22 +7965,45 @@ function showRestoreDialog(title, message, isSuccess) {
             // Create file input for images
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
-            fileInput.accept = 'image/*';
+            // Broad accept allows iOS chooser to offer Photo Library, Take Photo, and Files.
+            fileInput.accept = 'image/*,.heic,.heif,.webp';
             fileInput.multiple = false;
             fileInput.style.display = 'none';
-            
+
             fileInput.onchange = function(e) {
                 const file = e.target.files[0];
                 if (file) {
                     uploadImageFile(file);
                 }
+                // Keep the element alive until selection settles; early removal can break iOS pickers.
+                setTimeout(() => {
+                    if (fileInput.parentNode) {
+                        fileInput.parentNode.removeChild(fileInput);
+                    }
+                }, 100);
             };
-            
+
+            // Supported by Safari/iOS when user dismisses chooser without selecting.
+            fileInput.oncancel = function() {
+                setTimeout(() => {
+                    if (fileInput.parentNode) {
+                        fileInput.parentNode.removeChild(fileInput);
+                    }
+                }, 100);
+            };
+
             document.body.appendChild(fileInput);
-            fileInput.click();
-            document.body.removeChild(fileInput);
+            try {
+                fileInput.click();
+            } catch (error) {
+                console.error('Failed to open image picker:', error);
+                if (fileInput.parentNode) {
+                    fileInput.parentNode.removeChild(fileInput);
+                }
+                showErrorMessage('Unable to open image picker. Please try again.');
+            }
         }
-        
+
         function showDictionaryInterface() {
             // Use kid-friendly prompt for dictionary search
             showBeePrompt({
@@ -10989,12 +11012,14 @@ function showRestoreDialog(title, message, isSuccess) {
                     // Error occurred - hide progress immediately
                     hideFileUploadProgress();
                     
-                    // Check for OCR-specific error
+                    // Classify OCR errors so we only show "not clear enough" when image text is truly unreadable.
                     const errorMsg = data.error || "Unknown error occurred";
-                    const isOCRError = errorMsg.includes('tesseract') || errorMsg.includes('Tesseract') || errorMsg.includes('OCR');
-                    
-                    if (isOCRError) {
-                        // Show kid-friendly OCR error modal
+                    const errorCode = (data.error_code || '').toLowerCase();
+                    const isOCRRuntimeError = errorMsg.includes('tesseract') || errorMsg.includes('Tesseract') || errorMsg.includes('OCR');
+
+                    if (errorCode === 'ocr_no_words') {
+                        showImageUploadErrorModal('ocr_no_words', errorMsg);
+                    } else if (isOCRRuntimeError) {
                         showImageUploadErrorModal('ocr_not_installed', errorMsg);
                     } else {
                         // Check if this is a content violation warning from image upload
@@ -11002,7 +11027,7 @@ function showRestoreDialog(title, message, isSuccess) {
                             // Show violation in modal popup (like "Attention, spelling bee!")
                             showViolationWarning(data.error);
                         } else {
-                            // Show kid-friendly error modal
+                            // Show backend/server error details instead of blaming image clarity.
                             showImageUploadErrorModal('general_error', errorMsg);
                         }
                     }
@@ -11262,9 +11287,15 @@ function showRestoreDialog(title, message, isSuccess) {
                         box-shadow: 0 4px 15px rgba(33, 150, 243, 0.4);
                     ">Upload File Instead</button>
                 `;
-            } else {
-                title = '😔 Picture Not Clear Enough';
-                message = `Our word finder couldn't read this image clearly.\n\nTry:\n• A clearer, brighter photo\n• Better lighting\n• Less blurry picture\n• Or use "Type Words Manually" instead!`;
+            } else if (errorType === 'ocr_no_words') {
+                title = 'Picture Not Clear Enough';
+                message = `Our word finder couldn't detect readable words in this image.
+
+Try:
+- A clearer, brighter photo
+- Better lighting
+- Less blurry picture
+- Make sure words are visible and large enough`;
                 buttons = `
                     <button onclick="
                         const modal = document.getElementById('imageUploadErrorModal');
@@ -11283,6 +11314,28 @@ function showRestoreDialog(title, message, isSuccess) {
                         cursor: pointer;
                         box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
                     ">Try Another Picture</button>
+                `;
+            } else {
+                title = 'Upload Failed';
+                message = errorMessage || 'Something went wrong while processing your image upload.';
+                buttons = `
+                    <button onclick="
+                        const modal = document.getElementById('imageUploadErrorModal');
+                        if (modal) {
+                            modal.style.animation = 'fadeOut 0.3s ease';
+                            setTimeout(() => modal.remove(), 300);
+                        }
+                    " style="
+                        background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+                        color: white;
+                        border: none;
+                        border-radius: 15px;
+                        padding: 12px 30px;
+                        font-size: 1rem;
+                        font-weight: bold;
+                        cursor: pointer;
+                        box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
+                    ">OK</button>
                 `;
             }
             
