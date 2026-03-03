@@ -5782,7 +5782,7 @@ function showRestoreDialog(title, message, isSuccess) {
             {% endif %}
             
             <!-- Hidden file input for import -->
-            <input type="file" id="importFileInput" accept=".json,.csv,.txt,.docx,.pdf,text/*" style="display: none;" onchange="handleImportFile(this)">
+            <input type="file" id="importFileInput" accept=".json,.csv,.txt,.xlsx,.xls,.docx,.pdf,text/*" style="display: none;" onchange="handleImportFile(this)">
         </div>
     </div>
 
@@ -8361,11 +8361,11 @@ function showRestoreDialog(title, message, isSuccess) {
 
                     <div style="text-align: center; margin-bottom: 1.5rem; color: #8B4513;">
                         <p style="margin: 0.5rem 0;">Select a file to update your saved word list:</p>
-                        <p style="margin: 0.5rem 0; font-size: 0.9rem; opacity: 0.8;">Supported formats: CSV, TXT, DOCX, PDF, or Images (OCR)</p>
+                        <p style="margin: 0.5rem 0; font-size: 0.9rem; opacity: 0.8;">Supported formats: CSV, TXT, DOCX, PDF, XLSX, XLS, or Images (OCR)</p>
                     </div>
 
                     <div style="margin-bottom: 1.5rem;">
-                        <input type="file" id="uploadToSavedFile" accept=".csv,.txt,.docx,.pdf,image/*" style="
+                        <input type="file" id="uploadToSavedFile" accept=".csv,.txt,.xlsx,.xls,.docx,.pdf,image/*" style="
                             width: 100%;
                             padding: 1rem;
                             border: 2px dashed #FF6B9D;
@@ -13131,9 +13131,9 @@ function showRestoreDialog(title, message, isSuccess) {
             const filename = file.name;
             const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase();
             
-            // Accept text files, CSV files, JSON files, and document files (like Upload does)
-            if (ext !== '.json' && ext !== '.csv' && ext !== '.txt' && ext !== '.docx' && ext !== '.pdf') {
-                showErrorMessage('Please upload a .json, .csv, .txt, .docx, or .pdf file');
+            // Accept text files, CSV/Excel files, JSON files, and document files (like Upload does)
+            if (ext !== '.json' && ext !== '.csv' && ext !== '.txt' && ext !== '.xlsx' && ext !== '.xls' && ext !== '.docx' && ext !== '.pdf') {
+                showErrorMessage('Please upload a .json, .csv, .txt, .xlsx, .xls, .docx, or .pdf file');
                 input.value = ''; // Reset file input
                 return;
             }
