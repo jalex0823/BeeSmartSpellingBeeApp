@@ -106,7 +106,7 @@ class TestCompleteApp(unittest.TestCase):
         
         # Should return error about no file, but endpoint should exist
         # Image upload is typically auth-gated.
-        self.assertIn(response.status_code, [200, 405, 403])
+        self.assertIn(response.status_code, [200, 405, 401, 403])
         if response.status_code in (401, 403):
             self.assertTrue(_is_auth_required(response))
             return
