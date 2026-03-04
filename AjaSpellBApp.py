@@ -7716,14 +7716,13 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
         
         definition = data.get("definition", "")
         example = data.get("example", "")
+        clean_definition = sanitize_kid_friendly_text(_filter_definition(definition, word)) if definition else ""
         
-        # Create kid-friendly sentence from definition and example
+        # Sentence display should always be a real sentence with a blank.
         if example and len(example) > 10:
-            # Blank out the word in the example
-            sentence = f"{definition}. Example: {_blank_word(example, word)}"
+            sentence = sanitize_kid_friendly_text(_blank_word(example, word))
         else:
-            # Use definition with creative prompt
-            sentence = f"{definition}. Can you spell this {len(word)}-letter word?"
+            sentence = "Use the clue to spell the missing word: The _____ belongs in this sentence."
         
         # Create informative hint
         hint_parts = [f"Level {difficulty} word"]
@@ -7731,6 +7730,8 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
             hint_parts.append(f"{len(word)} letters")
         if item["uniqueness"] >= 2:
             hint_parts.append("has tricky spelling patterns")
+        if clean_definition:
+            hint_parts.append(f"Clue: {clean_definition}")
         
         result.append({
             "word": word,
@@ -11573,72 +11574,91 @@ def api_user_level():
                 "points_current": 0,
                 "points_next": 500,
                 "points_to_next": 500,
-                "progress_percent": 0,
-                "is_max_level": False
             }
-        })
+        }), 500
 
 @app.route("/api/dictionary-lookup", methods=["POST"])
 def api_dictionary_lookup():
     """
-    Look up a word using INTERNAL DICTIONARY ONLY (Simple English Wiktionary → Cache → Smart Fallback).
-     NO EXTERNAL API CALLS - All definitions from built-in resources.
+    Look up a word using INTERNAL DICTIONARY ONLY (Simple English Wiktionary → Smart Fallback).
+    NO EXTERNAL API CALLS - All definitions from built-in resources.
     
     Body JSON: { "word": "example" }
-    Returns: { "word": "example", "definition": "...", "phonetic": "E X A M P L E", "found": true/false }
+    Returns: { "word": "example", "definition": "...", "example": "...", "phonetic": "E X A M P L E", "found": true/false }
     """
-    payload = request.get_json(force=True)
-    word = (payload.get("word") or "").strip()
-    
-    if not word:
-        return jsonify({"error": "No word provided"}), 400
-
-    # Guest quota: small free allowance per day
     try:
-        if not current_user.is_authenticated:
-            QUOTA_KEY = "guest_dict_quota_v1"
-            quota = session.get(QUOTA_KEY) or {}
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            if quota.get("date") != today:
-                quota = {"date": today, "count": 0, "limit": 5}
-            limit = int(quota.get("limit", 5))
-            count = int(quota.get("count", 0))
-            if count >= limit:
-                reset_at = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
-                return jsonify({
-                    "ok": False,
-                    "error": "Guest dictionary lookups limit reached. Please register to continue.",
-                    "auth_required": True,
-                    "limit": limit,
-                    "reset_date": reset_at
-                }), 403
-            else:
-                quota["count"] = count + 1
-                quota["date"] = today
-                session[QUOTA_KEY] = quota
-                session.modified = True
-    except Exception:
-        # Non-fatal if quota logic fails
-        pass
-    
-    #  All lookups use INTERNAL DICTIONARY ONLY (Simple Wiktionary -> Smart Fallback)
-    definition = get_word_info(word)
-    phonetic_spelling = build_phonetic_spelling(word)
-    word_lower = word.lower()
-    
-    # Check which internal source provided the definition
-    wiktionary = ensure_simple_wiktionary_loaded()
-    found_in_wiktionary = wiktionary and word_lower in wiktionary
+        payload = request.get_json(force=True) or {}
+        word = (payload.get("word") or "").strip()
+        
+        if not word:
+            return jsonify({"error": "No word provided"}), 400
 
-    source = "simple_wiktionary" if found_in_wiktionary else "smart_fallback"
+        # Guest quota: small free allowance per day
+        try:
+            if not current_user.is_authenticated:
+                QUOTA_KEY = "guest_dict_quota_v1"
+                quota = session.get(QUOTA_KEY) or {}
+                today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                if quota.get("date") != today:
+                    quota = {"date": today, "count": 0, "limit": 5}
+                limit = int(quota.get("limit", 5))
+                count = int(quota.get("count", 0))
+                if count >= limit:
+                    reset_at = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
+                    return jsonify({
+                        "ok": False,
+                        "error": "Guest dictionary lookups limit reached. Please register to continue.",
+                        "auth_required": True,
+                        "limit": limit,
+                        "reset_date": reset_at
+                    }), 403
+                else:
+                    quota["count"] = count + 1
+                    quota["date"] = today
+                    session[QUOTA_KEY] = quota
+                    session.modified = True
+        except Exception:
+            # Non-fatal if quota logic fails
+            pass
+        
+        # All lookups use INTERNAL DICTIONARY ONLY (Simple Wiktionary -> Smart Fallback)
+        wiktionary = ensure_simple_wiktionary_loaded()
+        word_lower = word.lower()
 
-    return jsonify({
-        "word": word,
-        "definition": definition,
-        "phonetic": phonetic_spelling,
-        "found": bool(found_in_wiktionary),
-        "source": source  # All sources are internal (simple_wiktionary or smart_fallback)
-    })
+        found_in_wiktionary = bool(wiktionary and word_lower in wiktionary)
+        definition = ""
+        example = ""
+
+        if found_in_wiktionary:
+            word_data = wiktionary.get(word_lower, {}) or {}
+            definition = sanitize_kid_friendly_text(_filter_definition(word_data.get("definition", ""), word))
+            example = sanitize_kid_friendly_text(word_data.get("example", ""))
+            source = "simple_wiktionary"
+        else:
+            fb = generate_smart_fallback(word)
+            definition = sanitize_kid_friendly_text(fb.get("definition", ""))
+            example = sanitize_kid_friendly_text(fb.get("example", ""))
+            # Make fallback examples read naturally in dictionary modal.
+            if "_____" in example:
+                example = example.replace("_____", word)
+            source = "smart_fallback"
+
+        if not definition:
+            definition = "Definition not available for this word yet."
+
+        phonetic_spelling = build_phonetic_spelling(word)
+
+        return jsonify({
+            "word": word,
+            "definition": definition,
+            "example": example,
+            "phonetic": phonetic_spelling,
+            "found": bool(found_in_wiktionary),
+            "source": source  # All sources are internal (simple_wiktionary or smart_fallback)
+        })
+    except Exception as e:
+        print(f" Error in dictionary lookup: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/word-info/preload", methods=["POST"])
 def api_word_info_preload():

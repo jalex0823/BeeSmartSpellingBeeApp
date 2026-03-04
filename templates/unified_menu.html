@@ -11227,13 +11227,25 @@ Try:
                 },
                 body: JSON.stringify({ word: term })
             })
-            .then(response => response.json())
+            .then(async response => {
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Dictionary lookup failed');
+                }
+                return data;
+            })
             .then(data => {
                 hideLoadingMessage();
                 requestAnimationFrame(function() {
                     requestAnimationFrame(function() {
                         if (data.definition && data.definition.trim()) {
-                            showDictionaryResult(data.word, data.definition, data.phonetic || '');
+                            showDictionaryResult(
+                                data.word || term,
+                                data.definition,
+                                data.phonetic || '',
+                                data.example || '',
+                                data.source || ''
+                            );
                         } else {
                             showErrorMessage('Word not found in dictionary');
                         }
@@ -11289,7 +11301,6 @@ Try:
             }
         }
 
-        // Show locked feature: guest -> Sign In; authenticated non-premium -> Subscribe (goToPremiumPage)
         function showLockedFeature(featureName, options) {
             options = options || {};
             var requirePremium = options.requirePremium === true;
@@ -12115,17 +12126,17 @@ Try:
             }
         }
         
-        function showDictionaryResult(word, definition, phonetic) {
+        function showDictionaryResult(word, definition, phonetic, example, source) {
             const existing = document.getElementById('dictionaryModal');
             if (existing) existing.remove();
-            // Parse definition in dictionary style (matching quiz format)
-            let cleanDef = definition.replace(/^[]\s*/, '');
+            // Parse definition in dictionary style (accept clean definition text first).
+            let cleanDef = String(definition || '').trim();
             let wordType = '';
             let mainDefinition = cleanDef;
-            let exampleSentence = '';
+            let exampleSentence = String(example || '').trim();
             
-            // Check if definition contains "Fill in the blank:"
-            if (cleanDef.includes('Fill in the blank:')) {
+            // Back-compat: older payloads embedded sentence inside definition.
+            if (!exampleSentence && cleanDef.includes('Fill in the blank:')) {
                 const parts = cleanDef.split('Fill in the blank:');
                 mainDefinition = parts[0].trim();
                 exampleSentence = parts[1] ? parts[1].trim() : '';

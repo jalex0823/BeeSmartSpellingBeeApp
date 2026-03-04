@@ -483,38 +483,277 @@ if ('speechSynthesis' in window) {
     }
     
     .start-guidance-modal-buttons .action-btn {
-        width: 100%;
-        min-height: 48px;
-    }
 
-    /* A) Edge-to-edge card – theme cream (match menu card from style guide) */
-    .quiz-card {
-        flex: 1 1 auto;
-        min-height: 600px;
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        max-width: none;
-        margin: 0 auto;
-        overflow: hidden;
-        box-sizing: border-box;
-        border-radius: 18px;
-        background: var(--beesmart-cream);
-        border: 1px solid rgba(238, 147, 35, 0.15);
+/* Yellow pill CTA - prominent start guidance */
+.buzzy-pill {
+    width: 100%;
+    max-width: 280px;
+    margin: 12px auto;
+    border-radius: 999px;
+    padding: 14px 20px;
+    border: 2px solid rgba(255, 193, 7, 0.6);
+    background: linear-gradient(135deg, #FFD93D 0%, #FFA000 100%);
+    color: #5A2C15;
+    font-weight: 800;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(255, 170, 0, 0.4);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    -webkit-tap-highlight-color: transparent;
+    text-transform: none;
+}
+
+.buzzy-pill:hover { 
+    background: linear-gradient(135deg, #FFE082 0%, #FFB300 100%);
+    box-shadow: 0 8px 24px rgba(255, 170, 0, 0.5);
+    transform: translateY(-2px);
+}
+
+.buzzy-pill:active { 
+    transform: translateY(0) scale(0.98);
+    box-shadow: 0 4px 12px rgba(255, 170, 0, 0.3);
+}
+
+/* Green start guidance modal */
+.start-guidance-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+}
+
+.start-guidance-modal-content {
+    background: linear-gradient(135deg, #C8E6C9 0%, #81C784 50%, #66BB6A 100%);
+    border-radius: 20px;
+    padding: 24px;
+    max-width: 320px;
+    width: 100%;
+    box-shadow: 0 12px 40px rgba(76, 175, 80, 0.4);
+    border: 3px solid rgba(46, 125, 50, 0.3);
+    text-align: center;
+}
+
+.start-guidance-modal-content h3 {
+    color: #1B5E20;
+    font-size: 1.3rem;
+    font-weight: 800;
+    margin: 0 0 12px 0;
+}
+
+.start-guidance-modal-content p {
+    color: #2E7D32;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0 0 20px 0;
+}
+
+.start-guidance-modal-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.start-guidance-modal-buttons .action-btn {
+    width: 100%;
+    min-height: 48px;
+}
+
+/* A) Edge-to-edge card – theme cream (match menu card from style guide) */
+.quiz-card {
+    flex: 1 1 auto;
+    min-height: 600px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    margin: 0 auto;
+    overflow: hidden;
+    box-sizing: border-box;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #FFFDE7 0%, #FFF8E1 100%);
+    border: 1px solid rgba(238, 147, 35, 0.15);
+}
+
+.quiz-card .quiz-card-content {
+    padding: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    background: linear-gradient(180deg, #FFFDE7 0%, #FFF8E1 100%);
+}
+
+/* Card content should not trap scroll; let the page scroll */
+.card-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: visible !important;
+    padding: max(14px, env(safe-area-inset-top)) 12px 28px 12px; /* Extra bottom padding so Exit is never clipped */
+}
+
+/* Webkit scrollbar styling (Chrome, Safari, Edge) - Always visible */
+.card-scroll::-webkit-scrollbar {
+    width: 10px !important;
+    display: block !important;
+    -webkit-appearance: none;
+}
+
+.card-scroll::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 5px;
+    -webkit-box-shadow: inset 0 0 2px rgba(0,0,0,0.1);
+}
+
+.card-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.4) !important;
+    border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    min-height: 30px;
+}
+
+.card-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Ensure scrollbar is always visible when content overflows */
+.card-scroll:not(:hover)::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Force scrollbar visibility - override any hiding */
+.card-scroll {
+    scrollbar-gutter: stable; /* Reserve space for scrollbar */
+}
+
+/* Ensure visualizer/timer containers are not clipped */
+.quiz-card .quiz-card-content .card-scroll {
+    padding-top: max(14px, env(safe-area-inset-top));
+}
+
+/* Prevent clipping: ensure containers use static positioning */
+/* EXCEPT: countdown-container inside morph-content needs absolute for morphing effect */
+.voice-visualizer,
+#voiceVisualizer,
+.honey-jar-timer,
+.morph-container {
+    position: static !important;
+    margin-top: 0 !important;
+    z-index: auto !important;
+}
+
+/* countdown-container outside morph-content should be static */
+.countdown-container:not(.morph-content .countdown-container) {
+    position: static !important;
+    margin-top: 0 !important;
+    z-index: auto !important;
+}
+
+/* morph-content needs relative positioning for absolute children */
+.morph-content {
+    position: relative !important;
+    margin-top: 0 !important;
+    z-index: auto !important;
+}
+
+/* Top card: center and equally space avatar, honeypot, sentence (no excess gap at bottom) */
+.quiz-card-top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1rem; /* Even spacing between avatar and question area (timer/sentence) */
+    padding-bottom: 0.65rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Answer + keyboard in same scroll flow; visible gap, no overlap */
+.answer-and-keyboard {
+    display: block;
+    margin-bottom: 1rem; /* Increased spacing */
+    margin-top: 1rem; /* Added top margin for separation */
+}
+
+.answer-and-keyboard .quiz-answer-area {
+    margin-bottom: 16px; /* Increased spacing between answer area and keyboard */
+}
+
+/* F) Hide keyboard: toggle only; never position:fixed */
+#keyboardHost.is-hidden,
+.keyboard-host.is-hidden,
+.keyboard-shell.is-hidden {
+    display: none !important;
+}
+
+/* Keyboard: always visible by default; only hide when .is-hidden */
+/* Styling moved to QuizKeyboard.css - only positioning rules here */
+#keyboardHost,
+.keyboard-host,
+.keyboard-shell {
+    position: static !important;
+    top: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+    z-index: auto !important;
+    transform: none;
+    opacity: 1;
+}
+
+#quizKeyboardContainer {
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* Legacy keyboard styles removed - handled by QuizKeyboard.css */
+/* Ensure keys can shrink: max-width on children is OK, but don't block min-width: 0 */
+.keyboard-host * {
+    max-width: 100%;
+    box-sizing: border-box;
+    /* CRITICAL: Don't override min-width - let grid handle it for responsive shrink */
+    /* min-width is handled by QuizKeyboard.css with !important */
+}
+
+/* Key press pop (transform only, no layout shift) */
+.keyboard-host .key-pop,
+.keyboard-host .quiz-keyboard-key-pop {
+    transform: scale(1.08);
+    transition: transform .12s ease;
+}
+
+/* H) Buttons: 2 columns, full-width span option */
+.action-buttons .span-2,
+.secondary-buttons .span-2 {
+    grid-column: span 2;
+}
+
+/* Pop-out animation for keyboard */
+.quiz-keyboard-pop-out {
+    animation: keyboard-pop-out 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes keyboard-pop-out {
+    0% {
+        transform: scale(0.9);
+        opacity: 0;
     }
-    .quiz-card .quiz-card-content {
-        padding: 0;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        overflow: hidden;
+    50% {
+        transform: scale(1.02);
     }
-    /* Card content should not trap scroll; let the page scroll */
-    .card-scroll {
-        flex: 1 1 auto;
-        min-height: 0;
-        overflow: visible !important;
+    100% {
+        transform: scale(1);
         padding: max(14px, env(safe-area-inset-top)) 12px 28px 12px; /* Extra bottom padding so Exit is never clipped */
     }
     
@@ -6071,13 +6310,15 @@ class BeeDelightManager {
     handlePronounce(data, onEndCallback = null) {
         this.soundboard.play('speak');
         if (data && data.word) {
-            // Speak a friendly prompt and say the word once (the old double-say sounded like a glitch)
-            const phrase = `Spell the word ${data.word}.`;
+            // Speak only the target word here.
+            // Intro/announcer messaging is handled elsewhere to avoid duplicate repeats.
+            const phrase = data.word;
             const rate = data.rate || 0.92; // Use provided rate or default
             this.soundboard.speakWord(phrase, onEndCallback, rate);
         } else if (onEndCallback) {
             onEndCallback();
         }
+        
         this.setMascotState('speaking', 1600);
         const speakButton = document.getElementById('speakButton');
         if (!this.reducedMotion && speakButton) {
@@ -7128,17 +7369,18 @@ class QuizManager {
             <div style="margin-top: 0.75rem;">
                 <button id="forceNextBtn" style="
                     background: rgba(255, 165, 0, 0.12);
-                    border: 2px dashed rgba(255, 140, 0, 0.7);
-                    border-radius: 12px;
-                    padding: 10px 18px;
-                    font-size: 0.95rem;
+                    border: 3px solid #388E3C;
+                    border-radius: 15px;
+                    padding: 15px 30px;
+                    font-size: 1.2rem;
                     font-weight: 700;
-                    color: #8B008B;
+                    color: white;
                     cursor: pointer;
+                    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
                     min-height: 44px;
-                    touch-action: manipulation;
                     width: 85%;
                     max-width: 320px;
+                    touch-action: manipulation;
                 ">
                     ➡️ If it gets stuck, tap here (Next Word)
                 </button>
@@ -7724,8 +7966,8 @@ class QuizManager {
                 wordIntro = this.studentName + ', ' + wordIntro.toLowerCase();
             }
             
-            wordIntro += ' ' + data.word + '.';
-
+            wordIntro += ' Listen carefully.';
+            
             // Start a new speech chain for this word (cancels older overlapping chains)
             const seq = this.beginSpeechSequence();
 
@@ -8115,7 +8357,6 @@ class QuizManager {
         }
         pointsHtml += '<hr style="margin: 10px 0; border: 1px solid rgba(74,44,42,0.3);">';
         pointsHtml += `<div style="font-size: 1.5em; font-weight: bold; margin-top: 10px;">💰 Total: ${points.toLocaleString()} points!</div>`;
-        pointsHtml += '</div>';
         pointsHtml += `<div style="margin-top: 15px; font-size: 1.1em;">🏆 Session Total: ${this.sessionPoints.toLocaleString()} points</div>`;
         pointsHtml += '</div>';
         
@@ -8494,32 +8735,32 @@ class QuizManager {
         });
 
         if (speakButton) {
-            var doPronounce = () => {
+            const manualPronounceCooldownMs = 900;
+            var doPronounce = async () => {
                 console.log('🔊 Pronounce button clicked');
                 try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('button'); } catch (e) {}
+                if (this._manualPronounceInProgress) return;
+                this._manualPronounceInProgress = true;
                 try {
-                    if (this.isAndroid) {
-                        this.pronounceWord({ refresh: true, rate: 0.7 });
-                    } else {
-                        const w = (this.currentWordData && this.currentWordData.word) || (this.currentWord && this.currentWord.word) || '';
-                        if (w) {
-                            this.speakAnnouncement(`Please spell: ${w}`).then(() => {
-                                this.pronounceWord({ refresh: true, rate: 0.7 });
-                            });
-                        } else {
-                            this.pronounceWord({ refresh: true, rate: 0.7 });
-                        }
-                    }
+                    await this.pronounceWordSlow();
+                    await new Promise(resolve => setTimeout(resolve, 280));
+                    await this.pronounceWordSlow();
                 } catch (_e) {
-                    this.pronounceWord({ refresh: true, rate: 0.7 });
+                    try {
+                        await this.pronounceWordSlow();
+                    } catch (__e) {}
+                } finally {
+                    this._manualPronounceInProgress = false;
                 }
             };
             speakButton.addEventListener('click', () => {
                 if (this._suppressPronounceClickUntil && Date.now() < this._suppressPronounceClickUntil) return;
+                this._suppressPronounceClickUntil = Date.now() + manualPronounceCooldownMs;
                 doPronounce();
             });
             speakButton.addEventListener('touchend', (e) => {
-                if (this.isAndroid) { this._suppressPronounceClickUntil = Date.now() + 400; doPronounce(); }
+                this._suppressPronounceClickUntil = Date.now() + manualPronounceCooldownMs;
+                doPronounce();
             }, { passive: true });
         }
 
@@ -9110,7 +9351,7 @@ class QuizManager {
                     await this.speakAnnouncement(preface);
                 }
                 // Subsequent words: consistent phrasing for clarity
-                const phrase = `Your next word is: ${data.word}`;
+                const phrase = 'Your next word is.';
                 await this.speakAnnouncement(phrase);
                 
                 // Brief visual pause between phases, then auto‑pronounce

@@ -14,14 +14,31 @@
 
     /** Set true only after QA confirms tap targets remain accurate. */
     const USE_HEX_KEYS_DEFAULT = false;
+    const KEY_CLICK_URL = '/static/sounds/button-click.mp3';
 
     let instance = null;
 
+    function isSfxEnabled() {
+        try {
+            if (window.BeeSmartButtonSfx && typeof window.BeeSmartButtonSfx.getEnabled === 'function') {
+                return !!window.BeeSmartButtonSfx.getEnabled();
+            }
+        } catch (_) {}
+        try {
+            const v = window.localStorage.getItem('beesmart_sfx_enabled_v1');
+            if (v === null) return true;
+            return v !== '0';
+        } catch (_) {}
+        return true;
+    }
+
     function playKeyClick(volume) {
         try {
-            if (typeof window.BeeSmartButtonSfx !== 'undefined' && window.BeeSmartButtonSfx.playRandom) {
-                window.BeeSmartButtonSfx.playRandom({ volume: typeof volume === 'number' ? volume : 0.32 });
-            }
+            if (!isSfxEnabled()) return;
+            const audio = new Audio(KEY_CLICK_URL);
+            audio.volume = typeof volume === 'number' ? volume : 0.3;
+            const p = audio.play();
+            if (p && typeof p.catch === 'function') p.catch(() => {});
         } catch (_) {}
     }
 
