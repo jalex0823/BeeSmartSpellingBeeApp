@@ -14614,8 +14614,29 @@ def school_login():
         # Keep this endpoint fast: avoid full schema inspection/init checks on every key submit.
         # If school tables are unavailable, the queries below will fail and return a handled error.
 
-        user = current_user if getattr(current_user, 'is_authenticated', False) else None
+        sk = SchoolKey.query.filter_by(key_code=key_code.strip(), is_active=True).first()
+        if not sk:
+            return jsonify({"success": False, "error": "Invalid or inactive School Key"}), 401
 
+        if sk.expires_at and sk.expires_at < dt.utcnow():
+            return jsonify({"success": False, "error": "School Key has expired"}), 401
+        school = School.query.get(sk.school_id)
+        if not school:
+            return jsonify({"success": False, "error": "School not found"}), 404
+
+        # Always start school transition from a clean auth/session context.
+        was_authenticated = bool(getattr(current_user, 'is_authenticated', False))
+        try:
+            if was_authenticated:
+                logout_user()
+        except Exception as e:
+            app.logger.warning(f"School login: logout during transition failed: {e}")
+        try:
+            session.clear()
+        except Exception as e:
+            app.logger.warning(f"School login: session clear during transition failed: {e}")
+
+        verified_user = None
         if email and password:
             auth_user = User.query.filter(db.func.lower(User.email) == email.lower()).first() or \
                         User.query.filter(db.func.lower(User.username) == email.lower()).first()
@@ -14623,46 +14644,43 @@ def school_login():
                 return jsonify({"success": False, "error": "Invalid email or password"}), 401
             if not auth_user.is_active:
                 return jsonify({"success": False, "error": "Account is disabled"}), 403
-            login_user(auth_user, remember=True)
-            user = auth_user
-
-        sk = SchoolKey.query.filter_by(key_code=key_code.strip(), is_active=True).first()
-        if not sk:
-            return jsonify({"success": False, "error": "Invalid or inactive School Key"}), 401
-        if sk.expires_at and sk.expires_at < dt.utcnow():
-            return jsonify({"success": False, "error": "School Key has expired"}), 401
-        school = School.query.get(sk.school_id)
-        if not school:
-            return jsonify({"success": False, "error": "School not found"}), 404
+            # School portal key flow intentionally remains non-authenticated after success.
+            # Credentials are validated for role-aware context only.
+            verified_user = auth_user
 
         role_context = 'teacher' if sk.key_type.upper() == 'TEACHER' else 'student' if sk.key_type.upper() == 'STUDENT' else None
         if not role_context and sk.key_type.upper() == 'SCHOOL':
-            role_context = ((getattr(user, 'role', None) or session.get('role_context') or 'student')).lower()
+            role_context = ((getattr(verified_user, 'role', None) or 'student')).lower()
             if role_context not in ('teacher', 'student'):
                 role_context = 'student'
         if not role_context:
-            role_context = ((getattr(user, 'role', None) or session.get('role_context') or 'student')).lower()
+            role_context = ((getattr(verified_user, 'role', None) or 'student')).lower()
 
-        try:
-            if user and hasattr(user, 'school_id') and user.school_id != school.id:
-                user.school_id = school.id
-                db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            app.logger.warning(f"School login: could not set user.school_id: {e}")
+        if verified_user and hasattr(verified_user, 'school_id') and verified_user.school_id != school.id:
+            verified_user.school_id = school.id
 
         session['school_id'] = school.id
         session['school_key_type'] = sk.key_type
         session['school_code'] = school.school_code
         session['role_context'] = role_context
+        session['school_mascot_asset_key'] = (school.mascot_asset_key or '').strip()
+        session.modified = True
 
         try:
-            if user:
-                _ensure_school_default_avatar(user, school)
-                db.session.commit()
+            if verified_user:
+                _ensure_school_default_avatar(verified_user, school)
+            db.session.commit()
         except Exception as e:
             db.session.rollback()
             app.logger.warning(f"School login: ensure_school_default_avatar failed: {e}")
+
+        app.logger.info(
+            "School login success: school_id=%s key_type=%s user_authenticated=%s prior_auth=%s",
+            school.id,
+            sk.key_type,
+            bool(getattr(current_user, 'is_authenticated', False)),
+            was_authenticated,
+        )
 
         return jsonify({"success": True, "redirect": url_for('home')})
     except Exception as e:
@@ -20937,13 +20955,21 @@ def api_get_my_avatar():
         if use_mascot:
             if school_id:
                 from models import School, Avatar
-                school = School.query.get(school_id)
-                if school and (school.mascot_asset_key or '').strip():
-                    slug = (school.mascot_asset_key or '').strip()
+                school = None
+                slug = (session.get('school_mascot_asset_key') or '').strip()
+                if not slug:
+                    school = School.query.get(school_id)
+                    if school:
+                        slug = (school.mascot_asset_key or '').strip()
+                if slug:
                     avatar = Avatar.get_by_slug_for_context(slug, school_id=school_id)
                     if avatar:
-                        _ensure_school_default_avatar(user, school)
-                        db.session.commit()
+                        if school is None:
+                            school = School.query.get(school_id)
+                        if school:
+                            changed = _ensure_school_default_avatar(user, school)
+                            if changed:
+                                db.session.commit()
                         import os
                         base_path = "/static/assets/avatars/glb_files"
                         glb_filename = (avatar.obj_file or "MascotBee.glb").strip()
