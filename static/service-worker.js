@@ -4,7 +4,7 @@
 // IMPORTANT: do not precache HTML navigations like '/' — stale cached HTML can break auth-gated flows.
 // 2026-01-07: cache bust + ensure Word Lists UI updates immediately (Apple review).
 // 2026-01-16: force-refresh SW caches + never intercept /quiz (fix stale quiz HTML / JS syntax errors).
-const CACHE_VERSION = 'beesmart-v1.4.7-v41-2026-02-23-coloring-book-fix';
+const CACHE_VERSION = 'beesmart-v1.4.7-v42-2026-03-04-sw-redirect-fix';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
@@ -53,6 +53,19 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // If browser supplies a non-follow redirect mode, do not intercept.
+  // Returning a redirected response from SW in this case triggers:
+  // "a redirected response was used for a request whose redirect mode is not 'follow'".
+  if (request.mode === 'navigate' && request.redirect && request.redirect !== 'follow') {
+    return;
+  }
+
+  // Root navigation can legitimately redirect based on server-side auth/edition logic.
+  // Let browser handle it directly to avoid redirected-response SW errors.
+  if (url.pathname === '/') {
+    return;
+  }
 
   // ✅ Admin pages can redirect to login when a session expires.
   // To avoid "redirected response" fetch errors and accidental caching of login HTML,
