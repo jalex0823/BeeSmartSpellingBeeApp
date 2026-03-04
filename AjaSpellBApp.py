@@ -14684,7 +14684,7 @@ def school_login():
             was_authenticated,
         )
 
-        return jsonify({"success": True, "redirect": url_for('home')})
+        return jsonify({"success": True, "redirect": url_for('unified_menu')})
     except Exception as e:
         db.session.rollback()
         import traceback
