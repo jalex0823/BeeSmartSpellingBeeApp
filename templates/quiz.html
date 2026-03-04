@@ -483,6 +483,9 @@ if ('speechSynthesis' in window) {
     }
     
     .start-guidance-modal-buttons .action-btn {
+        width: 100%;
+        min-height: 54px;
+    }
 
 /* Yellow pill CTA - prominent start guidance */
 .buzzy-pill {
@@ -754,9 +757,11 @@ if ('speechSynthesis' in window) {
     }
     100% {
         transform: scale(1);
-        padding: max(14px, env(safe-area-inset-top)) 12px 28px 12px; /* Extra bottom padding so Exit is never clipped */
+        opacity: 1;
     }
-    
+
+}
+
     /* Webkit scrollbar styling (Chrome, Safari, Edge) - Always visible */
     .card-scroll::-webkit-scrollbar {
         width: 10px !important;
@@ -1471,8 +1476,8 @@ if ('speechSynthesis' in window) {
     /* Desktop: larger honey jar (was too small) */
     @media (min-width: 769px) {
         .jar-svg {
-            width: 130px;
-            height: 155px;
+            width: 96px;
+            height: 116px;
         }
     }
     
@@ -1548,7 +1553,7 @@ if ('speechSynthesis' in window) {
     /* Desktop: larger timer number to match jar size */
     @media (min-width: 769px) {
         .honey-jar-wrapper .timer-number {
-            font-size: 2.75rem;
+            font-size: 2rem;
         }
     }
     
@@ -1765,13 +1770,13 @@ if ('speechSynthesis' in window) {
         }
         
         .jar-svg {
-            width: 160px; /* Larger jar for mobile */
-            height: 190px;
+            width: 84px;
+            height: 100px;
         }
         
         /* Enhanced mobile timer visibility (overlays jar via honey-jar-wrapper) */
         .honey-jar-wrapper .timer-number {
-            font-size: 3.2rem; /* Larger font for mobile */
+            font-size: 1.9rem;
             font-weight: 900;
             color: #3E2723; /* Darker brown for better contrast */
             text-shadow: 
@@ -1781,8 +1786,8 @@ if ('speechSynthesis' in window) {
             background: rgba(255, 255, 255, 0.15); /* Subtle background circle */
             border-radius: 50%;
             padding: 0.2em; /* Padding based on font size */
-            min-width: 1.8em;
-            min-height: 1.8em;
+            min-width: 1.5em;
+            min-height: 1.5em;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1845,7 +1850,7 @@ if ('speechSynthesis' in window) {
         box-shadow: 0 4px 12px rgba(91, 49, 26, 0.08);
         border: 1px solid rgba(238, 147, 35, 0.25);
         min-height: 100px;
-        max-height: 200px;
+        max-height: 140px;
         width: 100%;
     }
     .voice-visualizer canvas,
@@ -2299,9 +2304,9 @@ if ('speechSynthesis' in window) {
     }
     /* BeeSmart crest logo at top – prominent size (was extremely too small) */
     .quiz-card-crest-avatar .quiz-card-crest {
-        width: clamp(160px, 38vw, 260px);
+        width: clamp(120px, 28vw, 180px);
         height: auto;
-        max-height: 200px;
+        max-height: 140px;
         object-fit: contain;
         filter: drop-shadow(0 6px 14px rgba(238, 147, 35, 0.25));
         opacity: 0.98;
@@ -2310,15 +2315,15 @@ if ('speechSynthesis' in window) {
         display: none !important; /* Red pill removed per user request */
     }
     .quiz-card-crest-avatar .mascot-3d-container {
-        width: 160px;
-        height: 160px;
-        max-width: 60vw;
-        max-height: 60vw;
+        width: 120px;
+        height: 120px;
+        max-width: 46vw;
+        max-height: 46vw;
         margin: 0 auto;
     }
     @media (max-width: 420px) {
-        .quiz-card-crest-avatar .quiz-card-crest { width: clamp(140px, 36vw, 200px); max-height: 160px; }
-        .quiz-card-crest-avatar .mascot-3d-container { width: 140px; height: 140px; }
+        .quiz-card-crest-avatar .quiz-card-crest { width: clamp(110px, 34vw, 150px); max-height: 120px; }
+        .quiz-card-crest-avatar .mascot-3d-container { width: 105px; height: 105px; }
     }
     
     /* Optional: subtle placeholder while avatar loads */
@@ -2994,11 +2999,11 @@ if ('speechSynthesis' in window) {
 
     /* Action Buttons - Match Reference Image Style */
     .action-btn {
-        padding: 0.9rem 1.2rem;
+        padding: 1rem 1.2rem;
         border: none;
         border-radius: 16px; /* Slightly more rounded to match reference */
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: 1rem;
         cursor: pointer;
         transition: all 0.2s ease;
         display: flex;
@@ -3056,7 +3061,7 @@ if ('speechSynthesis' in window) {
     .quiz-buttons .action-btn,
     .actions-area.quiz-buttons .action-btn {
         width: 100%;
-        min-height: 48px;
+        min-height: 54px;
         margin: 0; /* Remove any default margins */
     }
     
@@ -4525,12 +4530,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="score-label">Incorrect</span>
             </div>
             
-            <div class="score-item">
+            <div class="score-item" id="scoreItemStreak">
                 <span class="score-number streak" id="streakCount">0</span>
                 <span class="score-label">Streak</span>
             </div>
             
-            <div class="score-item">
+            <div class="score-item" id="scoreItemPoints">
                 <span class="score-number points" id="sessionPoints" style="color: #FFD700;">0</span>
                 <span class="score-label">Points</span>
             </div>
@@ -8800,6 +8805,26 @@ class QuizManager {
                 this.showSentence();
             });
         }
+
+        // Kid-friendly default: keep core stats visible, hide advanced stats initially
+        try {
+            const streakItem = document.getElementById('scoreItemStreak');
+            const pointsItem = document.getElementById('scoreItemPoints');
+            const streakBtn = document.getElementById('toggleStreakBtn');
+            const pointsBtn = document.getElementById('togglePointsBtn');
+            if (streakItem) streakItem.style.display = 'none';
+            if (pointsItem) pointsItem.style.display = 'none';
+            if (streakBtn) {
+                const t = streakBtn.querySelector('.toggle-text');
+                if (t) t.textContent = 'Show Streak';
+                streakBtn.classList.add('stat-hidden');
+            }
+            if (pointsBtn) {
+                const t = pointsBtn.querySelector('.toggle-text');
+                if (t) t.textContent = 'Show Points';
+                pointsBtn.classList.add('stat-hidden');
+            }
+        } catch (_e) {}
         
         // Stat Toggle Controls
         const toggleButtons = document.querySelectorAll('.toggle-stat');
@@ -10916,7 +10941,7 @@ class QuizManager {
         }
     }
     
-    showSentence() {
+    async showSentence() {
         console.log('📝 Show Sentence button clicked');
         console.log('Current word:', this.currentWordData);
         
@@ -10927,7 +10952,21 @@ class QuizManager {
             return;
         }
         
-        if (!wordData.sentence) {
+        let sentenceText = (wordData.sentence || '').trim();
+        if (!sentenceText) {
+            try {
+                const pronounceData = await this.fetchPronounce(true);
+                sentenceText = (pronounceData && pronounceData.sentence ? pronounceData.sentence : '').trim();
+                if (sentenceText) {
+                    wordData.sentence = sentenceText;
+                    if (this.currentWordData) this.currentWordData.sentence = sentenceText;
+                }
+            } catch (e) {
+                console.warn('Unable to load sentence from /api/pronounce:', e);
+            }
+        }
+
+        if (!sentenceText) {
             this.showFeedback('📝 No sentence available for this word.', 'error');
             console.warn('No sentence found for word:', wordData.word);
             return;
@@ -10936,7 +10975,7 @@ class QuizManager {
         const defDisplay = document.getElementById('definitionDisplay');
         if (defDisplay) {
             // Hide the target word from the sentence to avoid giving away the answer
-            const safeSentence = hideTargetWord(wordData.sentence, wordData.word);
+            const safeSentence = hideTargetWord(sentenceText || wordData.sentence, wordData.word).replace(/^\s*[:;,-]+\s*/, '').trim();
             
             defDisplay.innerHTML = `
                 <div class="sentence-content">
