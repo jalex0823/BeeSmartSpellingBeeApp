@@ -7515,6 +7515,14 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
     
     for word, data in wiktionary.items():
         word_lower = word.lower()
+
+        # Safety gate: random-play dictionary words must be kid-friendly.
+        try:
+            ok, _reason = is_kid_friendly(word_lower)
+            if not ok:
+                continue
+        except Exception:
+            pass
         
         # Kid-safety filter: never include inappropriate words in Random Play
         try:
