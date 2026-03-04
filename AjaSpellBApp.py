@@ -2395,11 +2395,10 @@ def get_word_info(word):
     """Fast word enrichment: definition + example sentence with blanks.
     Priority:
       1) Simple Wiktionary (indexed) – kid-friendly
-      2) Persistent DICTIONARY_CACHE (previous enrichments)
-      3) Smart fallback generator
+      2) Smart fallback generator
     All paths blank out the target word safely.
     """
-    global DICTIONARY_CACHE, SIMPLE_WIKTIONARY_INDEX
+    global SIMPLE_WIKTIONARY_INDEX
 
     if not word:
         return "Definition not available for this word. Listen carefully and spell _____ correctly"
@@ -2415,9 +2414,7 @@ def get_word_info(word):
     global _WORD_INFO_MISSES
     _WORD_INFO_MISSES += 1
 
-    # Ensure caches
-    if not DICTIONARY_CACHE:
-        DICTIONARY_CACHE = load_dictionary_cache()
+    # Ensure primary dictionary is available
     wiktionary = ensure_simple_wiktionary_loaded()
 
     # PRIORITY 1: Simple Wiktionary via index (constant time membership)
@@ -2439,26 +2436,7 @@ def get_word_info(word):
             formatted = _enforce_safe_prompt_text(formatted)
             _cache_word_info(word_lower, formatted)
             return formatted
-
-    # PRIORITY 2: Persistent DICTIONARY_CACHE
-    if word_lower in DICTIONARY_CACHE:
-        word_data = DICTIONARY_CACHE[word_lower]
-        definition = word_data.get("definition", "")
-        example = word_data.get("example", "")
-        if definition:
-            if example:
-                definition = sanitize_kid_friendly_text(_filter_definition(definition, word))
-                example = sanitize_kid_friendly_text(_blank_word(example, word))
-                formatted = f"{definition}. Fill in the blank: {example}"
-            else:
-                definition = sanitize_kid_friendly_text(_filter_definition(definition, word))
-                formatted = f"{definition}. Fill in the blank: Can you spell _____ correctly?"
-            print(f" Cache hit '{word}'")
-            formatted = _enforce_safe_prompt_text(formatted)
-            _cache_word_info(word_lower, formatted)
-            return formatted
-    
-    # PRIORITY 3: Smart fallback - deterministic enrichment
+    # PRIORITY 2: Smart fallback - deterministic enrichment
     try:
         fb = generate_smart_fallback(word)
         definition = sanitize_kid_friendly_text(fb.get("definition", "A word to spell"))
@@ -9371,15 +9349,12 @@ def api_upload():
     print(f" {len(deduped)} words passed kid-friendly filter")
 
     # Auto-enrich words with definitions (INTERNAL ONLY - NO EXTERNAL API CALLS)
-    # Uses: 1) Simple Wiktionary (50K+ words), 2) Dictionary cache, 3) Smart fallback
+    # Uses: 1) Simple Wiktionary (50K+ words), 2) Smart fallback
     print(f" Enriching {len(deduped)} words using built-in dictionary...")
     import time
     enrichment_start = time.time()
     
-    # PRE-LOAD dictionary ONCE to avoid repeated lazy-loading
-    global DICTIONARY_CACHE
-    if not DICTIONARY_CACHE:
-        DICTIONARY_CACHE = load_dictionary_cache()
+    # PRE-LOAD primary dictionary ONCE to avoid repeated lazy-loading
     ensure_simple_wiktionary_loaded()  # Pre-load Wiktionary once
     
     enriched = []
@@ -9642,7 +9617,7 @@ def api_upload_manual_words():
         print(f" {len(deduped)} words passed kid-friendly filter")
         
         # Auto-enrich words with definitions (INTERNAL ONLY - NO EXTERNAL API CALLS)
-        # Uses: 1) Simple Wiktionary (50K+ words), 2) Dictionary cache, 3) Smart fallback
+        # Uses: 1) Simple Wiktionary (50K+ words), 2) Smart fallback
         print(f"DEBUG /api/upload-manual-words: Starting enrichment for {len(deduped)} words...")
         import time
         enrichment_start = time.time()
@@ -10074,9 +10049,7 @@ def api_pronounce():
         else:
             definition = "Please spell the word you hear."
 
-    word_lower = current_word.lower()
-    cached_entry = DICTIONARY_CACHE.get(word_lower, {}) if current_word else {}
-    phonetic_lookup = cached_entry.get("phonetic", "")
+    phonetic_lookup = ""
     spelled_out = build_phonetic_spelling(current_word)
 
     # Also sanitize sentence and hint for safety
@@ -10803,11 +10776,6 @@ def api_answer():
     phonetic_help = ""
     phonetic_spelling = ""
     if not is_correct or skip_requested:
-        word_lower = correct_spelling.lower()
-        if word_lower in DICTIONARY_CACHE:
-            cached_data = DICTIONARY_CACHE[word_lower]
-            phonetic_help = cached_data.get("phonetic", "")
-
         phonetic_spelling = build_phonetic_spelling(correct_spelling)
 
     feedback_message = "Great job!" if is_correct else (
@@ -11653,7 +11621,7 @@ def api_dictionary_lookup():
         # Non-fatal if quota logic fails
         pass
     
-    #  All lookups use INTERNAL DICTIONARY ONLY (get_word_info uses Simple Wiktionary → Cache → Smart Fallback)
+    #  All lookups use INTERNAL DICTIONARY ONLY (Simple Wiktionary -> Smart Fallback)
     definition = get_word_info(word)
     phonetic_spelling = build_phonetic_spelling(word)
     word_lower = word.lower()
@@ -11661,22 +11629,15 @@ def api_dictionary_lookup():
     # Check which internal source provided the definition
     wiktionary = ensure_simple_wiktionary_loaded()
     found_in_wiktionary = wiktionary and word_lower in wiktionary
-    found_in_cache = word_lower in DICTIONARY_CACHE
-    
-    # Determine source (all internal)
-    if found_in_wiktionary:
-        source = "simple_wiktionary"
-    elif found_in_cache:
-        source = "internal_cache"
-    else:
-        source = "smart_fallback"
+
+    source = "simple_wiktionary" if found_in_wiktionary else "smart_fallback"
 
     return jsonify({
         "word": word,
         "definition": definition,
         "phonetic": phonetic_spelling,
-        "found": found_in_wiktionary or found_in_cache,
-        "source": source  #  All sources are internal (simple_wiktionary, internal_cache, or smart_fallback)
+        "found": bool(found_in_wiktionary),
+        "source": source  # All sources are internal (simple_wiktionary or smart_fallback)
     })
 
 @app.route("/api/word-info/preload", methods=["POST"])
@@ -11697,7 +11658,7 @@ def api_word_info_preload():
         # Pre-cache definitions for common words
         for word in words:
             try:
-                # This will cache the definition in DICTIONARY_CACHE
+                # Warm the in-memory LRU via get_word_info
                 definition = get_word_info(word)
                 if definition:
                     preloaded_count += 1
@@ -11712,7 +11673,7 @@ def api_word_info_preload():
             "preloaded": preloaded_count,
             "total_requested": len(words),
             "wiktionary_loaded": wiktionary is not None,
-            "cache_size": len(DICTIONARY_CACHE)
+            "cache_size": len(WORD_INFO_CACHE)
         })
         
     except Exception as e:
@@ -11742,7 +11703,7 @@ def api_dictionary_stats():
             "ok": True,
             "wiktionary_loaded": SIMPLE_WIKTIONARY_LOADED,
             "wiktionary_size": len(SIMPLE_WIKTIONARY) if SIMPLE_WIKTIONARY_LOADED else 0,
-            "persistent_cache_size": len(DICTIONARY_CACHE),
+            "persistent_cache_size": 0,
             "lru_size": len(WORD_INFO_CACHE),
             "lru_capacity": WORD_INFO_CACHE_MAX,
             "lru_hits": _WORD_INFO_HITS,
@@ -11966,33 +11927,19 @@ def api_verify_wordbank():
 def api_dictionary_status():
     """
     Report internal dictionary system status.
-    Shows how many words are cached and ready for instant definition lookup.
+    Single-source dictionary status (Simple Wiktionary only).
     """
-    global DICTIONARY_CACHE
-    
-    # Lazy load dictionary cache if not loaded
-    if not DICTIONARY_CACHE:
-        DICTIONARY_CACHE = load_dictionary_cache()
-    
-    # Check Simple Wiktionary status
     wiktionary = ensure_simple_wiktionary_loaded()
     wiktionary_count = len(wiktionary) if wiktionary else 0
-    
-    # Check DICTIONARY_CACHE status
-    cache_count = len(DICTIONARY_CACHE)
-    
-    # Total unique words available
-    total_words = wiktionary_count + cache_count
-    
+
     return jsonify({
-        "available": True,  # Dictionary is always available (has fallback)
-        "word_count": total_words,
+        "available": True,
+        "word_count": wiktionary_count,
         "sources": {
-            "simple_wiktionary": wiktionary_count,
-            "dictionary_cache": cache_count
+            "simple_wiktionary": wiktionary_count
         },
         "status": "ready",
-        "message": f"Internal dictionary ready with {total_words:,} pre-loaded definitions",
+        "message": f"Internal dictionary ready with {wiktionary_count:,} pre-loaded definitions",
         "optimization": "All quiz definitions pre-enriched during upload for instant quiz performance"
     })
 
@@ -12059,86 +12006,44 @@ def api_reset():
 @app.route("/api/build_dictionary", methods=["POST"])
 def api_build_dictionary():
     """
-    Build dictionary cache for all words in current wordbank using built-in Simple Wiktionary
-     NO EXTERNAL API - Uses only 50K+ word built-in dictionary
+    Validate wordbank coverage against built-in Simple Wiktionary.
+    NO EXTERNAL API - Uses only 50K+ word built-in dictionary.
     """
     wordbank = get_wordbank()
     if not wordbank:
         return jsonify({"error": "No wordbank loaded"}), 400
-    
+
     results = {
         "total_words": len(wordbank),
-        "api_lookups": 0,  # Now means Wiktionary lookups
-        "cache_hits": 0,
-        "fallbacks": 0,
+        "wiktionary_hits": 0,
+        "fallback_required": 0,
         "errors": []
     }
-    
-    print(f"Building dictionary cache for {len(wordbank)} words using built-in Wiktionary...")
-    
+
+    print(f"Checking dictionary coverage for {len(wordbank)} words using built-in Wiktionary...")
+    wiktionary = ensure_simple_wiktionary_loaded()
+
     for record in wordbank:
         word = record.get("word", "").strip()
         if not word:
             continue
-            
+
         word_lower = word.lower()
-        
-        # Skip if already cached
-        if word_lower in DICTIONARY_CACHE:
-            results["cache_hits"] += 1
-            continue
-        
+
         try:
-            # Try built-in Wiktionary lookup first (50K+ words)
-            wiktionary = ensure_simple_wiktionary_loaded()
-            
             if wiktionary and word_lower in wiktionary:
-                word_data = wiktionary[word_lower]
-                # Sanitize before caching to prevent storing inappropriate content
-                try:
-                    safe_def = sanitize_kid_friendly_text(_filter_definition(word_data.get("definition", ""), word))
-                    safe_ex = sanitize_kid_friendly_text(_blank_word(word_data.get("example", ""), word))
-                except Exception:
-                    safe_def = word_data.get("definition", "")
-                    safe_ex = _blank_word(word_data.get("example", ""), word)
-
-                sanitized = dict(word_data)
-                if safe_def:
-                    sanitized["definition"] = safe_def
-                if safe_ex:
-                    sanitized["example"] = safe_ex
-
-                # Cache the sanitized Wiktionary entry
-                cache_entry = {word_lower: sanitized}
-                save_dictionary_cache(cache_entry)
-                DICTIONARY_CACHE.update(cache_entry)
-                results["api_lookups"] += 1
-                print(f" Wiktionary lookup successful for '{word}'")
+                results["wiktionary_hits"] += 1
             else:
-                # Generate fallback for words not in Wiktionary
-                fallback_data = generate_smart_fallback(word)
-                fallback_data["created"] = datetime.now().isoformat()
-                # Sanitize fallback data before caching (belt-and-suspenders)
-                try:
-                    fallback_data["definition"] = sanitize_kid_friendly_text(fallback_data.get("definition", ""))
-                    fallback_data["example"] = sanitize_kid_friendly_text(_blank_word(fallback_data.get("example", ""), word))
-                except Exception:
-                    pass
+                results["fallback_required"] += 1
 
-                cache_entry = {word_lower: fallback_data}
-                save_dictionary_cache(cache_entry)
-                DICTIONARY_CACHE.update(cache_entry)
-                results["fallbacks"] += 1
-                print(f" Using fallback for '{word}'")
-                
         except Exception as e:
             error_msg = f"Error processing '{word}': {str(e)}"
             results["errors"].append(error_msg)
-            print(f"Γ£ù {error_msg}")
-    
+            print(f"❌ {error_msg}")
+
     return jsonify({
         "success": True,
-        "message": f"Dictionary cache built for {results['total_words']} words using built-in Wiktionary (50K+ words)",
+        "message": f"Dictionary coverage checked for {results['total_words']} words using built-in Wiktionary (50K+ words)",
         "results": results
     })
 
@@ -21187,7 +21092,7 @@ print(f" App version: {APP_VERSION}")
 print(f" Environment: {os.environ.get('FLASK_ENV', 'development')}")
 print(f" Database: {app.config['SQLALCHEMY_DATABASE_URI'][:30]}...")
 print(f" Sessions: {'Database (persistent)' if SESSION_INIT_SUCCESS else 'Filesystem (temporary)'}")
-print(f" Dictionary cache: {len(DICTIONARY_CACHE.get('words', {}))} words loaded")
+print(f" Dictionary source: Simple Wiktionary ({len(SIMPLE_WIKTIONARY) if SIMPLE_WIKTIONARY_LOADED else 0} loaded at boot)")
 print(f" Health check endpoint: /health")
 print(f" Ready to serve requests on port ${os.environ.get('PORT', '5000')}")
 print("=" * 60)
@@ -21373,9 +21278,6 @@ if __name__ == "__main__":
     def preload_dictionary():
         print(" Pre-loading Simple Wiktionary dictionary (background)...")
         ensure_simple_wiktionary_loaded()
-        global DICTIONARY_CACHE
-        if not DICTIONARY_CACHE:
-            DICTIONARY_CACHE = load_dictionary_cache()
         print(f" Dictionary ready ({len(SIMPLE_WIKTIONARY_INDEX) if SIMPLE_WIKTIONARY_INDEX else 0} words indexed)")
     
     dict_thread = threading.Thread(target=preload_dictionary, daemon=True)
