@@ -141,6 +141,19 @@ ENHANCED_INAPPROPRIATE_WORDS = {
         "corpse", "suicide", "self-harm",
         "sadism", "sadist", "sadistic"
     },
+    'religious_content': {
+        "god", "gods", "goddess", "goddesses",
+        "jesus", "christ", "christian", "christians", "christianity",
+        "allah", "islam", "muslim", "muslims",
+        "jew", "jews", "jewish", "judaism",
+        "hindu", "hindus", "hinduism",
+        "buddha", "buddhist", "buddhists", "buddhism",
+        "sikh", "sikhs", "sikhism",
+        "church", "churches", "mosque", "mosques", "temple", "temples", "synagogue", "synagogues",
+        "bible", "quran", "koran", "torah", "gospel", "scripture", "scriptures",
+        "prayer", "prayers", "pray", "praying",
+        "pastor", "pastors", "priest", "priests", "rabbi", "rabbis", "imam", "imams",
+    },
     'spam_patterns': {
         # Common spam/inappropriate patterns
         "wtf", "omg", "lol", "rofl", "stfu", "gtfo", "af", "thot"
@@ -207,9 +220,10 @@ def get_kid_friendly_violation_message(word: str, category: str, violation_count
         'profanity': "uses words that aren't polite or respectful",
         'sexual_content': "includes grown-up topics not suitable for kids",
         'violence': "describes harmful or scary things",
-        'drugs_alcohol': "mentions substances that aren't healthy for children",
-        'hate_speech': "contains mean or hurtful language",
-        'disturbing_content': "includes topics that might be scary or upsetting",
+        'drugs_alcohol': "mentions substances that aren't safe for kids",
+        'hate_speech': "contains hurtful language about people",
+        'disturbing_content': "describes things that may be too scary or upsetting",
+        'religious_content': "includes religious terms we don't use in this word list",
         'spam_patterns': "looks like random letters or spam"
     }
     

@@ -4137,7 +4137,21 @@ INAPPROPRIATE_WORDS = {
     # Other inappropriate
     "death", "die", "dying", "blood", "bloody", "torture",
     # Disturbing / age-inappropriate concepts
-    "sadism", "sadist", "sadistic"
+    "sadism", "sadist", "sadistic",
+    # --- Religious terms (requested filter scope) ---
+    "god", "gods", "goddess", "goddesses",
+    "jesus", "christ", "christian", "christians", "christianity",
+    "allah", "islam", "muslim", "muslims",
+    "jew", "jews", "jewish", "judaism",
+    "hindu", "hindus", "hinduism",
+    "buddha", "buddhist", "buddhists", "buddhism",
+    "sikh", "sikhs", "sikhism",
+    "church", "churches", "mosque", "mosques", "temple", "temples", "synagogue", "synagogues",
+    "bible", "quran", "koran", "torah", "gospel", "scripture", "scriptures",
+    "prayer", "prayers", "pray", "praying",
+    "pastor", "pastors", "priest", "priests", "rabbi", "rabbis", "imam", "imams",
+    # Spam / inappropriate internet slang
+    "wtf", "stfu", "gtfo", "omfg", "thot", "simp", "sexting",
 }
 
 STRICT_BLOCKED_PHRASES = {
