@@ -10928,14 +10928,13 @@ function showRestoreDialog(title, message, isSuccess) {
         function proceedWithImageUpload(file) {
             const formData = new FormData();
             formData.append('file', file);
-            
+
             console.log(' DEBUG: Starting image upload for file:', file.name);
-            
+
             // Show animated progress indicator with picture-to-word theme
             showFileUploadProgress(file.name, true);
-            
+
             // Simulate OCR progress stages (OCR takes longer)
-            let progress = 0;
             const progressStages = [
                 { percent: 10, message: ' Reading image...', detail: 'Loading your picture' },
                 { percent: 25, message: ' Scanning for text...', detail: 'Looking for words in the image' },
@@ -10944,7 +10943,7 @@ function showRestoreDialog(title, message, isSuccess) {
                 { percent: 75, message: ' Looking up definitions...', detail: 'Getting word meanings' },
                 { percent: 90, message: ' Storing in hive...', detail: 'Saving your word list' }
             ];
-            
+
             let stageIndex = 0;
             const progressInterval = setInterval(() => {
                 if (stageIndex < progressStages.length) {
@@ -10955,8 +10954,8 @@ function showRestoreDialog(title, message, isSuccess) {
                     clearInterval(progressInterval);
                 }
             }, 800); // Slower for OCR (800ms per stage)
-            
-            fetch('/api/upload?' + Date.now(), {
+
+            fetch('/api/upload/image?_cache=' + Date.now(), {
                 method: 'POST',
                 headers: {
                     'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -10979,71 +10978,79 @@ function showRestoreDialog(title, message, isSuccess) {
                     }
                     return data;
                 })
-                .then(data => {
-                console.log(' DEBUG: Image response data:', data);
-                
-                // Stop simulated progress
-                clearInterval(progressInterval);
-                
-                if (data.ok) {
-                    // Complete animation at 100%
-                    updateFileUploadProgress(100, ' OCR complete!', `Found ${data.count || 0} words in image`);
-                    
-                    setTimeout(async () => {
-                        hideFileUploadProgress();
-                        
-                        // Show kid-friendly success modal with picture-to-word animation
-                        showImageUploadSuccessModal(data.count || 0, data.blocked_count || 0);
-                        
-                        //  Update word count badge AND start quiz button using centralized manager
-                        await WordBankManager.updateAllDisplays(true);
-                        
-                        // Persist latest word list for mobile restore (fetch enriched list)
-                        try { fetch('/api/wordbank?_cache='+Date.now(), {cache:'no-store'})
-                            .then(r=>r.json()).then(wb=>{ if(wb && wb.words && window.persistUploadedWords){ window.persistUploadedWords(wb.words); } }); } catch(_){ }
-                    
-                        // Note: Start Quiz button is now updated by WordBankManager.updateAllDisplays() above
-                        console.log('Quiz button enabled after image upload, word count:', data.count);
-                        
-                        // Note: Navigation to quiz is now handled by the success modal button
-                        console.log('Image upload complete with', data.count, 'words');
-                    }, 500); // Show completion message briefly
-                } else {
-                    // Error occurred - hide progress immediately
-                    hideFileUploadProgress();
-                    
-                    // Classify OCR errors so we only show "not clear enough" when image text is truly unreadable.
-                    const errorMsg = data.error || "Unknown error occurred";
-                    const errorCode = (data.error_code || '').toLowerCase();
-                    const errorMsgLower = errorMsg.toLowerCase();
-                    const isOCRRuntimeError = (
-                        errorCode === 'ocr_unavailable' ||
-                        errorMsgLower.includes('tesseract ocr engine was not found') ||
-                        errorMsgLower.includes('image processing requires tesseract ocr') ||
-                        errorMsgLower.includes('ocr (image upload) is not available on this server')
-                    );
+                .then(async data => {
+                    console.log(' DEBUG: Image response data:', data);
 
-                    if (errorCode === 'ocr_no_words') {
-                        showImageUploadErrorModal('ocr_no_words', errorMsg);
-                    } else if (isOCRRuntimeError) {
-                        showImageUploadErrorModal('ocr_not_installed', errorMsg);
+                    // Stop simulated progress
+                    clearInterval(progressInterval);
+                    const processedCount = Number(data.count || data.stored || 0);
+
+                    if (data.ok || data.status === 'success') {
+                        // Complete animation at 100%
+                        updateFileUploadProgress(100, ' OCR complete!', `Found ${processedCount} words in image`);
+
+                        setTimeout(async () => {
+                            hideFileUploadProgress();
+
+                            // Show kid-friendly success modal with picture-to-word animation
+                            showImageUploadSuccessModal(processedCount, data.blocked_count || 0);
+
+                            // Update word count badge AND start quiz button using centralized manager
+                            await WordBankManager.updateAllDisplays(true);
+
+                            // Persist latest word list for mobile restore (fetch enriched list)
+                            try {
+                                fetch('/api/wordbank?_cache=' + Date.now(), { cache: 'no-store' })
+                                    .then(r => r.json())
+                                    .then(wb => {
+                                        if (wb && wb.words && window.persistUploadedWords) {
+                                            window.persistUploadedWords(wb.words);
+                                        }
+                                    });
+                            } catch (_) {}
+
+                            // Note: Start Quiz button is now updated by WordBankManager.updateAllDisplays() above
+                            console.log('Quiz button enabled after image upload, word count:', processedCount);
+
+                            // Note: Navigation to quiz is now handled by the success modal button
+                            console.log('Image upload complete with', processedCount, 'words');
+                        }, 500); // Show completion message briefly
                     } else {
-                        // Check if this is a content violation warning from image upload
-                        if (data.violation_warning && data.error) {
-                            // Show violation in modal popup (like "Attention, spelling bee!")
-                            showViolationWarning(data.error);
+                        // Error occurred - hide progress immediately
+                        hideFileUploadProgress();
+
+                        // Classify OCR errors so we only show "not clear enough" when image text is truly unreadable.
+                        const errorMsg = data.error || data.message || 'Unknown error occurred';
+                        const errorCode = (data.error_code || '').toLowerCase();
+                        const errorMsgLower = errorMsg.toLowerCase();
+                        const isOCRRuntimeError = (
+                            errorCode === 'ocr_unavailable' ||
+                            errorMsgLower.includes('tesseract ocr engine was not found') ||
+                            errorMsgLower.includes('image processing requires tesseract ocr') ||
+                            errorMsgLower.includes('ocr (image upload) is not available on this server')
+                        );
+
+                        if (errorCode === 'ocr_no_words') {
+                            showImageUploadErrorModal('ocr_no_words', errorMsg);
+                        } else if (isOCRRuntimeError) {
+                            showImageUploadErrorModal('ocr_not_installed', errorMsg);
                         } else {
-                            // Show backend/server error details instead of blaming image clarity.
-                            showImageUploadErrorModal('general_error', errorMsg);
+                            // Check if this is a content violation warning from image upload
+                            if (data.violation_warning && data.error) {
+                                // Show violation in modal popup (like "Attention, spelling bee!")
+                                showViolationWarning(data.error);
+                            } else {
+                                // Show backend/server error details instead of blaming image clarity.
+                                showImageUploadErrorModal('general_error', errorMsg);
+                            }
                         }
                     }
-                }
-            })
-            .catch(error => {
-                clearInterval(progressInterval);
-                hideFileUploadProgress();
-                showImageUploadErrorModal('network_error', error.message || "Network error occurred");
-            });
+                })
+                .catch(error => {
+                    clearInterval(progressInterval);
+                    hideFileUploadProgress();
+                    showImageUploadErrorModal('network_error', error.message || 'Network error occurred');
+                });
         }
         
         // Kid-friendly success modal for image upload with picture-to-word animation

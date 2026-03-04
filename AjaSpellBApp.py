@@ -8830,13 +8830,12 @@ def api_upload_progress(session_id):
         return jsonify({"error": "Session not found"}), 404
     
     return jsonify(progress)
-
-def process_upload_with_progress(session_id, request_obj):
     """Background function to process upload with progress updates"""
     try:
         # Parse the request to get initial data
         rows: List[Dict[str, str]] = []
-        
+        ext = ""
+
         # Handle the request similar to original upload but with progress tracking
         with request_obj.environ['werkzeug.request'].application_context():
             # Copy form data and files from original request
@@ -9093,6 +9092,7 @@ def api_upload():
         app.logger.warning(f"Error logging upload request details: {e}")
     
     rows: List[Dict[str, str]] = []
+    ext = ""
 
     # JSON payload path
     if request.content_type and "application/json" in request.content_type:
