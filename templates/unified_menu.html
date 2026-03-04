@@ -5557,6 +5557,11 @@ function showRestoreDialog(title, message, isSuccess) {
                 document.addEventListener('DOMContentLoaded', function() {
                     // Check OCR availability first (must work for Apple review)
                     checkOCRAvailability();
+                    const imageTile = document.getElementById('tileImageUpload');
+                    if (imageTile) {
+                        imageTile.style.display = 'none';
+                        imageTile.remove();
+                    }
                     const quickBtn = document.getElementById('quickStartQuizBtn');
                     // Ensure a slow, constant auto-rotation with morph-at-180 behavior
                     // This uses the existing avatar controller API without changing assets or UI.
