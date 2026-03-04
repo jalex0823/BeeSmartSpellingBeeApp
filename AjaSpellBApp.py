@@ -14625,16 +14625,18 @@ def school_login():
             return jsonify({"success": False, "error": "School not found"}), 404
 
         # Always start school transition from a clean auth/session context.
+        # Important ordering: clear session first, then call logout_user().
+        # logout_user() writes remember-cookie clearing markers into session;
+        # if we clear after logout, those markers are removed and stale auth can rehydrate.
         was_authenticated = bool(getattr(current_user, 'is_authenticated', False))
-        try:
-            if was_authenticated:
-                logout_user()
-        except Exception as e:
-            app.logger.warning(f"School login: logout during transition failed: {e}")
         try:
             session.clear()
         except Exception as e:
             app.logger.warning(f"School login: session clear during transition failed: {e}")
+        try:
+            logout_user()
+        except Exception as e:
+            app.logger.warning(f"School login: logout during transition failed: {e}")
 
         verified_user = None
         if email and password:
@@ -20963,6 +20965,10 @@ def api_get_my_avatar():
                         slug = (school.mascot_asset_key or '').strip()
                 if slug:
                     avatar = Avatar.get_by_slug_for_context(slug, school_id=school_id)
+                    if not avatar:
+                        # Fallback: honor explicit school mascot slug even if school_id linkage
+                        # on the avatar row is inconsistent with the current school record.
+                        avatar = Avatar.get_by_slug(slug)
                     if avatar:
                         if school is None:
                             school = School.query.get(school_id)
