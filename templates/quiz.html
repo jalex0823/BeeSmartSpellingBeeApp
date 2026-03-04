@@ -4504,8 +4504,15 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="quiz-header">
         <!-- Modern header layout: progress left, exit right -->
         <div class="quiz-header-top">
-            <div class="progress-section">
-                <span id="progressText">Question 1 of 10</span>
+            <img class="kids-header-logo" src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart">
+            <div class="kids-progress-wrap">
+                <div class="kids-progress-meta">
+                    <span id="progressText">Question 1 of 10</span>
+                    <span id="progressPercentage">Progress: 0%</span>
+                </div>
+                <div class="kids-progress-track" aria-hidden="true">
+                    <div class="kids-progress-fill" id="topHoneyProgressFill"></div>
+                </div>
             </div>
         </div>
 
@@ -4581,11 +4588,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <!-- Voice and Music Toggle Buttons - HIDDEN for compact layout matching reference -->
         <div class="voice-toggle-container" style="display:none; justify-content:center; align-items:center; gap: 1rem; margin: 1rem 0; width: 100%;">
             <button type="button" class="action-btn secondary" id="voiceToggleBtn" title="Toggle announcer voice">
-                <span class="bee-icon" aria-hidden="true" id="voiceToggleIcon">🔊</span>
+                <span class="bee-icon" aria-hidden="true">🔊</span>
                 <span id="voiceToggleText">Mute Buzzy</span>
             </button>
             <button type="button" class="action-btn secondary" id="musicToggleBtn" title="Toggle background music">
-                <span class="bee-icon" aria-hidden="true" id="musicToggleIcon">🎵</span>
+                <span class="bee-icon" aria-hidden="true">🎵</span>
                 <span id="musicToggleText">Music On</span>
             </button>
         </div>
@@ -5098,6 +5105,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="bee-icon" aria-hidden="true">🔊</span>
                 Pronounce Word
             </button>
+            <button type="button" class="action-btn secondary" id="repeatButton">
+                <span class="bee-icon" aria-hidden="true">🔁</span>
+                Repeat
+            </button>
             
             <!-- Definition/Sentence Helper Buttons -->
             <button type="button" class="action-btn secondary" id="showDefinitionButton">
@@ -5291,10 +5302,267 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="honey-jar">
         <div id="honeyLevel" style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, #FFB300 0%, #FFC107 50%, #FFD54F 100%); border-radius: 0 0 14px 14px; height: 0%; transition: height 0.6s ease, box-shadow 0.6s ease; box-shadow: 0 -4px 15px rgba(255, 179, 0, 0.5);"></div>
     </div>
+    <div class="honey-percent" id="honeyPercent">0%</div>
     <div class="progress-description">
         Fill the honey jar as you spell correctly! 🍯
     </div>
 </div>
+
+<style>
+    /* ===== 2026 Quiz Redesign (kids-first layout, preserve existing hooks) ===== */
+    #quizContainer.quiz-page {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 10px 16px 130px;
+    }
+
+    #quizContainer .quiz-header {
+        background: linear-gradient(180deg, #ffd54f 0%, #ffb300 100%);
+        border: 3px solid #d88600;
+        border-radius: 24px;
+        padding: 12px 16px;
+        box-shadow: 0 8px 20px rgba(86, 46, 0, 0.2);
+        margin-bottom: 14px;
+    }
+
+    #quizContainer .quiz-header-top {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .kids-header-logo {
+        width: 184px;
+        max-width: 42vw;
+        height: auto;
+        object-fit: contain;
+    }
+
+    .kids-progress-wrap {
+        min-width: 0;
+    }
+
+    .kids-progress-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        color: #6b3500;
+        font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+        font-weight: 700;
+        font-size: 0.98rem;
+        margin-bottom: 6px;
+    }
+
+    .kids-progress-track {
+        height: 16px;
+        border-radius: 999px;
+        background: rgba(106, 54, 0, 0.2);
+        border: 2px solid rgba(123, 64, 0, 0.35);
+        overflow: hidden;
+    }
+
+    .kids-progress-fill {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #ffd54f 0%, #ff8f00 100%);
+        transition: width 0.35s ease;
+        box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.35);
+    }
+
+    #quizContainer .quiz-card {
+        border-radius: 24px;
+        background: linear-gradient(180deg, #fffdf3 0%, #fff7dc 100%);
+        border: 2px solid rgba(224, 173, 76, 0.55);
+        box-shadow: 0 12px 30px rgba(62, 37, 0, 0.12);
+    }
+
+    #quizContainer .score-display {
+        display: grid !important;
+        position: fixed;
+        right: 16px;
+        top: 190px;
+        z-index: 20;
+        width: 170px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        padding: 12px;
+        border-radius: 20px;
+        background: linear-gradient(180deg, #ffe181 0%, #ffca28 100%);
+        border: 2px solid #d08b00;
+        box-shadow: 0 12px 20px rgba(85, 47, 0, 0.22);
+    }
+
+    #quizContainer #scoreItemStreak,
+    #quizContainer #scoreItemPoints,
+    #quizContainer .score-item-badge,
+    #quizContainer .stat-toggle-controls {
+        display: none !important;
+    }
+
+    #quizContainer .score-item {
+        min-height: 62px;
+        border-radius: 14px;
+        background: #fff8dd;
+        border: 1px solid rgba(136, 77, 0, 0.2);
+    }
+
+    #quizContainer .score-label {
+        color: #6d3f00;
+        font-weight: 700;
+    }
+
+    .progress-tracker {
+        position: fixed;
+        right: 20px;
+        top: 385px;
+        z-index: 20;
+        width: 162px;
+        margin: 0;
+        padding: 10px 10px 12px;
+        border-radius: 20px;
+        border: 2px solid #ce8600;
+        background: linear-gradient(180deg, #fff4bf 0%, #ffdb6a 100%);
+        box-shadow: 0 12px 20px rgba(73, 40, 0, 0.2);
+    }
+
+    .progress-tracker .honey-jar {
+        width: 88px;
+        height: 126px;
+        margin: 0 auto 6px;
+    }
+
+    .progress-tracker .progress-description {
+        margin-top: 4px;
+        font-size: 0.8rem;
+        line-height: 1.2;
+        color: #744100;
+    }
+
+    .honey-percent {
+        text-align: center;
+        font-size: 1.7rem;
+        font-weight: 900;
+        color: #7a3f00;
+        line-height: 1;
+        margin-top: 2px;
+    }
+
+    #quizActionButtons {
+        position: fixed;
+        left: 50%;
+        bottom: 10px;
+        transform: translateX(-50%);
+        z-index: 30;
+        width: min(980px, calc(100vw - 16px));
+        display: grid;
+        grid-template-columns: repeat(5, minmax(88px, 1fr));
+        gap: 8px;
+        padding: 10px;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #ffcf61 0%, #ffb300 100%);
+        border: 2px solid #d98900;
+        box-shadow: 0 10px 20px rgba(74, 43, 0, 0.28);
+    }
+
+    #quizActionButtons .action-btn {
+        min-height: 54px;
+        border-radius: 18px;
+        font-size: 0.95rem;
+        font-weight: 800;
+        padding: 10px 8px;
+    }
+
+    #quizActionButtons #showDefinitionButton,
+    #quizActionButtons #showSentenceButton,
+    #quizActionButtons #refreshResumeButton,
+    #quizActionButtons #retryButton {
+        display: none !important;
+    }
+
+    #secondaryButtons {
+        margin-bottom: 110px;
+    }
+
+    @media (max-width: 980px) {
+        #quizContainer .score-display,
+        .progress-tracker {
+            position: static;
+            width: 100%;
+            max-width: 100%;
+            margin: 12px 0 0;
+        }
+
+        #quizContainer .score-display {
+            grid-template-columns: repeat(2, minmax(90px, 1fr));
+        }
+
+        .progress-tracker {
+            display: grid;
+            grid-template-columns: 90px 1fr;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #quizActionButtons {
+            grid-template-columns: repeat(3, minmax(86px, 1fr));
+            border-radius: 24px;
+        }
+
+        #quizContainer.quiz-page {
+            padding-bottom: 170px;
+        }
+    }
+</style>
+
+<script>
+    (function () {
+        function parseProgressText(text) {
+            var m = /Question\s+(\d+)\s+of\s+(\d+)/i.exec(text || '');
+            if (!m) return null;
+            var current = parseInt(m[1], 10) || 1;
+            var total = parseInt(m[2], 10) || 1;
+            var answered = Math.max(0, current - 1);
+            var pct = Math.max(0, Math.min(100, Math.round((answered / Math.max(1, total)) * 100)));
+            return pct;
+        }
+
+        function syncTopProgress() {
+            var textEl = document.getElementById('progressText');
+            var fillEl = document.getElementById('topHoneyProgressFill');
+            var pctEl = document.getElementById('progressPercentage');
+            if (!textEl || !fillEl || !pctEl) return;
+            var pct = parseProgressText(textEl.textContent);
+            if (pct === null) return;
+            fillEl.style.width = pct + '%';
+            pctEl.textContent = 'Progress: ' + pct + '%';
+        }
+
+        function syncHoneyPercent() {
+            var honeyLevel = document.getElementById('honeyLevel');
+            var honeyPercent = document.getElementById('honeyPercent');
+            if (!honeyLevel || !honeyPercent) return;
+            var h = (honeyLevel.style && honeyLevel.style.height) || '0%';
+            honeyPercent.textContent = (h || '0%').trim();
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            syncTopProgress();
+            syncHoneyPercent();
+
+            var progressText = document.getElementById('progressText');
+            if (progressText && window.MutationObserver) {
+                new MutationObserver(syncTopProgress).observe(progressText, { childList: true, subtree: true, characterData: true });
+            }
+
+            var honeyLevel = document.getElementById('honeyLevel');
+            if (honeyLevel && window.MutationObserver) {
+                new MutationObserver(syncHoneyPercent).observe(honeyLevel, { attributes: true, attributeFilter: ['style'] });
+            }
+        });
+    })();
+</script>
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/QuizKeyboard.js') }}?v={{ timestamp }}"></script>
