@@ -118,7 +118,7 @@
 
         <div class="form-row" style="flex-direction:row; align-items:center; gap:0.5rem;">
           <input id="make_keys" name="make_keys" type="checkbox" value="1" checked>
-          <label for="make_keys" style="margin:0;">Generate SCHOOL / TEACHER / STUDENT keys</label>
+          <label for="make_keys" style="margin:0;">Generate school key</label>
         </div>
 
         <details style="margin: 0.5rem 0 0.85rem;">
@@ -208,18 +208,17 @@
                 <div class="meta-block">
                   <span class="meta-label">School Portal</span>
                   <div class="hint">Path: <span class="pill">/school</span></div>
-                  <div class="hint">Use SCHOOL / TEACHER / STUDENT key to choose role.</div>
+                  <div class="hint">Use the school key to enter.</div>
                 </div>
                 <div class="meta-block">
-                  <span class="meta-label">Active Keys</span>
+                  <span class="meta-label">School Key</span>
                   <div class="keys">
-                    {% for ktype, codes in (row['keys'] or {}).items() %}
-                      {% for code in codes %}
-                        <span class="pill">{{ ktype }}: {{ code }}</span>
-                      {% endfor %}
+                    {% set school_codes = (row['keys'] or {}).get('SCHOOL', []) %}
+                    {% if school_codes %}
+                      <span class="pill">SCHOOL: {{ school_codes[0] }}</span>
                     {% else %}
-                      <span class="hint">No active keys.</span>
-                    {% endfor %}
+                      <span class="hint">No active school key.</span>
+                    {% endif %}
                   </div>
                 </div>
                 <div class="meta-block upload-wrap">
