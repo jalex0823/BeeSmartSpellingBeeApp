@@ -6479,8 +6479,10 @@ class QuizManager {
             this.setupiOSKeyboardHandling();
         }
         
-        // Show green start guidance modal first (one-time per session)
-        this.showStartGuidanceModal();
+        // Guard duplicate /api/next fetches and stale duplicate payloads.
+        this._nextWordRequestInFlight = false;
+        this._introNextWordRequestInFlight = false;
+        this.currentQuestionNumber = 0;
         
         // Single "Ready to spell?" screen: one tap = voice choice + start (replaces voice modal + Play step)
         this.updateVoiceToggleUI();
@@ -6572,6 +6574,19 @@ class QuizManager {
 
         // Optional: mark mounted
         keyboardEl.dataset.mounted = "true";
+    }
+
+    // Keep custom keyboard visible once a word is loaded so typing can begin immediately.
+    ensureCustomKeyboardVisible() {
+        const keyboardHost = document.getElementById('keyboardHost');
+        if (keyboardHost) {
+            keyboardHost.classList.remove('is-hidden');
+            keyboardHost.classList.add('is-visible');
+        }
+        const showBtn = document.getElementById('showKeyboardBtn');
+        if (showBtn) showBtn.style.display = 'none';
+        const quizContainerEl = document.getElementById('quizContainer');
+        if (quizContainerEl) quizContainerEl.classList.add('kb-open');
     }
 
     // 🔁 Prevent accidental repeat announcements (within a short window)
@@ -7214,7 +7229,7 @@ class QuizManager {
                                        "Let's start spelling and fill that honey jar!";
                     const self = this;
 
-                    // Android: Web Speech is often silent in WebView – use native TTS so intro is heard, then start quiz
+                    // Android: Web Speech is often silent in WebView – use native TTS for announcer
                     if (this.isAndroid) {
                         const advance = function() {
                             if (self.quizStarted) return;
@@ -7463,6 +7478,11 @@ class QuizManager {
     // 🚑 Recovery: Used to break out of rare resume stalls on iOS Safari
     // Safe + idempotent: cancels speech and attempts to load the next word.
     async loadNextWordWithIntro() {
+        if (this._introNextWordRequestInFlight) {
+            console.log('⏭️ loadNextWordWithIntro skipped: request already in flight');
+            return;
+        }
+        this._introNextWordRequestInFlight = true;
         try {
             this.lastPronounceData = null;
             // Reset hint tracking for new word
@@ -7757,6 +7777,8 @@ class QuizManager {
         } catch (error) {
             console.error('Error loading word:', error);
             BeeSmart.showError('Error loading word. Please try again.');
+        } finally {
+            this._introNextWordRequestInFlight = false;
         }
     }
     
@@ -8968,6 +8990,11 @@ class QuizManager {
     showVoiceHelperNotification() {}
 
     async loadNextWord() {
+        if (this._nextWordRequestInFlight) {
+            console.log('⏭️ loadNextWord skipped: request already in flight');
+            return;
+        }
+        this._nextWordRequestInFlight = true;
         console.log('🔄 loadNextWord() called - starting to load next word...');
         try {
             // 🎭 MorphController removed - using CSS transitions instead
@@ -9000,16 +9027,6 @@ class QuizManager {
                 BeeSmart.showError(data.message || data.error || 'Failed to load the next word');
                 return;
             }
-
-            if (data.done) {
-                console.log('🏁 Quiz complete - showing summary');
-                // Announce quiz ending before showing report card
-                await this.announceQuizEnding();
-                this.showQuizComplete(data.summary);
-                return;
-            }
-            
-            console.log('✅ Got next word data, processing...');
 
             const questionNumber = __nn(data.index, __nn(data.number, 1));
             this.totalWords = __nn(data.total, this.totalWords);
@@ -9146,6 +9163,8 @@ class QuizManager {
         } catch (error) {
             console.error('Error loading next word:', error);
             BeeSmart.showError('Failed to load the next word. Please refresh the page.');
+        } finally {
+            this._nextWordRequestInFlight = false;
         }
     }
 
