@@ -99,13 +99,21 @@
             playKeyClick(0.32);
             onClick();
         };
-        button.addEventListener('click', wrapped);
-        button.addEventListener('touchstart', (e) => {
-            e.preventDefault();
+        let lastPressAt = 0;
+        const trigger = (e) => {
+            const now = Date.now();
+            if (now - lastPressAt < 220) {
+                if (e && e.cancelable) e.preventDefault();
+                return;
+            }
+            lastPressAt = now;
+            wrapped();
+        };
+        button.addEventListener('click', trigger);
+        button.addEventListener('touchend', (e) => {
+            if (e && e.cancelable) e.preventDefault();
             lastTouchActivationTs = Date.now();
-            keyPopAnimation(button);
-            playKeyClick(0.32);
-            onClick();
+            trigger(e);
         }, { passive: false });
         return button;
     }
@@ -207,7 +215,17 @@
 
         function handleSubmit() {
             if (!enabled) return;
-            if (typeof onSubmit === 'function') onSubmit();
+            try {
+                if (typeof onSubmit === 'function') {
+                    onSubmit();
+                    return;
+                }
+            } catch (_) {}
+            // Fallback path: trigger the main submit button if provided callback is missing/broken.
+            try {
+                const submitBtn = document.getElementById('submitButton');
+                if (submitBtn && typeof submitBtn.click === 'function') submitBtn.click();
+            } catch (_) {}
         }
 
         const container = document.createElement('div');

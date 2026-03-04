@@ -2230,17 +2230,15 @@ window.BeeSmartAudioFallback = (function() {
         pointer-events: auto;
     }
     
-    /* Timer layer - ABSOLUTE positioned to overlap visualizer */
+    /* Timer layer - STATIC positioned to maintain sentence position */
     .morph-content .countdown-container {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) scale(1); /* Center and full scale */
+        position: static;
         opacity: 0;
         transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
         pointer-events: none;
         display: flex !important; /* Override hidden class */
-        margin: 0; /* Remove default margin */
+        margin: 0 0 10px 0; /* Reserve stable slot above sentence so text does not jump */
+        min-height: 120px;
     }
     
     /* When morphing to timer mode */
@@ -2276,10 +2274,7 @@ window.BeeSmartAudioFallback = (function() {
     }
     .morph-container.mode-timer .countdown-container {
         position: static !important;
-        top: auto !important;
-        left: auto !important;
         transform: none !important;
-        margin: 0 0 10px 0 !important;
         pointer-events: auto;
     }
 
