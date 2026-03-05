@@ -3418,11 +3418,16 @@ def ensure_session():
 # --- School Edition: require school context when configured -------------------
 @app.before_request
 def school_edition_guard():
-    """When REQUIRE_SCHOOL_CONTEXT=true, send unauthenticated or non-school users to /school."""
+    """When REQUIRE_SCHOOL_CONTEXT=true, require school context before non-school routes.
+
+    Key-first school flow intentionally sets school session context without authenticating
+    a user account yet, so do not require current_user authentication here.
+    """
     try:
         from school_edition import require_school_context
         if not require_school_context():
             return
+        
         # Allow admin + admin APIs to bypass school context so admins can manage the system.
         if request.path.startswith((
             '/static/', '/health', '/favicon.ico', '/.well-known/',
@@ -3430,8 +3435,6 @@ def school_edition_guard():
             '/admin', '/api/admin',
         )):
             return
-        if not getattr(current_user, 'is_authenticated', False):
-            return redirect(url_for('school_landing_page', next=request.url))
         if not session.get('school_id'):
             return redirect(url_for('school_landing_page', next=request.url))
     except Exception:
