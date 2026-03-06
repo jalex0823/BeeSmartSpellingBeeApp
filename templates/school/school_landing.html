@@ -219,6 +219,7 @@
             var loadingProgressFill = document.getElementById('loadingProgressFill');
             var progressTimer = null;
             var progressValue = 0;
+            var nextParam = {{ (next or '')|tojson }};
 
             function setProgress(value) {
                 var next = Math.max(0, Math.min(100, Math.round(value || 0)));
@@ -280,7 +281,11 @@
                 var payload = {
                     key_code: document.getElementById('key_code').value.trim()
                 };
-                fetch('{{ url_for("school_login") }}', {
+                var loginUrl = '{{ url_for("school_login") }}';
+                if (nextParam) {
+                    loginUrl += '?next=' + encodeURIComponent(nextParam);
+                }
+                fetch(loginUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                     body: JSON.stringify(payload)

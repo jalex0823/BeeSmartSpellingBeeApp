@@ -1096,7 +1096,7 @@ function showRestoreDialog(title, message, isSuccess) {
         /* Main container - ENHANCED: Better centering and padding */
         .main-container {
             width: 100%;
-            max-width: var(--content-max);
+            max-width: var(--card-max);
             margin: 0 auto;
             padding: 0 1rem; /* ADDED horizontal padding */
             display: flex;
@@ -1238,7 +1238,7 @@ function showRestoreDialog(title, message, isSuccess) {
         /* Single unified card containing logo and menu */
         .content-card {
             width: 100%;
-            max-width: var(--content-max);
+            max-width: var(--card-max);
             box-sizing: border-box;
             background: linear-gradient(135deg, rgba(255, 250, 220, 0.75) 0%, rgba(255, 245, 200, 0.65) 100%);
             border-radius: 30px;
@@ -2009,14 +2009,14 @@ function showRestoreDialog(title, message, isSuccess) {
             max-width: 320px;
         }
         
-        :root { --content-max: min(94vw, 1280px); }
+        :root { --content-max: min(94vw, 1120px); --card-max: min(94vw, 1280px); }
 
         @media (max-width: 768px) {
-            :root { --content-max: min(92vw, 420px); }
+            :root { --content-max: min(92vw, 420px); --card-max: min(92vw, 420px); }
         }
 
         @media (min-width: 1400px) {
-            :root { --content-max: min(88vw, 1400px); }
+            :root { --content-max: min(88vw, 1280px); --card-max: min(88vw, 1400px); }
         }
         
         /* Menu options container */

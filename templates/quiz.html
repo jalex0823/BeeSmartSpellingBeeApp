@@ -677,16 +677,16 @@ if ('speechSynthesis' in window) {
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    gap: 0.5rem; /* Even spacing between avatar and question area (timer/sentence) */
-    padding-bottom: 0.25rem;
-    margin-bottom: 0.25rem;
+    gap: clamp(0.6rem, 1.2vh, 0.9rem); /* Balanced spacing so sections don't feel mushed */
+    padding-bottom: clamp(0.35rem, 0.9vh, 0.6rem);
+    margin-bottom: clamp(0.35rem, 0.9vh, 0.6rem);
 }
 
 /* Answer + keyboard in same scroll flow; visible gap, no overlap */
 .answer-and-keyboard {
     display: block;
     margin-bottom: 1rem; /* Increased spacing */
-    margin-top: 0.25rem; /* Tightened top margin for separation */
+    margin-top: clamp(0.55rem, 1.1vh, 0.85rem); /* Restore breathing room above input */
 }
 
 .answer-and-keyboard .quiz-answer-area {
@@ -829,15 +829,15 @@ if ('speechSynthesis' in window) {
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
-        gap: 0.5rem; /* Even spacing between avatar and question area (timer/sentence) */
-        padding-bottom: 0.25rem;
-        margin-bottom: 0.25rem;
+        gap: clamp(0.6rem, 1.2vh, 0.9rem); /* Balanced spacing so sections don't feel mushed */
+        padding-bottom: clamp(0.35rem, 0.9vh, 0.6rem);
+        margin-bottom: clamp(0.35rem, 0.9vh, 0.6rem);
     }
     /* Answer + keyboard in same scroll flow; visible gap, no overlap */
     .answer-and-keyboard {
         display: block;
         margin-bottom: 1rem; /* Increased spacing */
-        margin-top: 0.25rem; /* Tightened top margin for separation */
+        margin-top: clamp(0.55rem, 1.1vh, 0.85rem); /* Restore breathing room above input */
     }
     .answer-and-keyboard .quiz-answer-area {
         margin-bottom: 16px; /* Increased spacing between answer area and keyboard */
@@ -1084,8 +1084,6 @@ if ('speechSynthesis' in window) {
         background: linear-gradient(135deg, #F7931E 0%, #FF6B35 100%);
         transform: translateY(-1px);
         box-shadow: 0 6px 16px rgba(255, 107, 53, 0.35);
-        color: white;
-        text-decoration: none;
     }
     
     .exit-button .exit-icon {
@@ -2269,11 +2267,11 @@ if ('speechSynthesis' in window) {
         position: relative;
         width: calc(100% + 40px); /* Extend 20px on each side outside card */
         max-width: calc(100vw - 32px); /* iPhone safe area: 16px margin on each side */
-        min-height: 140px; /* Reduced from 320px – give voice vis room without huge empty space */
+        min-height: 180px; /* Give visualizer/timer a stable slot so it doesn't compress */
         max-height: none;
         margin: 0 -20px; /* Negative margin to extend outside card */
-        margin-bottom: 0.25rem;
-        margin-top: 0.25rem;
+        margin-bottom: clamp(0.5rem, 1.1vh, 0.85rem);
+        margin-top: clamp(0.45rem, 1vh, 0.75rem);
         transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: visible; /* Allow content to extend */
     }
@@ -2352,7 +2350,7 @@ if ('speechSynthesis' in window) {
     
     /* Honey jar timer state (countdown mode) – same compact height as voice mode */
     .morph-container.mode-timer {
-        min-height: 140px;
+        min-height: 180px;
         max-height: none;
     }
     
@@ -4754,8 +4752,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     .dotwave-wrapper canvas {
                         width: 100%;
-                        height: 56px !important;
-                        max-height: 56px !important;
+                        height: 96px !important;
+                        max-height: 96px !important;
                                     filter:
                                         drop-shadow(0 0 4px rgba(255,255,255,0.4))
                                         drop-shadow(0 0 12px rgba(255,200,0,0.4));
@@ -4893,8 +4891,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                         }
                                     }
                         const centerY = H / 2;
-                        const buffer = 40; // Increased safety buffer from edges to prevent clipping
-                        const maxHeight = (H / 2) - buffer; // Max amplitude with buffer to prevent clipping
+                        const buffer = Math.min(18, Math.max(8, H * 0.12));
+                        const maxHeight = Math.max(10, (H / 2) - buffer);
                         const spacing = W / (config.points - 1);
                         const centerIdx = config.points / 2;
 
