@@ -958,9 +958,69 @@ def home_root_direct():
     print(f" [HOME ROUTE] User authenticated: {current_user.is_authenticated}")
     print("="*80)
     
+    # School Edition: require School Portal context (school_id) before allowing access to the unified menu.
+    try:
+        from school_edition import is_school_edition
+        if is_school_edition() and not session.get('school_id'):
+            next_url = request.full_path or request.path
+            if next_url.endswith('?'):
+                next_url = next_url[:-1]
+            return redirect(url_for('school_landing_page', next=next_url))
+    except Exception:
+        pass
+
     # Get current user's avatar data for immediate display (same as dashboard)
     user_avatar_data = None
     use_mascot = True
+
+    # School Edition: after a School Key entry, show the school's default uploaded avatar on the main menu
+    # even before a teacher/student account signs in (fallback to mascot if none).
+    try:
+        from school_edition import is_school_edition
+        school_id = session.get('school_id')
+        if is_school_edition() and school_id and not current_user.is_authenticated:
+            from models import School, Avatar
+            slug = (session.get('school_mascot_asset_key') or '').strip()
+            if not slug:
+                school = School.query.get(school_id)
+                if school:
+                    slug = (school.mascot_asset_key or '').strip()
+            if slug:
+                avatar = Avatar.get_by_slug_for_context(slug, school_id=school_id)
+                if not avatar:
+                    avatar = Avatar.get_by_slug(slug)
+                if avatar:
+                    import os
+                    base_path = "/static/assets/avatars/glb_files"
+                    glb_filename = (getattr(avatar, 'obj_file', None) or "MascotBee.glb").strip()
+                    if glb_filename.lower().endswith('.obj'):
+                        glb_filename = glb_filename[:-4] + '.glb'
+                    elif not glb_filename.lower().endswith('.glb'):
+                        glb_filename = glb_filename + '.glb'
+                    glb_basename = os.path.splitext(os.path.basename(glb_filename))[0]
+                    thumbnail_path = f"{base_path}/AvatarThumbnails/{glb_basename}!.png"
+
+                    glb_url = None
+                    try:
+                        if getattr(avatar, 'glb_data', None):
+                            glb_url = url_for('api_get_avatar_glb', avatar_id=avatar.slug)
+                    except Exception:
+                        glb_url = None
+                    if not glb_url:
+                        glb_url = f"{base_path}/{glb_filename}"
+
+                    user_avatar_data = {
+                        'avatar_id': avatar.slug,
+                        'variant': 'default',
+                        'name': getattr(avatar, 'name', None) or 'School Mascot',
+                        'urls': {
+                            'glb': glb_url,
+                            'thumbnail': thumbnail_path,
+                        },
+                    }
+                    use_mascot = False
+    except Exception:
+        pass
     
     if current_user.is_authenticated:
         try:
@@ -1065,7 +1125,7 @@ def home_preview():
 # Our home route is implemented as `home()`, so provide a stable alias to avoid 500s.
 @app.route('/unified_menu')
 def unified_menu():
-    return home()
+    return home_root_direct()
 
 
 @app.route('/points-buzz-dust-explanation')
@@ -14596,7 +14656,8 @@ def school_landing_page():
     from school_edition import is_school_edition
     if not is_school_edition():
         return redirect(url_for('home'))
-    return render_template('school/school_landing.html')
+    next_url = (request.args.get('next') or '').strip()
+    return render_template('school/school_landing.html', next=next_url)
 
 
 @app.route('/school/login', methods=['POST'])
@@ -14608,6 +14669,9 @@ def school_login():
     if not is_school_edition():
         return jsonify({"success": False, "error": "School login not available"}), 404
     data = request.get_json(silent=True) or request.form
+    next_url = (request.args.get('next') or data.get('next') or '').strip()
+    if next_url and (not next_url.startswith('/') or next_url.startswith('//') or next_url.startswith('/school') or next_url.startswith('/school/login')):
+        next_url = ''
     email = (data.get('email') or data.get('username') or '').strip()
     password = data.get('password', '')
     key_code = (data.get('key_code') or data.get('key') or '').strip()
@@ -14686,8 +14750,7 @@ def school_login():
             bool(getattr(current_user, 'is_authenticated', False)),
             was_authenticated,
         )
-
-        return jsonify({"success": True, "redirect": url_for('unified_menu')})
+        return jsonify({"success": True, "redirect": next_url or url_for('unified_menu')})
     except Exception as e:
         db.session.rollback()
         import traceback
