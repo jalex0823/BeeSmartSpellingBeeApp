@@ -73,11 +73,11 @@
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0)); /* Reduced padding */
     padding-left: max(4px, env(safe-area-inset-left, 0));
     padding-right: max(4px, env(safe-area-inset-right, 0));
-    background: linear-gradient(180deg, #FFE082 0%, #FFD54F 35%, #FFC107 70%, #FFB300 100%); /* Yellow-orange gradient matching guide */
+    background: linear-gradient(180deg, #FFF8E1 0%, #FFECB3 35%, #FFD54F 70%, #FFC107 100%);
     border-radius: 10px; /* Slightly smaller radius */
-    border: none; /* No border, just gradient */
+    border: 2px solid rgba(139, 105, 20, 0.28);
     box-shadow:
-        0 3px 8px rgba(255, 179, 0, 0.2),
+        0 3px 10px rgba(139, 105, 20, 0.14),
         0 1px 3px rgba(0, 0, 0, 0.1),
         inset 0 1px 0 rgba(255, 255, 255, 0.25); /* Subtle inner highlight */
     position: relative; /* Normal flow, NOT fixed */
@@ -226,20 +226,20 @@
     font-weight: 800;
     text-transform: uppercase;
     color: #5a2d00; /* Dark brown text */
-    background: linear-gradient(180deg, rgba(255,214,102,0.95) 0%, rgba(255,175,0,0.95) 100%) !important; /* Warm gold gradient - override legacy */
-    border: 2px solid rgba(160,90,0,0.35) !important; /* Subtle border - override legacy */
+    background: linear-gradient(180deg, rgba(255, 253, 231, 0.96) 0%, rgba(255, 224, 130, 0.96) 100%) !important;
+    border: 2px solid rgba(139, 105, 20, 0.30) !important;
     box-shadow: 
-        0 6px 0 rgba(140,75,0,0.35), /* Soft bevel shadow */
-        0 10px 20px rgba(0,0,0,0.10) !important; /* Depth shadow - override legacy */
+        0 6px 0 rgba(139, 105, 20, 0.26),
+        0 10px 20px rgba(0,0,0,0.10) !important;
     cursor: pointer;
     transition: transform 0.1s ease, box-shadow 0.1s ease;
     -webkit-tap-highlight-color: transparent;
 }
 
 .quiz-keyboard-key:hover:not(:disabled) {
-    background: linear-gradient(180deg, rgba(255,224,102,0.98) 0%, rgba(255,185,0,0.98) 100%);
+    background: linear-gradient(180deg, rgba(255, 253, 231, 0.98) 0%, rgba(255, 213, 79, 0.98) 100%);
     box-shadow: 
-        0 7px 0 rgba(140,75,0,0.4),
+        0 7px 0 rgba(139, 105, 20, 0.30),
         0 12px 24px rgba(0,0,0,0.12);
     transform: translateY(-1px);
 }
@@ -247,7 +247,7 @@
 .quiz-keyboard-key:active:not(:disabled) {
     transform: translateY(2px); /* Pressed down effect */
     box-shadow: 
-        0 3px 0 rgba(140,75,0,0.35), /* Reduced bevel */
+        0 3px 0 rgba(139, 105, 20, 0.26),
         0 6px 14px rgba(0,0,0,0.10); /* Reduced depth */
 }
 
