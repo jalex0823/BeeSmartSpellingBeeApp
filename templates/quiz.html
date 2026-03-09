@@ -688,12 +688,12 @@ if ('speechSynthesis' in window) {
 /* Answer + keyboard in same scroll flow; visible gap, no overlap */
 .answer-and-keyboard {
     display: block;
-    margin-bottom: 1rem; /* Increased spacing */
-    margin-top: clamp(0.55rem, 1.1vh, 0.85rem); /* Restore breathing room above input */
+    margin-bottom: 0.5rem;
+    margin-top: 0.25rem; /* Tightened: less gap between timer and answer */
 }
 
 .answer-and-keyboard .quiz-answer-area {
-    margin-bottom: 16px; /* Increased spacing between answer area and keyboard */
+    margin-bottom: 10px;
 }
 
 /* F) Hide keyboard: toggle only; never position:fixed */
@@ -839,11 +839,11 @@ if ('speechSynthesis' in window) {
     /* Answer + keyboard in same scroll flow; visible gap, no overlap */
     .answer-and-keyboard {
         display: block;
-        margin-bottom: 1rem; /* Increased spacing */
-        margin-top: clamp(0.55rem, 1.1vh, 0.85rem); /* Restore breathing room above input */
+        margin-bottom: 0.5rem;
+        margin-top: 0.25rem; /* Tightened: less gap between timer and answer */
     }
     .answer-and-keyboard .quiz-answer-area {
-        margin-bottom: 16px; /* Increased spacing between answer area and keyboard */
+        margin-bottom: 10px;
     }
     /* F) Hide keyboard: toggle only; never position:fixed */
     #keyboardHost.is-hidden,
@@ -4560,7 +4560,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <div class="floating-bee" aria-hidden="true"></div>
 
 <!-- 🎯 Floating Session Stats Tracker (Top of screen) -->
-<div class="session-stats" id="sessionStatsBar" style="display: none;">
+<div class="session-stats" id="sessionStatsBar" style="display: none !important;">
     <div class="session-stat">
         <span>📊</span>
         <span class="session-stat-value" id="floatingWordCount">0/0</span>
@@ -7914,6 +7914,9 @@ class QuizManager {
             // Back-compat alias (older code paths referenced currentWord)
             this.currentWord = this.currentWordData;
 
+            // Auto-show sample sentence when word loads (school edition)
+            try { this.showSentence(); } catch (_e) {}
+
             // ✅ Allow early typing — enable input immediately (no need to wait for timer)
             {
                 const spellingInput = document.getElementById('spellingInput');
@@ -9447,7 +9450,10 @@ class QuizManager {
 
             // Back-compat alias (older code paths referenced currentWord)
             this.currentWord = this.currentWordData;
-            
+
+            // Auto-show sample sentence when word loads (school edition)
+            try { this.showSentence(); } catch (_e) {}
+
             // Don't animate mascot on every question - keep it calm during gameplay
             // Mascot will only animate when answers are submitted
 
