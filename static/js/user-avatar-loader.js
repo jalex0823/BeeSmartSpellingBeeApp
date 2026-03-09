@@ -395,7 +395,7 @@ class UserAvatarLoader {
             const response = await this._safeFetch(`/api/users/me/avatar?_=${cacheBuster}`, {
                 credentials: 'same-origin',
                 cache: 'no-store'  // iOS Safari: prevent aggressive caching
-            }, 8000, 2);  // 8 second timeout, 2 retries
+            }, 15000, 1);  // 15 second timeout, 1 retry (server may be warming up)
             
             if (response.ok) {
                 const data = await response.json();

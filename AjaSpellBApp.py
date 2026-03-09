@@ -1802,7 +1802,9 @@ def ensure_simple_wiktionary_loaded():
         print(f"️ Failed building wiktionary index: {_idx_err}")
     return SIMPLE_WIKTIONARY
 
-print(" Dictionary resources initialized (on-demand loading enabled)")
+print(" Pre-warming Wiktionary dictionary at startup...")
+ensure_simple_wiktionary_loaded()
+print(" Dictionary resources initialized (pre-warmed)")
 
 speed_logger = logging.getLogger('SpeedRound')
 if not speed_logger.handlers:
@@ -9767,23 +9769,16 @@ def api_upload_manual_words():
         set_wordbank(enriched, is_user_upload=True)
         init_quiz_state(len(enriched))
         
-        # CRITICAL: Aggressive session persistence (Railway fix for "3 clicks" bug)
+        # Ensure session persistence (DigitalOcean - no sleep needed)
         session.permanent = True
         session.modified = True
         
-        # Increased delay to ensure quiz state persists BEFORE response
-        time.sleep(0.25)
-        
-        # Double-check quiz state was saved
+        # Verify quiz state was saved
         saved_state = get_quiz_state()
         if not saved_state:
             print("ERROR /api/upload-manual-words: Quiz state failed to persist! Retrying init...")
             init_quiz_state(len(enriched))
             session.modified = True
-            time.sleep(0.2)
-        
-        # Small delay to ensure session is persisted
-        time.sleep(0.1)
         
         # Verify wordbank was set correctly
         verify_wb = get_wordbank()

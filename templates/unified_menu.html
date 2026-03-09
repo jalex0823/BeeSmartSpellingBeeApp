@@ -7724,11 +7724,12 @@ function showRestoreDialog(title, message, isSuccess) {
             }
             
             // CRITICAL FIX: Add timeout protection to prevent infinite "Processing..." hang
+            // 90s allows for first-request Wiktionary warm-up on cold DigitalOcean workers
             const controller = new AbortController();
             const timeoutId = setTimeout(() => {
                 controller.abort();
-                console.error('Manual word upload timeout after 30 seconds');
-            }, 30000); // 30 second timeout
+                console.error('Manual word upload timeout after 90 seconds');
+            }, 90000); // 90 second timeout
             
             // Send to backend with timeout protection
             fetch('/api/upload-manual-words', {
@@ -11375,7 +11376,13 @@ Try:
             }
         }
         
+        let _startQuizInFlight = false;
         function startQuiz() {
+            if (_startQuizInFlight) {
+                console.log('startQuiz already in progress, ignoring duplicate call');
+                return;
+            }
+            _startQuizInFlight = true;
             console.log('startQuiz called');
 
             (async () => {
@@ -11427,6 +11434,8 @@ Try:
                 } catch (error) {
                     console.error('Pre-quiz live-summary failed:', error);
                     showErrorMessage('Could not check your word list. Please refresh the page and try again.');
+                } finally {
+                    _startQuizInFlight = false;
                 }
             })();
         }
