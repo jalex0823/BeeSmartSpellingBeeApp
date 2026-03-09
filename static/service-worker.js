@@ -4,7 +4,7 @@
 // IMPORTANT: do not precache HTML navigations like '/' — stale cached HTML can break auth-gated flows.
 // 2026-01-07: cache bust + ensure Word Lists UI updates immediately (Apple review).
 // 2026-01-16: force-refresh SW caches + never intercept /quiz (fix stale quiz HTML / JS syntax errors).
-const CACHE_VERSION = 'beesmart-v1.4.7-v42-2026-03-04-sw-redirect-fix';
+const CACHE_VERSION = 'beesmart-v1.4.8-v43-2026-03-09-cache-search-fix';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 
 // Minimal core assets to cache; extend as needed
@@ -183,16 +183,21 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Cache-first for static assets under /static/ (excluding avatars)
+  // Use ignoreSearch so ?v=timestamp cache busters still match pre-cached assets
   if (url.pathname.startsWith('/static/')) {
     event.respondWith(
-      caches.match(request).then((cached) => {
+      caches.match(request, { ignoreSearch: true }).then((cached) => {
         const fetchAndCache = fetch(request).then((response) => {
           if (response && response.ok && !response.redirected && response.type !== 'opaqueredirect') {
             const copy = response.clone();
             caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
           }
           return response;
-        }).catch(() => cached);
+        }).catch(() => {
+          // Return cached version if available; otherwise a proper error response
+          // so respondWith never receives undefined (which crashes the fetch).
+          return cached || new Response('', { status: 503, statusText: 'Offline' });
+        });
         return cached || fetchAndCache;
       })
     );
