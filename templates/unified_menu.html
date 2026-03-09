@@ -11378,144 +11378,57 @@ Try:
         function startQuiz() {
             console.log('startQuiz called');
 
-            // First, check live summary to decide resume/start/import
             (async () => {
                 try {
-                    const lsRes = await fetch('/api/wordbank/live-summary', { cache: 'no-store', credentials: 'same-origin' });
-                    if (lsRes && lsRes.ok) {
-                        const ls = await lsRes.json();
-                        const hasWords = !!ls && typeof ls.count === 'number' && ls.count > 0;
-                        const hasQuiz = !!ls && !!ls.quiz_state_present;
-                        if (!hasWords) {
-                            // Show friendly message instead of trying to navigate to non-existent /import
-                            console.log(' No words found; showing friendly modal');
-                            openFriendlyInfoModal({
-                                title: ' No Words Yet!',
-                                message: 'Please load some words first before starting the quiz! You can upload a word list, type words manually, or use our Random Words option. ',
-                                buttonText: 'Got it!'
-                            });
-                            return; // Stop further processing
+                    const cacheBuster = Date.now();
+                    const lsRes = await fetch(`/api/wordbank/live-summary?_=${cacheBuster}`, {
+                        cache: 'no-store',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache'
                         }
-                        if (hasQuiz) {
-                            console.log(' Quiz state present; resuming quiz');
-                            if (window.magicalEffects) { window.magicalEffects.playChimeSounds(); }
-                            showLoadingMessage(' Resuming your spelling adventure...');
-                            try {
-                                // Resume state server-side (correct API path is /api/quiz/resume)
-                                await fetch('/api/quiz/resume', { method: 'POST', credentials: 'same-origin' });
-                            } catch(e) { console.warn('Resume API failed (continuing to quiz):', e); }
-                            const quizUrl = `/quiz?t=${Date.now()}&resume=1`;
-                            setTimeout(() => { window.location.href = quizUrl; }, 150);
-                            return; // Stop further processing
-                        }
-                        // Else fall through to normal start behavior below
+                    });
+                    if (!lsRes.ok) throw new Error(`live-summary failed: ${lsRes.status}`);
+
+                    const ls = await lsRes.json();
+                    console.log('Pre-quiz live-summary:', ls);
+
+                    const wordCount = (ls && typeof ls.count === 'number') ? ls.count : 0;
+                    const hasQuiz = !!(ls && ls.quiz_state_present);
+
+                    if (wordCount <= 0) {
+                        console.log(' No words found; showing friendly modal');
+                        openFriendlyInfoModal({
+                            title: ' No Words Yet!',
+                            message: 'Please load some words first before starting the quiz! You can upload a word list, type words manually, or use our Random Words option. ',
+                            buttonText: 'Got it!'
+                        });
+                        return;
                     }
-                } catch (e) {
-                    console.warn('live-summary check failed, proceeding with verify flow:', e);
+
+                    if (window.magicalEffects) {
+                        window.magicalEffects.playChimeSounds();
+                    }
+
+                    if (hasQuiz) {
+                        showLoadingMessage(' Resuming your spelling adventure...');
+                        try {
+                            await fetch('/api/quiz/resume', { method: 'POST', credentials: 'same-origin' });
+                        } catch(e) { console.warn('Resume API failed (continuing to quiz):', e); }
+                        const quizUrl = `/quiz?t=${Date.now()}&resume=1`;
+                        setTimeout(() => { window.location.href = quizUrl; }, 150);
+                        return;
+                    }
+
+                    showLoadingMessage(' Getting your spelling adventure ready...');
+                    const quizUrl = `/quiz?t=${Date.now()}&words=${wordCount}`;
+                    setTimeout(() => { window.location.href = quizUrl; }, 150);
+                } catch (error) {
+                    console.error('Pre-quiz live-summary failed:', error);
+                    showErrorMessage('Could not check your word list. Please refresh the page and try again.');
                 }
             })();
-            
-            //  ENHANCED: Verify wordbank state before navigating to quiz
-            const cacheBuster = Date.now();
-            // CORRECTED: Use the correct 'live-summary' endpoint instead of the non-existent 'verify'
-            fetch(`/api/wordbank/live-summary?_=${cacheBuster}`, {
-                cache: 'no-store',
-                credentials: 'same-origin',
-                headers: {
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache'
-                }
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Network response was not ok: ${response.statusText}`);
-                    }
-                    return response.json();
-                })
-                .then(async data => {
-                    console.log('Pre-quiz wordbank verification:', data);
-
-                    const wordCount = data.count || 0;
-
-                    // Helper: quick navigate to quiz with friendly loading + sound
-                    const navigateToQuiz = async () => {
-                        //  CRITICAL: Re-verify session has words just before navigating
-                        let finalWordCount = 0;
-                        try {
-                            const verifyResp = await fetch('/api/wordbank', {
-                                credentials: 'same-origin',
-                                headers: { 'Cache-Control': 'no-cache' }
-                            });
-                            const verifyData = await verifyResp.json();
-                            
-                            if (verifyData.status !== 'success' || !verifyData.count || verifyData.count === 0) {
-                                console.error(' Session lost before quiz navigation! Wordbank empty:', verifyData);
-                                showErrorMessage(' Your word list seems to be empty. Please upload your words again or try the Random Words option.');
-                                return; // Stop navigation
-                            }
-                            finalWordCount = verifyData.count;
-                            console.log(`Session re-verified before quiz: ${finalWordCount} words present.`);
-                        } catch (err) {
-                            console.error('Could not re-verify session before quiz. Attempting to proceed anyway.', err);
-                            // Fallback to the count from the last successful check
-                            finalWordCount = wordCount > 0 ? wordCount : await WordBankManager.getCount(true);
-                            if (finalWordCount === 0) {
-                                showErrorMessage(' Could not confirm your word list. Please try uploading again.');
-                                return;
-                            }
-                        }
-
-                        if (window.magicalEffects) {
-                            window.magicalEffects.playChimeSounds();
-                        }
-                        showLoadingMessage(' Getting your spelling adventure ready...');
-                        
-                        const quizUrl = `/quiz?t=${Date.now()}&words=${finalWordCount}`;
-                        setTimeout(() => { window.location.href = quizUrl; }, 150);
-                    };
-
-                    if (wordCount > 0) {
-                        // Words exist, proceed to quiz
-                        await navigateToQuiz();
-                    } else {
-                        // No words found, offer random words
-                        showRandomWordListModal(
-                            // onConfirm
-                            () => {
-                                console.log(' User accepted random word list');
-                                showLoadingMessage(' Selecting 10 random words for you...');
-                                fetch('/api/random-words', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ difficulty: 2, count: 10 })
-                                })
-                                .then(res => res.json())
-                                .then(randomData => {
-                                    if (randomData.success && randomData.count > 0) {
-                                        showSuccessMessage(`Great! ${randomData.count} random words loaded! `);
-                                        WordBankManager.updateAllDisplays(true);
-                                        setTimeout(navigateToQuiz, 800);
-                                    } else {
-                                        showErrorMessage('Could not load random words. Please try uploading your own word list! ');
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error('Failed to load random words:', error);
-                                    showErrorMessage('Oops! Could not load random words. Please try uploading your own list! ');
-                                });
-                            },
-                            // onCancel
-                            () => { 
-                                console.log(' User declined random word list');
-                                showNotification('No problem! Upload your own word list when you\'re ready! ', 'info');
-                            }
-                        );
-                    }
-                })
-                .catch(error => {
-                    console.error('Pre-quiz wordbank verification completely failed:', error);
-                    showErrorMessage('Could not check your word list. Please refresh the page and try again.');
-                });
         }
         
         async function updateWordCount() {

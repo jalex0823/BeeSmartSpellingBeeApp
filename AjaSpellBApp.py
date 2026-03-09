@@ -727,21 +727,28 @@ def api_wordbank_live_summary():
     - last_modified: disk timestamp of the active storage file if present
     """
     try:
-        sid = _ensure_session_storage_id()
-        rows = get_wordbank()
-        exists = os.path.exists(_wordbank_path(sid))
-        last_modified = None
-        if exists:
+        sid = session.get('wordbank_storage_id')
+        count = 0
+        if sid:
             try:
-                last_modified = datetime.fromtimestamp(os.path.getmtime(_wordbank_path(sid))).isoformat()
+                from models import WordBankStorage
+                storage = WordBankStorage.query.filter_by(storage_id=sid).first()
+                if storage:
+                    count = int(storage.word_count or 0)
             except Exception:
-                last_modified = None
+                count = 0
+        else:
+            try:
+                count = int(session.get('wordbank_count') or 0)
+            except Exception:
+                count = 0
+        last_modified = None
         qs = session.get(QUIZ_STATE_KEY)
         return jsonify({
             'status': 'success',
             'storage_id': sid,
-            'count': len(rows),
-            'ready_for_quiz': len(rows) > 0,
+            'count': count,
+            'ready_for_quiz': count > 0,
             'quiz_state_present': bool(qs is not None),
             'last_modified': last_modified
         })
@@ -7014,27 +7021,36 @@ def quiz_page():
     try:
         # Ensure session persists across page navigation
         session.permanent = True
-        
-        # Enhanced debugging for mobile session issues
-        session_id = session.get("session_id", "NONE")
-        storage_id = session.get("wordbank_storage_id", "NONE")
-        
-        print(f"\n{'='*60}")
-        print(f" /quiz ROUTE ACCESSED")
-        print(f"{'='*60}")
-        print(f"DEBUG /quiz: session_id={session_id}, storage_id={storage_id}")
-        print(f"DEBUG /quiz: session keys={list(session.keys())}")
-        print(f"DEBUG /quiz: cookies={list(request.cookies.keys())}")
-        print(f"DEBUG /quiz: cookie values={dict(request.cookies)}")
-        print(f"DEBUG /quiz: user-agent={request.headers.get('User-Agent', 'UNKNOWN')[:80]}")
-        
-        # Check WORD_STORAGE
-        with WORD_STORAGE_LOCK:
-            storage_keys = list(WORD_STORAGE.keys())
-            print(f"DEBUG /quiz: WORD_STORAGE has {len(storage_keys)} entries: {storage_keys}")
-            if storage_id and storage_id != "NONE":
-                words_in_storage = len(WORD_STORAGE.get(storage_id, []))
-                print(f"DEBUG /quiz: storage_id {storage_id} has {words_in_storage} words")
+
+        debug_quiz = bool(
+            app.debug
+            or os.environ.get('DEBUG_QUIZ_STARTUP', '').strip().lower() in ('1', 'true', 'yes', 'on')
+        )
+
+        if debug_quiz:
+            # Enhanced debugging for mobile session issues
+            session_id = session.get("session_id", "NONE")
+            storage_id = session.get("wordbank_storage_id", "NONE")
+
+            print(f"\n{'='*60}")
+            print(f" /quiz ROUTE ACCESSED")
+            print(f"{'='*60}")
+            print(f"DEBUG /quiz: session_id={session_id}, storage_id={storage_id}")
+            print(f"DEBUG /quiz: session keys={list(session.keys())}")
+            print(f"DEBUG /quiz: cookies={list(request.cookies.keys())}")
+            print(f"DEBUG /quiz: cookie values={dict(request.cookies)}")
+            print(f"DEBUG /quiz: user-agent={request.headers.get('User-Agent', 'UNKNOWN')[:80]}")
+
+            # Check WORD_STORAGE (legacy debug hook)
+            try:
+                with WORD_STORAGE_LOCK:
+                    storage_keys = list(WORD_STORAGE.keys())
+                    print(f"DEBUG /quiz: WORD_STORAGE has {len(storage_keys)} entries: {storage_keys}")
+                    if storage_id and storage_id != "NONE":
+                        words_in_storage = len(WORD_STORAGE.get(storage_id, []))
+                        print(f"DEBUG /quiz: storage_id {storage_id} has {words_in_storage} words")
+            except Exception as _e:
+                print(f"DEBUG /quiz: WORD_STORAGE inspection failed: {_e}")
         
         # Ensure wordbank is loaded before showing quiz
         wordbank = get_wordbank()
@@ -7052,19 +7068,23 @@ def quiz_page():
         # Initialize quiz state for this wordbank (only if not already initialized)
         state = get_quiz_state()
         if state is None or len(state.get("order", [])) != len(wordbank):
-            print(f"DEBUG /quiz: Initializing quiz state for {len(wordbank)} words")
+            if debug_quiz:
+                print(f"DEBUG /quiz: Initializing quiz state for {len(wordbank)} words")
             init_quiz_state(len(wordbank))
         else:
             # Check if quiz is completed - reset if so
             idx = state.get('idx', 0)
             order = state.get('order', [])
             if idx >= len(order):
-                print(f"DEBUG /quiz: Quiz completed (idx={idx}, total={len(order)}) - resetting for new attempt")
+                if debug_quiz:
+                    print(f"DEBUG /quiz: Quiz completed (idx={idx}, total={len(order)}) - resetting for new attempt")
                 init_quiz_state(len(wordbank))
             else:
-                print(f"DEBUG /quiz: Using existing quiz state - idx={idx}, total={len(order)}")
+                if debug_quiz:
+                    print(f"DEBUG /quiz: Using existing quiz state - idx={idx}, total={len(order)}")
             
-        print(f"DEBUG /quiz: Rendering quiz.html with {len(wordbank)} words")
+        if debug_quiz:
+            print(f"DEBUG /quiz: Rendering quiz.html with {len(wordbank)} words")
         
         # Cache busting timestamp
         import time
@@ -7074,7 +7094,8 @@ def quiz_page():
         user_name = None
         if current_user.is_authenticated:
             user_name = current_user.display_name
-            print(f"DEBUG /quiz: User logged in as {user_name}")
+            if debug_quiz:
+                print(f"DEBUG /quiz: User logged in as {user_name}")
         
         # Force fresh HTML for quiz page (prevents stale cached templates that can preserve old JS syntax bugs)
         from flask import make_response
