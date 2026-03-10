@@ -4579,8 +4579,8 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 <div class="quiz-container quiz-shell quiz-content quiz-page" id="quizContainer">
-    <!-- Quiz Header -->
-    <div class="quiz-header">
+    <!-- Quiz Header - HIDDEN per school UI simplification -->
+    <div class="quiz-header" style="display: none !important;">
         <!-- Modern header layout: progress left, exit right -->
         <div class="quiz-header-top">
             <div class="progress-section">
@@ -4669,7 +4669,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
         </div>
 
-        <div class="quiz-stats-pill" id="quizStatsPill" style="display: none;">
+        <div class="quiz-stats-pill" id="quizStatsPill" style="display: none !important;">
             <span id="quizStatsProgress">Question 1 of 10</span>
             <span class="quiz-stats-sep">|</span>
             <span class="quiz-stats-metric">
