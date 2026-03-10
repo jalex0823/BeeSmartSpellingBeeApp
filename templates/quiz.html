@@ -10476,7 +10476,7 @@ class QuizManager {
         const statsIncorrect = document.getElementById('quizStatsIncorrect');
         if (statsCorrect) statsCorrect.textContent = correct;
         if (statsIncorrect) statsIncorrect.textContent = incorrect;
-        if (statsPill && total > 0) statsPill.style.display = 'flex';
+        // quizStatsPill hidden for school edition (display:none !important in HTML)
         
         // Update session points display (if element exists)
         const sessionPointsElement = document.getElementById('sessionPoints');
@@ -10502,11 +10502,8 @@ class QuizManager {
             floatingStreak.textContent = streak;
         }
         
-        // Show the floating stats bar once quiz starts
-        if (sessionStatsBar && total > 0) {
-            sessionStatsBar.style.display = 'flex';
-        }
-
+        // sessionStatsBar hidden for school edition (display:none !important in HTML)
+        
         // Update honey jar fill level based on QUIZ PROGRESSION (not correctness ratio)
         // This ensures consistency with progress percentage display
         const honeyLevel = document.getElementById('honeyLevel');
@@ -12354,20 +12351,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         debugLog('🎯 Quiz page: Starting avatar initialization...');
 
-        // School edition: skip avatar loading entirely - use static mascot immediately
+        // School edition: skip UserAvatarLoader, load school GLB directly via SmartyBee3D
         if (typeof window.UserAvatarLoader !== 'function') {
-            debugLog('✅ School edition: skipping avatar loader, using fallback mascot');
-            setFallbackMascotImage();
+            debugLog('✅ School edition: loading school mascot GLB directly');
+            const schoolGlb = {{ (school_mascot_glb | tojson) if school_mascot_glb else 'null' }};
+            const schoolThumb = {{ (school_mascot_thumbnail | tojson) if school_mascot_thumbnail else 'null' }};
+            const glbPath = schoolGlb || '/static/assets/avatars/glb_files/MascotBee.glb';
+            // Try loading 3D model; fall back to thumbnail/PNG on failure
+            if (typeof window.SmartyBee3D === 'function' || await waitFor(() => typeof window.SmartyBee3D === 'function', 3000)) {
+                try {
+                    smartyBee = new SmartyBee3D('mascotBee3D', {
+                        modelPath: glbPath,
+                        fetchFromServer: false,
+                        width: 400,
+                        height: 412,
+                        autoRotate: true,
+                        brighterLighting: true
+                    });
+                    debugLog('✅ School mascot 3D loaded:', glbPath);
+                } catch (_e) {
+                    debugLog('⚠️ SmartyBee3D failed, using thumbnail fallback');
+                    setFallbackMascotImage();
+                }
+            } else {
+                setFallbackMascotImage();
+            }
             setOverlay(false, 'Ready');
             quizStartTriggered = true;
-            // Jump past all avatar loading logic
+            // Jump past UserAvatarLoader logic
         } else {
 
-        setOverlay(true, 'Loading avatar system…');
+            setOverlay(true, 'Loading avatar system…');
 
-        if (typeof window.SmartyBee3D !== 'function') {
-            await waitFor(() => typeof window.SmartyBee3D === 'function', 4500);
-        }
+            if (typeof window.SmartyBee3D !== 'function') {
+                await waitFor(() => typeof window.SmartyBee3D === 'function', 4500);
+            }
 
         // Ensure loader instance exists
         if (!window.userAvatarLoader && typeof window.UserAvatarLoader === 'function') {

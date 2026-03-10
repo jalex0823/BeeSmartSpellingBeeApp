@@ -7098,10 +7098,52 @@ def quiz_page():
             user_name = current_user.display_name
             if debug_quiz:
                 print(f"DEBUG /quiz: User logged in as {user_name}")
-        
+
+        # School Edition: resolve school mascot GLB URL for quiz 3D avatar
+        school_mascot_glb = None
+        school_mascot_thumbnail = None
+        try:
+            from school_edition import is_school_edition
+            school_id = session.get('school_id')
+            if is_school_edition() and school_id:
+                from models import School, Avatar
+                slug = (session.get('school_mascot_asset_key') or '').strip()
+                if not slug:
+                    school = School.query.get(school_id)
+                    if school:
+                        slug = (school.mascot_asset_key or '').strip()
+                if slug:
+                    avatar = Avatar.get_by_slug_for_context(slug, school_id=school_id)
+                    if not avatar:
+                        avatar = Avatar.get_by_slug(slug)
+                    if avatar:
+                        import os as _os
+                        base_path = "/static/assets/avatars/glb_files"
+                        glb_filename = (getattr(avatar, 'obj_file', None) or "MascotBee.glb").strip()
+                        if glb_filename.lower().endswith('.obj'):
+                            glb_filename = glb_filename[:-4] + '.glb'
+                        elif not glb_filename.lower().endswith('.glb'):
+                            glb_filename = glb_filename + '.glb'
+                        glb_basename = _os.path.splitext(_os.path.basename(glb_filename))[0]
+                        school_mascot_thumbnail = f"{base_path}/AvatarThumbnails/{glb_basename}!.png"
+                        try:
+                            if getattr(avatar, 'glb_data', None):
+                                school_mascot_glb = url_for('api_get_avatar_glb', avatar_id=avatar.slug)
+                        except Exception:
+                            pass
+                        if not school_mascot_glb:
+                            school_mascot_glb = f"{base_path}/{glb_filename}"
+                        if debug_quiz:
+                            print(f"DEBUG /quiz: School mascot GLB={school_mascot_glb}")
+        except Exception as _e:
+            if debug_quiz:
+                print(f"DEBUG /quiz: School mascot lookup failed: {_e}")
+
         # Force fresh HTML for quiz page (prevents stale cached templates that can preserve old JS syntax bugs)
         from flask import make_response
-        resp = make_response(render_template("quiz.html", user_name=user_name, timestamp=timestamp))
+        resp = make_response(render_template("quiz.html", user_name=user_name, timestamp=timestamp,
+                                             school_mascot_glb=school_mascot_glb,
+                                             school_mascot_thumbnail=school_mascot_thumbnail))
         resp.headers['Cache-Control'] = 'no-store, no-cache, max-age=0, must-revalidate'
         resp.headers['Pragma'] = 'no-cache'
         resp.headers['Expires'] = '0'
