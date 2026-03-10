@@ -357,7 +357,7 @@ if ('speechSynthesis' in window) {
         padding-top: env(safe-area-inset-top);
         padding-bottom: max(10px, env(safe-area-inset-bottom));
         box-sizing: border-box;
-        max-width: 700px;
+        max-width: 900px;
         margin: 0 auto;
         text-align: center;
         position: relative;
@@ -2333,7 +2333,7 @@ if ('speechSynthesis' in window) {
     .quiz-avatar-container {
         position: relative;
         width: 100%;
-        max-width: 700px; /* match quiz container width */
+        max-width: 900px; /* match quiz container width */
         margin: 0 auto; /* remove extra top/bottom margins */
         min-height: 220px; /* visible area for avatar */
         background: rgba(255, 255, 255, 0.0); /* transparent to blend with quiz */
@@ -5113,7 +5113,7 @@ document.addEventListener('DOMContentLoaded', () => {
                            style="font-size: 16px;">
                 </div>
                 <script>
-                (function(){ var ua = navigator.userAgent || ''; var cap = window.Capacitor; var isA = /Android/i.test(ua) || (cap && cap.getPlatform && cap.getPlatform() === 'android'); var isI = /iPad|iPhone|iPod/.test(ua); if (isA || isI) { var inp = document.getElementById('spellingInput'); if (inp) { inp.setAttribute('readonly','readonly'); inp.setAttribute('inputmode','none'); } })();
+                (function(){ var ua = navigator.userAgent || ''; var cap = window.Capacitor; var isA = /Android/i.test(ua) || (cap && cap.getPlatform && cap.getPlatform() === 'android'); var isI = /iPad|iPhone|iPod/.test(ua); if (isA || isI) { var inp = document.getElementById('spellingInput'); if (inp) { inp.setAttribute('readonly','readonly'); inp.setAttribute('inputmode','none'); } } })();
                 </script>
                 <!-- Show keyboard button (visible when keyboard is hidden so user can bring it back) -->
                 <button type="button" id="showKeyboardBtn" class="action-btn secondary quiz-show-keyboard-btn" style="display: none; margin-top: 8px; width: 100%; max-width: 260px;" aria-label="Show keyboard">
