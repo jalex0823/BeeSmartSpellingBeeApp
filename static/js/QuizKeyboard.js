@@ -112,8 +112,13 @@
         button.addEventListener('click', trigger);
         button.addEventListener('touchend', (e) => {
             if (e && e.cancelable) e.preventDefault();
-            lastTouchActivationTs = Date.now();
-            trigger(e);
+            const now = Date.now();
+            if (now - lastPressAt < 220) return;
+            lastPressAt = now;
+            lastTouchActivationTs = now;
+            keyPopAnimation(button);
+            playKeyClick(0.32);
+            onClick();
         }, { passive: false });
         return button;
     }
