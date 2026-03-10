@@ -1139,6 +1139,7 @@ if ('speechSynthesis' in window) {
     }
  
     .quiz-stats-pill {
+        display: none !important;
         width: fit-content;
         max-width: 100%;
         margin: 0 auto;
@@ -1147,10 +1148,6 @@ if ('speechSynthesis' in window) {
         background: linear-gradient(180deg, rgba(255, 248, 225, 0.95) 0%, rgba(255, 236, 179, 0.95) 100%);
         border: 2px solid rgba(139, 105, 20, 0.35);
         box-shadow: 0 6px 16px rgba(139, 105, 20, 0.10);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
         color: #5d4100;
         font-weight: 800;
         font-size: 0.92rem;
@@ -1456,15 +1453,15 @@ if ('speechSynthesis' in window) {
     .countdown-container {
         display: flex;
         justify-content: center;
-        margin: 0; /* remove extra margin around timer */
+        margin: 0;
         opacity: 0;
         transform: translateY(-10px);
         transition: opacity 0.3s ease, transform 0.3s ease;
         padding: 8px 10px;
-        border-radius: 18px;
-        background: rgba(255, 255, 255, 0.72);
-        border: 2px solid rgba(139, 105, 20, 0.28);
-        box-shadow: 0 6px 16px rgba(139, 105, 20, 0.10);
+        border-radius: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
     }
     
     .countdown-container.active {
