@@ -584,12 +584,10 @@ if ('speechSynthesis' in window) {
     margin: 0 auto;
     overflow: hidden;
     box-sizing: border-box;
-    border-radius: 18px;
-    background: linear-gradient(180deg, #FFFDE7 0%, #FFF8E1 100%);
-    border: 3px solid rgba(139, 105, 20, 0.45);
-    box-shadow:
-        0 14px 34px rgba(139, 105, 20, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    border-radius: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
 
 .quiz-card .quiz-card-content {
@@ -599,7 +597,7 @@ if ('speechSynthesis' in window) {
     flex-direction: column;
     flex: 1;
     overflow: hidden;
-    background: linear-gradient(180deg, #FFFDE7 0%, #FFF8E1 100%);
+    background: transparent;
 }
 
 /* Card content should not trap scroll; let the page scroll */
@@ -607,7 +605,7 @@ if ('speechSynthesis' in window) {
     flex: 1 1 auto;
     min-height: 0;
     overflow: visible !important;
-    padding: max(14px, env(safe-area-inset-top)) 12px 28px 12px; /* Extra bottom padding so Exit is never clipped */
+    padding: max(14px, env(safe-area-inset-top)) 12px 28px 12px;
 }
 
 /* Webkit scrollbar styling (Chrome, Safari, Edge) - Always visible */
@@ -1518,16 +1516,16 @@ if ('speechSynthesis' in window) {
     
     /* SVG Jar Styling - compact on mobile */
     .jar-svg {
-        width: 68px;
-        height: 80px;
+        width: 110px;
+        height: 130px;
         filter: drop-shadow(0 6px 16px rgba(255, 193, 7, 0.4));
         transition: all 0.3s ease;
     }
-    /* Desktop: larger honey jar (was too small) */
+    /* Desktop: even larger honey jar */
     @media (min-width: 769px) {
         .jar-svg {
-            width: 96px;
-            height: 116px;
+            width: 140px;
+            height: 168px;
         }
     }
     
@@ -1590,7 +1588,7 @@ if ('speechSynthesis' in window) {
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        font-size: 1.5rem;
+        font-size: 2.2rem;
         font-weight: 900;
         color: #5d4100;
         text-shadow: 
@@ -1603,20 +1601,20 @@ if ('speechSynthesis' in window) {
     /* Desktop: larger timer number to match jar size */
     @media (min-width: 769px) {
         .honey-jar-wrapper .timer-number {
-            font-size: 2rem;
+            font-size: 2.8rem;
         }
     }
     
     .timer-label {
-        font-size: 0.75rem;
-        font-weight: 600;
+        font-size: 0.9rem;
+        font-weight: 700;
         color: #6d4c00;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
     @media (min-width: 769px) {
         .timer-label {
-            font-size: 0.9rem;
+            font-size: 1.05rem;
         }
     }
     
@@ -1820,22 +1818,22 @@ if ('speechSynthesis' in window) {
         }
         
         .jar-svg {
-            width: 84px;
-            height: 100px;
+            width: 110px;
+            height: 130px;
         }
         
         /* Enhanced mobile timer visibility (overlays jar via honey-jar-wrapper) */
         .honey-jar-wrapper .timer-number {
-            font-size: 1.9rem;
+            font-size: 2.2rem;
             font-weight: 900;
-            color: #3E2723; /* Darker brown for better contrast */
+            color: #3E2723;
             text-shadow: 
-                0 3px 12px rgba(255, 255, 255, 0.9), /* Strong white glow */
+                0 3px 12px rgba(255, 255, 255, 0.9),
                 0 0 25px rgba(255, 255, 255, 0.8),
-                0 1px 3px rgba(0, 0, 0, 0.3); /* Dark outline for definition */
-            background: rgba(255, 255, 255, 0.15); /* Subtle background circle */
+                0 1px 3px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.15);
             border-radius: 50%;
-            padding: 0.2em; /* Padding based on font size */
+            padding: 0.2em;
             min-width: 1.5em;
             min-height: 1.5em;
             display: flex;
@@ -1847,7 +1845,7 @@ if ('speechSynthesis' in window) {
         
         /* Enhanced mobile warning states */
         .honey-jar-timer.warning .honey-jar-wrapper .timer-number {
-            color: #E65100; /* Darker orange for mobile contrast */
+            color: #E65100;
             background: rgba(255, 193, 7, 0.2);
             border-color: rgba(255, 193, 7, 0.5);
             text-shadow: 
@@ -1857,18 +1855,18 @@ if ('speechSynthesis' in window) {
         }
         
         .honey-jar-timer.critical .honey-jar-wrapper .timer-number {
-            color: #B71C1C; /* Darker red for mobile contrast */
+            color: #B71C1C;
             background: rgba(244, 67, 54, 0.2);
             border-color: rgba(244, 67, 54, 0.6);
             text-shadow: 
                 0 3px 12px rgba(255, 255, 255, 0.95),
                 0 0 25px rgba(255, 255, 255, 0.8),
                 0 1px 3px rgba(0, 0, 0, 0.5);
-            transform: translate(-50%, -50%) scale(1.15); /* Keep centered when critical */
+            transform: translate(-50%, -50%) scale(1.15);
         }
         
         .timer-label {
-            font-size: 0.8rem;
+            font-size: 0.95rem;
             font-weight: 700;
             color: #4A4A4A;
             text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8);
