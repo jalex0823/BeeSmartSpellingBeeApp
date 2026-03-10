@@ -681,15 +681,15 @@ if ('speechSynthesis' in window) {
     align-items: center;
     justify-content: flex-start;
     gap: clamp(0.6rem, 1.2vh, 0.9rem); /* Balanced spacing so sections don't feel mushed */
-    padding-bottom: clamp(0.35rem, 0.9vh, 0.6rem);
-    margin-bottom: clamp(0.35rem, 0.9vh, 0.6rem);
+    padding-bottom: 0;
+    margin-bottom: 0;
 }
 
 /* Answer + keyboard in same scroll flow; visible gap, no overlap */
 .answer-and-keyboard {
     display: block;
     margin-bottom: 0.5rem;
-    margin-top: 0.25rem; /* Tightened: less gap between timer and answer */
+    margin-top: 0; /* No gap between timer and answer */
 }
 
 .answer-and-keyboard .quiz-answer-area {
@@ -833,14 +833,14 @@ if ('speechSynthesis' in window) {
         align-items: center;
         justify-content: flex-start;
         gap: clamp(0.6rem, 1.2vh, 0.9rem); /* Balanced spacing so sections don't feel mushed */
-        padding-bottom: clamp(0.35rem, 0.9vh, 0.6rem);
-        margin-bottom: clamp(0.35rem, 0.9vh, 0.6rem);
+        padding-bottom: 0;
+        margin-bottom: 0;
     }
     /* Answer + keyboard in same scroll flow; visible gap, no overlap */
     .answer-and-keyboard {
         display: block;
         margin-bottom: 0.5rem;
-        margin-top: 0.25rem; /* Tightened: less gap between timer and answer */
+        margin-top: 0; /* No gap between timer and answer */
     }
     .answer-and-keyboard .quiz-answer-area {
         margin-bottom: 10px;
