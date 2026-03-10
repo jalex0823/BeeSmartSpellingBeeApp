@@ -12774,6 +12774,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 progressPercentage.textContent = `Progress: 0% (0 of ${totalWords} words)`;
             }
 
+            // Also update the stats pill and floating stats from wordbank count
+            const quizStatsProgress = document.getElementById('quizStatsProgress');
+            if (quizStatsProgress) {
+                quizStatsProgress.textContent = `Question 1 of ${totalWords}`;
+            }
+            const floatingWordCount = document.getElementById('floatingWordCount');
+            if (floatingWordCount) {
+                floatingWordCount.textContent = `0/${totalWords}`;
+            }
+
             // ✅ Restore resume/start-over UX for unfinished quizzes
             const action = await resolveQuizStartAction();
             try {
