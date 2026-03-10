@@ -12353,12 +12353,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
         debugLog('🎯 Quiz page: Starting avatar initialization...');
+
+        // School edition: skip avatar loading entirely - use static mascot immediately
+        if (typeof window.UserAvatarLoader !== 'function') {
+            debugLog('✅ School edition: skipping avatar loader, using fallback mascot');
+            setFallbackMascotImage();
+            setOverlay(false, 'Ready');
+            quizStartTriggered = true;
+            // Jump past all avatar loading logic
+        } else {
+
         setOverlay(true, 'Loading avatar system…');
 
-        // Ensure constructors are present (deferred scripts should load before DOMContentLoaded, but be resilient)
-        if (typeof window.UserAvatarLoader !== 'function') {
-            await waitFor(() => typeof window.UserAvatarLoader === 'function', 4500);
-        }
         if (typeof window.SmartyBee3D !== 'function') {
             await waitFor(() => typeof window.SmartyBee3D === 'function', 4500);
         }
@@ -12475,6 +12481,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
         } catch (_e) {}
+    } // end else (non-school avatar loading)
     } catch (error) {
         console.error('❌ Mascot/avatar preload failed:', error);
         // Always show *something* and continue
