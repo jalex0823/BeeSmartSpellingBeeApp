@@ -4295,7 +4295,8 @@ if ('speechSynthesis' in window) {
 
     <!-- 3D mascot/avatar systems -->
     <script defer src="{{ url_for('static', filename='js/smarty-bee-3d.js') }}?v={{ timestamp }}"></script>
-    <script defer src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v={{ timestamp }}"></script>
+    <!-- DISABLED for school edition: avatar picker not used -->
+    <!-- <script defer src="{{ url_for('static', filename='js/user-avatar-loader.js') }}?v={{ timestamp }}"></script> -->
 
     <!-- 3D Badge Renderer for GLB rank badges -->
     <script defer src="{{ url_for('static', filename='js/badge-3d-renderer.js') }}?v={{ timestamp }}"></script>
