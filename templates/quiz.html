@@ -4691,29 +4691,29 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="dotwave-wrapper">
                                 <canvas id="dotWaveCanvas" width="860" height="260"></canvas>
                             </div>
-
-                            <!-- 🎯 Inline Session Stats (between waveform/timer and sentence) -->
-                            <div class="session-stats" id="sessionStatsBar" style="display: none;">
-                                <div class="session-stat">
-                                    <span>📊</span>
-                                    <span class="session-stat-value" id="floatingWordCount">0/0</span>
-                                </div>
-                                <div class="session-stat">
-                                    <span>🍯</span>
-                                    <span class="session-stat-value" id="floatingPoints">0</span>
-                                </div>
-                                <div class="session-stat">
-                                    <span>🔥</span>
-                                    <span class="session-stat-value" id="floatingStreak">0</span>
-                                </div>
-                            </div>
-
-                            <!-- Definition display inside visualizer -->
-                            <div class="voice-definition" id="voiceDefinition">
-                                🐝 Listen carefully and spell the word! 🐝
-                            </div>
                         </div>
-                </div>
+                    </div>
+
+                    <!-- 🎯 Session Stats (below visualizer, above sentence) -->
+                    <div class="session-stats" id="sessionStatsBar" style="display: none;">
+                        <div class="session-stat">
+                            <span>📊</span>
+                            <span class="session-stat-value" id="floatingWordCount">0/0</span>
+                        </div>
+                        <div class="session-stat">
+                            <span>🍯</span>
+                            <span class="session-stat-value" id="floatingPoints">0</span>
+                        </div>
+                        <div class="session-stat">
+                            <span>🔥</span>
+                            <span class="session-stat-value" id="floatingStreak">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Definition / sample sentence (below score pill) -->
+                    <div class="voice-definition" id="voiceDefinition">
+                        🐝 Listen carefully and spell the word! 🐝
+                    </div>
 
                 <!-- Center-Flowing Amber Wave CSS - compact to avoid overlapping keyboard -->
                 <style>
@@ -4729,12 +4729,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         text-align: center;
                         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto", sans-serif;
                         overflow: visible;
-                        min-height: 100px; /* Room for wave animation (icon removed for more vis space) */
+                        min-height: 100px;
                     }
                     .dotwave-wrapper {
-                        min-height: 80px; /* More room for voice vis to animate (per BUG_FIXES_VOICE_VISUALIZER.md) */
+                        min-height: 80px;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        padding: 4px 12px;
+                        overflow: visible;
                     }
-
                     .voice-header {
                         font-size: 0.95rem;
                         font-weight: 600;
@@ -4744,17 +4748,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         justify-content: center;
                         letter-spacing: 0.02em;
                         margin-bottom: 6px;
+                        gap: 0;
                     }
                     .voice-visualizer.speaking .voice-header { color: var(--beesmart-orange, #EE9323); }
-
-                    /* Hide bee icon to give voice visualization more room to animate (per BUG_FIXES_VOICE_VISUALIZER.md) */
+                    /* Hide bee icon to give voice visualization more room to animate */
                     .voice-bee {
                         display: none !important;
                     }
-                    .voice-header {
-                        gap: 0;
-                    }
-
                     .voice-definition {
                         font-size: 0.85rem;
                         font-weight: 500;
@@ -4765,34 +4765,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         line-height: 1.4;
                         letter-spacing: 0.01em;
                     }
-                    /* Mobile: bring sentence down so it rests clearly beneath honeypot timer */
                     @media (max-width: 480px) {
                         .voice-definition {
                             margin-top: 0.85rem;
                         }
-                        .morph-container.mode-timer .voice-visualizer .voice-definition {
-                            margin-top: 0.85rem;
-                        }
                     }
-
-                    .dotwave-wrapper {
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        padding: 4px 12px;
-                        overflow: visible;
-                    }
-
                     .dotwave-wrapper canvas {
                         width: 100%;
                         height: 56px !important;
                         max-height: 56px !important;
-                                    filter:
-                                        drop-shadow(0 0 4px rgba(255,255,255,0.4))
-                                        drop-shadow(0 0 12px rgba(255,200,0,0.4));
-                                    display: block; /* Remove inline spacing */
-                                }
-                    /* Desktop: taller voice visualization so it's not super thin */
+                        filter:
+                            drop-shadow(0 0 4px rgba(255,255,255,0.4))
+                            drop-shadow(0 0 12px rgba(255,200,0,0.4));
+                        display: block;
+                    }
                     @media (min-width: 769px) {
                         .dotwave-wrapper {
                             min-height: 140px;
