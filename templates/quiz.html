@@ -600,10 +600,10 @@ window.BeeSmartAudioFallback = (function() {
         margin: 0 auto;
         overflow: hidden;
         box-sizing: border-box;
-        border-radius: 0;
+        border-radius: 22px;
         background: transparent;
-        border: none;
-        box-shadow: none;
+        border: 2px solid rgba(255, 193, 7, 0.35);
+        box-shadow: 0 2px 12px rgba(255, 193, 7, 0.1);
     }
     .quiz-card .quiz-card-content {
         padding: 0;
@@ -689,9 +689,9 @@ window.BeeSmartAudioFallback = (function() {
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
-        gap: 1rem; /* Even spacing between avatar and question area (timer/sentence) */
-        padding-bottom: 0.65rem;
-        margin-bottom: 0.5rem;
+        gap: 0.25rem; /* Tight spacing for compact layout */
+        padding-bottom: 0.25rem;
+        margin-bottom: 0.25rem;
     }
     /* Answer + keyboard unified form container */
     .answer-and-keyboard {
@@ -874,19 +874,7 @@ window.BeeSmartAudioFallback = (function() {
     }
 
     .quiz-header {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem; /* Reduced from 1rem */
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 20px;
-        padding: 1rem; /* Reduced from 1.5rem */
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        border: 2px solid rgba(255, 193, 7, 0.2);
-        margin-bottom: 1.5rem;
-        /* No sticky scrolling per iOS/Safari guidelines */
-        position: static;
-        top: auto;
-        z-index: auto;
+        display: none !important;
     }
     
     /* Mobile exit button - hidden by default, shown on mobile */
@@ -950,8 +938,6 @@ window.BeeSmartAudioFallback = (function() {
         background: linear-gradient(135deg, #F7931E 0%, #FF6B35 100%);
         transform: translateY(-1px);
         box-shadow: 0 6px 16px rgba(255, 107, 53, 0.35);
-        color: white;
-        text-decoration: none;
     }
     
     .exit-button .exit-icon {
@@ -1337,11 +1323,11 @@ window.BeeSmartAudioFallback = (function() {
     }
     /* Space between honeypot timer and sentence below (mobile: sentence rests clearly beneath timer) */
     .countdown-container .honey-jar-timer {
-        margin-bottom: 0.65rem;
+        margin-bottom: 0.25rem;
     }
     @media (max-width: 480px) {
         .countdown-container .honey-jar-timer {
-            margin-bottom: 0.9rem;
+            margin-bottom: 0.35rem;
         }
     }
     
@@ -2129,7 +2115,7 @@ window.BeeSmartAudioFallback = (function() {
         min-height: 0;
         max-height: none;
         overflow: visible;
-        margin-bottom: 0.6rem; /* Balanced gap below sentence */
+        margin-bottom: 0.2rem; /* Compact gap below sentence */
         width: 100%;
     }
     
@@ -2149,11 +2135,11 @@ window.BeeSmartAudioFallback = (function() {
         position: relative;
         width: calc(100% + 40px); /* Extend 20px on each side outside card */
         max-width: calc(100vw - 32px); /* iPhone safe area: 16px margin on each side */
-        min-height: 200px; /* Reduced from 320px – give voice vis room without huge empty space */
+        min-height: 160px; /* Compact: reduced from 200px */
         max-height: none;
         margin: 0 -20px; /* Negative margin to extend outside card */
-        margin-bottom: 0.65rem;
-        margin-top: 0.6rem;
+        margin-bottom: 0.25rem;
+        margin-top: 0.15rem;
         transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: visible; /* Allow content to extend */
     }
@@ -2177,8 +2163,8 @@ window.BeeSmartAudioFallback = (function() {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 10px;
-        padding: 10px 0 6px;
+        gap: 4px;
+        padding: 6px 0 2px;
         text-align: center;
     }
     /* BeeSmart crest logo at top – prominent size (was extremely too small) */
@@ -4107,7 +4093,7 @@ window.BeeSmartAudioFallback = (function() {
         background: #fff9e6; color: #5d4100; border: 2px solid #ffd54f; border-radius: 12px;
         padding: 0.6rem 0.8rem; box-shadow: 0 6px 14px rgba(255,193,7,0.25);
 "></div>
-<div style="text-align:center; margin-bottom: 1rem;">
+<div id="quizUploadBtnContainer" style="text-align:center; margin-bottom: 1rem; display: none;">
     <button id="load-sample-btn" class="hidden" onclick="loadSampleWords()" style="
             background: linear-gradient(135deg,#FF6B35 0%, #F7931E 100%); color: white; border: none;
             border-radius: 14px; padding: 10px 16px; font-weight: 700; box-shadow: 0 4px 12px rgba(255,107,53,0.25);
