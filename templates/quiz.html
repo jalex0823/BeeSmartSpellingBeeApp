@@ -4058,6 +4058,180 @@ window.BeeSmartAudioFallback = (function() {
     }
 </style>
 <style>
+/* ═══════════════════════════════════════════════════════════
+   KID-FRIENDLY UI ENHANCEMENTS
+   1) Sky-to-grass background gradient
+   2) Chunky, color-coded action buttons
+   3) Golden game-style score panel
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── 1. SKY / GRASS BACKGROUND ── */
+.quiz-page {
+    background: linear-gradient(
+        180deg,
+        #87CEEB 0%,        /* sky blue */
+        #B0E0F0 18%,       /* lighter sky */
+        #FFF8E1 38%,       /* warm horizon */
+        #F5EFCF 52%,       /* sandy transition */
+        #A8D48C 70%,       /* light grass */
+        #7BC856 88%,       /* green grass */
+        #5DAE3B 100%       /* darker grass base */
+    ) !important;
+}
+
+/* ── 2. CHUNKY COLOR-CODED BUTTONS ── */
+/* Base override: bigger, rounder, bolder */
+.actions-area.quiz-buttons .action-btn,
+#quizActionButtons .action-btn {
+    border-radius: 28px;
+    font-weight: 800;
+    font-size: 1rem;
+    min-height: 56px;
+    padding: 0.75rem 1rem;
+    letter-spacing: 0.02em;
+    border: 3px solid transparent;
+    text-transform: none;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.15), 0 6px 12px rgba(0,0,0,0.1);
+    transition: all 0.15s ease;
+}
+.actions-area.quiz-buttons .action-btn:active,
+#quizActionButtons .action-btn:active {
+    box-shadow: 0 1px 0 rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1);
+    transform: translateY(2px) scale(0.97);
+}
+
+/* 🔊 Pronounce Word – warm orange (like reference speaker button) */
+#speakButton {
+    background: linear-gradient(180deg, #FF9A3E 0%, #E67E22 100%) !important;
+    color: #fff !important;
+    border-color: #C0650A !important;
+    box-shadow: 0 4px 0 #B35E09, 0 6px 12px rgba(230, 126, 34, 0.3) !important;
+}
+#speakButton:hover { background: linear-gradient(180deg, #FFB366 0%, #FF9A3E 100%) !important; }
+
+/* 📖 Show Definition – soft purple/violet */
+#showDefinitionButton {
+    background: linear-gradient(180deg, #B388FF 0%, #7C4DFF 100%) !important;
+    color: #fff !important;
+    border-color: #5E35B1 !important;
+    box-shadow: 0 4px 0 #4527A0, 0 6px 12px rgba(124, 77, 255, 0.3) !important;
+}
+#showDefinitionButton:hover { background: linear-gradient(180deg, #CE93D8 0%, #B388FF 100%) !important; }
+
+/* 📝 Show Sentence – sky blue */
+#showSentenceButton {
+    background: linear-gradient(180deg, #4FC3F7 0%, #0288D1 100%) !important;
+    color: #fff !important;
+    border-color: #01579B !important;
+    box-shadow: 0 4px 0 #015A9E, 0 6px 12px rgba(2, 136, 209, 0.3) !important;
+}
+#showSentenceButton:hover { background: linear-gradient(180deg, #81D4FA 0%, #4FC3F7 100%) !important; }
+
+/* ✅ Submit Answer – bright yellow/gold (largest, most prominent, like reference) */
+#submitButton {
+    background: linear-gradient(180deg, #FFD740 0%, #FFC107 100%) !important;
+    color: #5D4100 !important;
+    border-color: #F9A825 !important;
+    box-shadow: 0 5px 0 #E09100, 0 8px 16px rgba(255, 193, 7, 0.35) !important;
+    font-size: 1.1rem !important;
+    min-height: 60px !important;
+    letter-spacing: 0.04em;
+}
+#submitButton:hover { background: linear-gradient(180deg, #FFE57F 0%, #FFD740 100%) !important; }
+
+/* 🍯 Honey Hint – green (like reference lightbulb button) */
+#getHintButton {
+    background: linear-gradient(180deg, #66BB6A 0%, #43A047 100%) !important;
+    color: #fff !important;
+    border-color: #2E7D32 !important;
+    box-shadow: 0 4px 0 #1B5E20, 0 6px 12px rgba(76, 175, 80, 0.3) !important;
+}
+#getHintButton:hover { background: linear-gradient(180deg, #81C784 0%, #66BB6A 100%) !important; }
+
+/* ⏭ Skip Word – coral/red (like reference forward button) */
+#skipButton {
+    background: linear-gradient(180deg, #FF7043 0%, #E64A19 100%) !important;
+    color: #fff !important;
+    border-color: #BF360C !important;
+    box-shadow: 0 4px 0 #A13009, 0 6px 12px rgba(230, 74, 25, 0.3) !important;
+}
+#skipButton:hover { background: linear-gradient(180deg, #FF8A65 0%, #FF7043 100%) !important; }
+
+/* Emoji icons in buttons: slightly larger for kid readability */
+#quizActionButtons .action-btn .bee-icon {
+    font-size: 1.3rem;
+}
+
+/* Mobile: slightly smaller buttons but still chunky */
+@media (max-width: 480px) {
+    .actions-area.quiz-buttons .action-btn,
+    #quizActionButtons .action-btn {
+        border-radius: 22px;
+        font-size: 0.9rem;
+        min-height: 50px;
+        padding: 0.6rem 0.8rem;
+    }
+    #submitButton {
+        min-height: 54px !important;
+        font-size: 1rem !important;
+    }
+}
+
+/* ── 3. GOLDEN GAME-STYLE SCORE PANEL ── */
+.session-stats {
+    background: linear-gradient(180deg, #FFE082 0%, #FFB300 50%, #E69500 100%) !important;
+    border: 3px solid #C17900 !important;
+    border-radius: 18px !important;
+    padding: 0.6rem 1.8rem 0.6rem 1rem !important;
+    gap: 1.2rem !important;
+    box-shadow:
+        0 4px 0 #A06800,
+        0 6px 14px rgba(255, 152, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+}
+
+.session-stat {
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    gap: 0.3rem !important;
+    color: #4A2800 !important;
+}
+
+.session-stat > span:first-child {
+    font-size: 1.5rem;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+}
+
+.session-stat-value {
+    font-size: 1.35rem !important;
+    font-weight: 900 !important;
+    color: #fff !important;
+    text-shadow:
+        0 1px 0 #B36D00,
+        0 2px 4px rgba(0,0,0,0.25) !important;
+    min-width: 1.6rem;
+    text-align: center;
+}
+
+/* Mobile score panel */
+@media (max-width: 768px) {
+    .session-stats {
+        border-radius: 14px !important;
+        padding: 0.5rem 1.4rem 0.5rem 0.8rem !important;
+        gap: 0.8rem !important;
+    }
+    .session-stat {
+        font-size: 1rem !important;
+    }
+    .session-stat > span:first-child {
+        font-size: 1.3rem;
+    }
+    .session-stat-value {
+        font-size: 1.15rem !important;
+    }
+}
+</style>
+<style>
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 </style>
 
