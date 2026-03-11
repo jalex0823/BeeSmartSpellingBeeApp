@@ -5459,19 +5459,26 @@ function showRestoreDialog(title, message, isSuccess) {
                     <div class="kid-tip"> Quick and easy! Just type your words!</div>
                 </div>
 
-                <!-- Upload Image (Premium) -->
-                <div id="tileImageUpload" class="menu-option theme-ocean {% if _is_premium != 'true' %}locked-tile{% endif %}" data-feature="image" data-requires-premium="true" data-lockmsg="BeeSmart Premium" onmouseover="kidSounds.playSoftClick()" title="{% if _is_auth != 'true' %} Sign in to unlock image upload feature!{% elif _is_premium != 'true' %} Subscribe to BeeSmart Premium to unlock image upload!{% else %} Take a photo of a book page or worksheet and we'll find the words for you!{% endif %}">
-                    {% if _is_premium != 'true' %}
+                <!-- Coloring Book QR Scanner (auth-gated, not premium) -->
+                {% if _is_auth == 'true' %}
+                <div id="tileQRScanner" class="menu-option theme-ocean" data-feature="qr-scanner" onclick="kidSounds.playRandomEffect(); openQRScanner()" onmouseover="kidSounds.playSoftClick()" title="Scan a QR code from your BeeSmart Coloring Book to load spelling words!">
+                    <div class="option-icon">📷</div>
+                    <div class="option-title">Scan Coloring Book</div>
+                    <div class="option-description">Scan QR code to load spelling words</div>
+                    <div class="kid-tip">🐝 Scan the code in your coloring book!</div>
+                </div>
+                {% else %}
+                <div id="tileQRScanner" class="menu-option theme-ocean locked-tile" data-feature="qr-scanner" onmouseover="kidSounds.playSoftClick()" title="Sign in to scan your coloring book QR codes!">
                     <div class="lock-overlay">
                         <div class="lock-icon">🔒</div>
-                        <div class="lock-text">{% if _is_auth != 'true' %}Sign In to Unlock{% else %}Premium Required{% endif %}</div>
+                        <div class="lock-text">Sign In to Unlock</div>
                     </div>
-                    {% endif %}
-                    <div class="option-icon"></div>
-                    <div class="option-title">Extract from Image</div>
-                    <div class="option-description">Extract words from photos</div>
-                    <div class="kid-tip">{% if _is_auth != 'true' %} Premium Feature!{% elif _is_premium != 'true' %} Subscribe to unlock!{% else %} Magic word finder from pictures!{% endif %}</div>
+                    <div class="option-icon">📷</div>
+                    <div class="option-title">Scan Coloring Book</div>
+                    <div class="option-description">Scan QR code to load spelling words</div>
+                    <div class="kid-tip">🔐 Sign in to scan your coloring book!</div>
                 </div>
+                {% endif %}
 
                 <!-- Dictionary Search -->
                 {% if _is_student_role %}
@@ -5574,49 +5581,8 @@ function showRestoreDialog(title, message, isSuccess) {
             <!-- Action buttons -->
             <section class="action-buttons">
                 <script>
-                // Check OCR availability and hide tile if not available (Apple Review requirement)
-                async function checkOCRAvailability() {
-                    try {
-                        const response = await fetch('/api/upload/image', {
-                            method: 'GET',
-                            cache: 'no-store'
-                        });
-                        const data = await response.json();
-                        
-                        const imageTile = document.getElementById('tileImageUpload');
-                        if (imageTile) {
-                            if (data.status === 'error' || response.status === 501) {
-                                // OCR not available - hide the tile completely
-                                console.warn('⚠️ OCR not available - hiding image upload tile for Apple compliance');
-                                imageTile.style.display = 'none';
-                                // Also remove from DOM to prevent any interaction
-                                imageTile.remove();
-                            } else {
-                                // OCR is available - ensure tile is visible
-                                imageTile.style.display = '';
-                                console.log('✅ OCR available - image upload tile enabled');
-                            }
-                        }
-                    } catch (error) {
-                        // On error, hide the tile to be safe (Apple won't approve broken features)
-                        console.error('❌ Error checking OCR availability:', error);
-                        const imageTile = document.getElementById('tileImageUpload');
-                        if (imageTile) {
-                            imageTile.style.display = 'none';
-                            imageTile.remove();
-                        }
-                    }
-                }
-                
                 // Ensure Quiz button works reliably
                 document.addEventListener('DOMContentLoaded', function() {
-                    // Check OCR availability first (must work for Apple review)
-                    checkOCRAvailability();
-                    const imageTile = document.getElementById('tileImageUpload');
-                    if (imageTile) {
-                        imageTile.style.display = 'none';
-                        imageTile.remove();
-                    }
                     const quickBtn = document.getElementById('quickStartQuizBtn');
                     // Ensure a slow, constant auto-rotation with morph-at-180 behavior
                     // This uses the existing avatar controller API without changing assets or UI.
@@ -7108,13 +7074,6 @@ function showRestoreDialog(title, message, isSuccess) {
                         title: ' Battle of the Bees (Members Only)',
                         message: 'Register to join spelling battles with classmates and track your wins!',
                         buttonText: 'Register to battle'
-                    });
-
-                    const imageTile = document.getElementById('tileImageUpload');
-                    lockMenuTile(imageTile, {
-                        title: ' Image Upload (Members Only)',
-                        message: 'Image word capture is a members-only feature. Create a free account to unlock and use photo-to-words (OCR).',
-                        buttonText: 'Register to unlock'
                     });
                 } else {
                     // Registered users: ensure everything is unlocked visually
@@ -22068,6 +22027,225 @@ const avatarsUrl = '/api/avatars' + (/iPhone|iPad|iPod/i.test(ua) ? '?platform=a
         // Allow quiz pages to trigger an immediate refresh (optional)
         window.addEventListener('beesmart:stats-updated', refreshStats);
     })();
+    </script>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         COLORING BOOK QR SCANNER
+         Uses html5-qrcode for camera-based QR code scanning.
+         Decoded set_id is sent to /wordlists/from-set to create
+         the user's word list automatically.
+         ═══════════════════════════════════════════════════════════ -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+    <!-- QR Scanner Modal -->
+    <div id="qrScannerModal" style="
+        display: none;
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.85);
+        z-index: 10001;
+        align-items: center; justify-content: center;
+        flex-direction: column;
+    ">
+        <div style="
+            background: linear-gradient(135deg, #FFF9E6 0%, #FFF0CC 100%);
+            border: 3px solid #FFD54F;
+            border-radius: 24px;
+            padding: 1.5rem;
+            max-width: 420px;
+            width: 92vw;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            text-align: center;
+            position: relative;
+        ">
+            <!-- Close button -->
+            <button onclick="closeQRScanner()" style="
+                position: absolute; top: 10px; right: 14px;
+                background: none; border: none; font-size: 1.6rem;
+                cursor: pointer; color: #8B4513; z-index: 2;
+            " title="Close scanner">&times;</button>
+
+            <div style="font-size: 1.3rem; font-weight: 800; color: #5A2C15; margin-bottom: 0.5rem;">
+                📷 Scan Coloring Book QR Code
+            </div>
+            <div style="font-size: 0.9rem; color: #8B4513; margin-bottom: 1rem;">
+                Point your camera at the QR code on your coloring book page
+            </div>
+
+            <!-- Camera viewport -->
+            <div id="qrReaderContainer" style="
+                width: 100%; min-height: 280px;
+                border-radius: 16px; overflow: hidden;
+                background: #000;
+            "></div>
+
+            <!-- Status message area -->
+            <div id="qrScannerStatus" style="
+                margin-top: 0.75rem; font-size: 0.95rem;
+                font-weight: 700; color: #5A2C15;
+                min-height: 1.5em;
+            "></div>
+        </div>
+    </div>
+
+    <script>
+    // ── QR Scanner Logic ──
+    let _qrScanner = null;
+
+    function openQRScanner() {
+        const modal = document.getElementById('qrScannerModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        const statusEl = document.getElementById('qrScannerStatus');
+        if (statusEl) statusEl.textContent = 'Starting camera...';
+
+        // Small delay to let modal render before starting camera
+        setTimeout(() => _startQRScanner(), 300);
+    }
+
+    function closeQRScanner() {
+        _stopQRScanner();
+        const modal = document.getElementById('qrScannerModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function _stopQRScanner() {
+        if (_qrScanner) {
+            try {
+                _qrScanner.stop().catch(() => {});
+                _qrScanner.clear();
+            } catch (_) {}
+            _qrScanner = null;
+        }
+    }
+
+    function _startQRScanner() {
+        _stopQRScanner();
+        const container = document.getElementById('qrReaderContainer');
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (typeof Html5Qrcode === 'undefined') {
+            _setQRStatus('Camera library failed to load. Please check your connection and try again.', true);
+            return;
+        }
+
+        _qrScanner = new Html5Qrcode('qrReaderContainer');
+
+        const config = {
+            fps: 10,
+            qrbox: { width: 220, height: 220 },
+            aspectRatio: 1.0,
+        };
+
+        _qrScanner.start(
+            { facingMode: 'environment' },
+            config,
+            _onQRCodeSuccess,
+            () => {} // ignore per-frame scan failures
+        ).then(() => {
+            _setQRStatus('Looking for QR code...');
+        }).catch(err => {
+            console.warn('QR camera start failed:', err);
+            _setQRStatus('Could not access camera. Please allow camera permissions and try again.', true);
+        });
+    }
+
+    function _setQRStatus(msg, isError) {
+        const el = document.getElementById('qrScannerStatus');
+        if (!el) return;
+        el.textContent = msg;
+        el.style.color = isError ? '#c62828' : '#5A2C15';
+    }
+
+    async function _onQRCodeSuccess(decodedText) {
+        // Prevent multiple rapid scans
+        if (window.__qrProcessing) return;
+        window.__qrProcessing = true;
+
+        _setQRStatus('QR code found! Loading word list...');
+
+        // Stop scanning immediately
+        _stopQRScanner();
+
+        try {
+            // Extract set_id from the QR text (could be a URL or raw token)
+            const setId = _extractSetIdFromQR(decodedText);
+            if (!setId) {
+                _setQRStatus('This QR code is not a valid Coloring Book code. Please try another.', true);
+                window.__qrProcessing = false;
+                setTimeout(() => _startQRScanner(), 2000);
+                return;
+            }
+
+            // Call the coloring book API
+            const resp = await fetch('/wordlists/from-set', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ set_id: setId }),
+            });
+
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                const errMsg = (data && data.error === 'set_not_found')
+                    ? `Word set "${setId}" was not found. Please check the QR code.`
+                    : (data && data.error) || 'Something went wrong. Please try again.';
+                _setQRStatus(errMsg, true);
+                window.__qrProcessing = false;
+                setTimeout(() => _startQRScanner(), 2500);
+                return;
+            }
+
+            // Success!
+            const listTitle = (data.list && data.list.title) || 'Coloring Book';
+            const wordCount = (data.words && data.words.length) || 0;
+            const wasNew = data.created;
+
+            closeQRScanner();
+
+            // Show success modal
+            if (typeof openFriendlyInfoModal === 'function') {
+                const wordsList = (data.words || []).map(w => `<strong>${w}</strong>`).join(', ');
+                openFriendlyInfoModal({
+                    title: wasNew
+                        ? `🐝 ${listTitle} Added!`
+                        : `📚 ${listTitle} Already Saved`,
+                    message: wasNew
+                        ? `<div style="text-align:center;">We added <strong>${wordCount}</strong> spelling words to your Word Lists!<br><br>${wordsList}<br><br>Head to <strong>Saved Word Lists</strong> or start a quiz to practice! 🍯</div>`
+                        : `<div style="text-align:center;">You already have this set in your Word Lists.<br><br>${wordsList}<br><br>Keep practicing! 🎉</div>`,
+                    buttonText: 'Awesome!'
+                });
+            }
+        } catch (err) {
+            console.error('QR word list creation failed:', err);
+            _setQRStatus('Network error. Please check your connection and try again.', true);
+            setTimeout(() => _startQRScanner(), 2500);
+        } finally {
+            window.__qrProcessing = false;
+        }
+    }
+
+    function _extractSetIdFromQR(raw) {
+        const s = (raw || '').trim();
+        if (!s) return '';
+        // If it's a URL like https://example.com/q/coloring/a-set-01
+        try {
+            if (s.includes('://')) {
+                const url = new URL(s);
+                const path = (url.pathname || '').replace(/^\/+|\/+$/g, '');
+                // Match /q/coloring/<set_id> pattern
+                const match = path.match(/q\/coloring\/(.+)/);
+                if (match) return match[1].trim();
+                // Fallback: last path segment
+                const parts = path.split('/').filter(Boolean);
+                if (parts.length > 0) return parts[parts.length - 1];
+            }
+        } catch (_) {}
+        // If it matches a-set-01 pattern directly
+        if (/^[a-z]-set-\d+$/i.test(s)) return s.toLowerCase();
+        return '';
+    }
     </script>
 </body>
 </html>
