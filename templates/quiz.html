@@ -4346,7 +4346,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <div class="floating-bee" aria-hidden="true"></div>
 
 <!-- 🎯 Floating Session Stats Tracker (Top of screen) -->
-<div class="session-stats" id="sessionStatsBar" style="display: none !important;">
+<div class="session-stats" id="sessionStatsBar" style="display: none;">
     <div class="session-stat">
         <span>📊</span>
         <span class="session-stat-value" id="floatingWordCount">0/0</span>
@@ -10282,10 +10282,9 @@ class QuizManager {
             floatingStreak.textContent = streak;
         }
         
-        // sessionStatsBar hidden (display:none !important in HTML)
-        // if (sessionStatsBar && total > 0) {
-        //     sessionStatsBar.style.display = 'flex';
-        // }
+        if (sessionStatsBar && total > 0) {
+            sessionStatsBar.style.display = 'flex';
+        }
 
         // Update honey jar fill level based on QUIZ PROGRESSION (not correctness ratio)
         // This ensures consistency with progress percentage display
