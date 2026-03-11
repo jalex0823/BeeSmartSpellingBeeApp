@@ -3637,22 +3637,21 @@ window.BeeSmartAudioFallback = (function() {
         }
     }
     
-    /* Session Points Tracker */
+    /* Session Points Tracker – inline under waveform/timer */
     .session-stats {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
+        position: static;
         display: flex;
+        justify-content: center;
         gap: 1.5rem;
         background: linear-gradient(135deg, rgba(255, 193, 7, 0.95), rgba(255, 152, 0, 0.95));
-        padding: 0.8rem 1.5rem;
+        padding: 0.6rem 1.2rem;
         border-radius: 50px;
         box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
-        z-index: 100;
-        /* Remove any inner white oval/ring highlight */
+        z-index: auto;
         border: none;
-        transition: transform 0.3s ease, opacity 0.3s ease;
+        transition: opacity 0.3s ease;
+        margin: 0.25rem auto 0.5rem;
+        max-width: fit-content;
     }
 
     /* Defensive: if any theme adds a glossy inner oval via pseudo-elements, disable it */
@@ -3661,42 +3660,7 @@ window.BeeSmartAudioFallback = (function() {
         content: none !important;
         background: transparent !important;
     }
-    
-    .session-stats.collapsed {
-        transform: translateX(-50%) translateY(-70px);
-        opacity: 0.3;
-    }
-    
-    .stats-toggle-btn {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: rgba(255, 255, 255, 0.3);
-        border: 2px solid rgba(255, 255, 255, 0.5);
-        border-radius: 50%;
-        width: 28px;
-        height: 28px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        color: #5A2C15;
-        transition: all 0.3s ease;
-        padding: 0;
-        line-height: 1;
-    }
-    
-    .stats-toggle-btn:hover {
-        background: rgba(255, 255, 255, 0.5);
-        transform: translateY(-50%) scale(1.1);
-    }
-    
-    .session-stats.collapsed .stats-toggle-btn {
-        transform: translateY(-50%) rotate(180deg);
-    }
-    
+
     .session-stat {
         display: flex;
         align-items: center;
@@ -4013,9 +3977,8 @@ window.BeeSmartAudioFallback = (function() {
     
     @media (max-width: 768px) {
         .session-stats {
-            top: 10px;
             gap: 1rem;
-            padding: 0.6rem 1rem;
+            padding: 0.5rem 0.8rem;
         }
         
         .session-stat {
@@ -4182,7 +4145,7 @@ window.BeeSmartAudioFallback = (function() {
     background: linear-gradient(180deg, #FFE082 0%, #FFB300 50%, #E69500 100%) !important;
     border: 3px solid #C17900 !important;
     border-radius: 18px !important;
-    padding: 0.6rem 1.8rem 0.6rem 1rem !important;
+    padding: 0.6rem 1.4rem !important;
     gap: 1.2rem !important;
     box-shadow:
         0 4px 0 #A06800,
@@ -4518,25 +4481,6 @@ document.addEventListener('DOMContentLoaded', () => {
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
-
-<!-- 🎯 Floating Session Stats Tracker (Top of screen) -->
-<div class="session-stats" id="sessionStatsBar" style="display: none;">
-    <div class="session-stat">
-        <span>📊</span>
-        <span class="session-stat-value" id="floatingWordCount">0/0</span>
-    </div>
-    <div class="session-stat">
-        <span>🍯</span>
-        <span class="session-stat-value" id="floatingPoints">0</span>
-    </div>
-    <div class="session-stat">
-        <span>🔥</span>
-        <span class="session-stat-value" id="floatingStreak">0</span>
-    </div>
-    <button class="stats-toggle-btn" id="statsToggleBtn" onclick="toggleStatsBar()" title="Hide stats bar">
-        ▲
-    </button>
-</div>
 
 <div class="quiz-container quiz-shell quiz-content quiz-page" id="quizContainer">
     <!-- Quiz Header -->
@@ -5037,6 +4981,22 @@ document.addEventListener('DOMContentLoaded', () => {
         </div> <!-- End question-area -->
         </div>
         <!-- end quiz-card-top (visualizer, timer, sentence) -->
+
+        <!-- 🎯 Inline Session Stats (under waveform/timer) -->
+        <div class="session-stats" id="sessionStatsBar" style="display: none;">
+            <div class="session-stat">
+                <span>📊</span>
+                <span class="session-stat-value" id="floatingWordCount">0/0</span>
+            </div>
+            <div class="session-stat">
+                <span>🍯</span>
+                <span class="session-stat-value" id="floatingPoints">0</span>
+            </div>
+            <div class="session-stat">
+                <span>🔥</span>
+                <span class="session-stat-value" id="floatingStreak">0</span>
+            </div>
+        </div>
 
         <!-- 2) Answer input row -->
         <div class="answer-and-keyboard">
