@@ -73,13 +73,10 @@
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0)); /* Reduced padding */
     padding-left: max(4px, env(safe-area-inset-left, 0));
     padding-right: max(4px, env(safe-area-inset-right, 0));
-    background: linear-gradient(180deg, #FFE082 0%, #FFD54F 35%, #FFC107 70%, #FFB300 100%); /* Yellow-orange gradient matching guide */
-    border-radius: 10px; /* Slightly smaller radius */
-    border: none; /* No border, just gradient */
-    box-shadow:
-        0 3px 8px rgba(255, 179, 0, 0.2),
-        0 1px 3px rgba(0, 0, 0, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.25); /* Subtle inner highlight */
+    background: transparent; /* Blends into .answer-and-keyboard parent */
+    border-radius: 0 0 14px 14px; /* Match bottom of parent container */
+    border: none;
+    box-shadow: none; /* Parent provides shadow */
     position: relative; /* Normal flow, NOT fixed */
     z-index: 2; /* Above buttons but below modals */
     display: flex;

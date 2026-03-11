@@ -492,9 +492,9 @@ window.BeeSmartAudioFallback = (function() {
     .quiz-answer-area {
         position: static;
         z-index: auto;
-        background: linear-gradient(180deg, #FFFDE7 0%, #FFF8E1 100%);
+        background: transparent;
         padding: 4px 8px;
-        margin-bottom: 0.25rem; /* Base margin, overridden by .answer-and-keyboard .quiz-answer-area */
+        margin-bottom: 0;
     }
 
     /* Standalone buttons (not in the 2-column grids) should be centered in the card */
@@ -600,9 +600,10 @@ window.BeeSmartAudioFallback = (function() {
         margin: 0 auto;
         overflow: hidden;
         box-sizing: border-box;
-        border-radius: 18px;
-        background: #FFFDE7;
-        border: 1px solid rgba(238, 147, 35, 0.15);
+        border-radius: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
     }
     .quiz-card .quiz-card-content {
         padding: 0;
@@ -611,6 +612,7 @@ window.BeeSmartAudioFallback = (function() {
         flex-direction: column;
         flex: 1;
         overflow: hidden;
+        background: transparent;
     }
     /* Card content should not trap scroll; let the page scroll */
     .card-scroll {
@@ -691,14 +693,19 @@ window.BeeSmartAudioFallback = (function() {
         padding-bottom: 0.65rem;
         margin-bottom: 0.5rem;
     }
-    /* Answer + keyboard in same scroll flow; visible gap, no overlap */
+    /* Answer + keyboard unified form container */
     .answer-and-keyboard {
         display: block;
-        margin-bottom: 1rem; /* Increased spacing */
-        margin-top: 1rem; /* Added top margin for separation */
+        margin-bottom: 1rem;
+        margin-top: 1rem;
+        background: linear-gradient(180deg, #FFF8E1 0%, #FFE082 40%, #FFD54F 100%);
+        border-radius: 18px;
+        padding: 12px 10px 4px 10px;
+        border: 2px solid rgba(255, 179, 0, 0.25);
+        box-shadow: 0 4px 16px rgba(255, 179, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.4);
     }
     .answer-and-keyboard .quiz-answer-area {
-        margin-bottom: 16px; /* Increased spacing between answer area and keyboard */
+        margin-bottom: 6px; /* Small gap between input and keyboard */
     }
     /* F) Hide keyboard: toggle only; never position:fixed */
     #keyboardHost.is-hidden,
@@ -1054,7 +1061,17 @@ window.BeeSmartAudioFallback = (function() {
         overflow: hidden;
         animation: honeyJarGlow 3s ease-in-out infinite;
     }
-    
+    /* Honey Jar Glow Animation */
+    @keyframes honeyJarGlow {
+        0%, 100% { 
+            box-shadow: 0 0 16px rgba(255, 193, 7, 0.5);
+            transform: scale(1);
+        }
+        50% { 
+            box-shadow: 0 0 20px rgba(255, 193, 7, 0.7);
+            transform: scale(1.02);
+        }
+    }
     .honey-jar-inline .honey-jar::before {
         content: '';
         position: absolute;
@@ -1066,7 +1083,6 @@ window.BeeSmartAudioFallback = (function() {
         background: linear-gradient(180deg, #FFCC80 0%, #FB8C00 100%);
         box-shadow: 0 2px 6px rgba(251, 140, 0, 0.4);
     }
-    
     .honey-jar-inline .honey-jar-label {
         font-size: 0.65rem;
         font-weight: 600;
@@ -1275,6 +1291,11 @@ window.BeeSmartAudioFallback = (function() {
         opacity: 0;
         transform: translateY(-10px);
         transition: opacity 0.3s ease, transform 0.3s ease;
+        padding: 8px 10px;
+        border-radius: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
     }
     
     .countdown-container.active {
@@ -1324,18 +1345,18 @@ window.BeeSmartAudioFallback = (function() {
         }
     }
     
-    /* SVG Jar Styling - compact on mobile */
+    /* SVG Jar Styling - bigger on mobile */
     .jar-svg {
-        width: 68px;
-        height: 80px;
+        width: 110px;
+        height: 130px;
         filter: drop-shadow(0 6px 16px rgba(255, 193, 7, 0.4));
         transition: all 0.3s ease;
     }
-    /* Desktop: larger honey jar (was too small) */
+    /* Desktop: even larger honey jar */
     @media (min-width: 769px) {
         .jar-svg {
-            width: 130px;
-            height: 155px;
+            width: 140px;
+            height: 168px;
         }
     }
     
@@ -1398,7 +1419,7 @@ window.BeeSmartAudioFallback = (function() {
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        font-size: 1.5rem;
+        font-size: 2.2rem;
         font-weight: 900;
         color: #5d4100;
         text-shadow: 
@@ -1411,20 +1432,20 @@ window.BeeSmartAudioFallback = (function() {
     /* Desktop: larger timer number to match jar size */
     @media (min-width: 769px) {
         .honey-jar-wrapper .timer-number {
-            font-size: 2.75rem;
+            font-size: 2.8rem;
         }
     }
     
     .timer-label {
-        font-size: 0.75rem;
-        font-weight: 600;
+        font-size: 0.9rem;
+        font-weight: 700;
         color: #6d4c00;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
     @media (min-width: 769px) {
         .timer-label {
-            font-size: 0.9rem;
+            font-size: 1.05rem;
         }
     }
     
@@ -3463,14 +3484,14 @@ window.BeeSmartAudioFallback = (function() {
     .bee-input input[type="text"] {
         width: 100%;
         max-width: none;
-        border: 3px solid #FFC107;
-        border-radius: 16px; /* Slightly smaller radius */
-        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
+        border: 2px solid rgba(160, 90, 0, 0.3);
+        border-radius: 14px;
+        box-shadow: inset 0 2px 6px rgba(0,0,0,0.06), 0 2px 4px rgba(255,179,0,0.1);
         transition: box-shadow 0.3s ease, transform 0.2s ease;
-        padding: 0.7rem 3rem 0.7rem 1rem; /* Right padding for voice button icon */
-        font-size: 1.05rem; /* Further reduced */
-        text-align: left; /* Left align to accommodate voice button */
-        background-color: #FFFDE7; /* Light yellow background to match reference */
+        padding: 0.7rem 3rem 0.7rem 1rem;
+        font-size: 1.05rem;
+        text-align: left;
+        background-color: rgba(255, 255, 255, 0.85);
         color: #332300;
         box-sizing: border-box;
     }
@@ -4339,7 +4360,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <div class="floating-bee" aria-hidden="true"></div>
 
 <!-- 🎯 Floating Session Stats Tracker (Top of screen) -->
-<div class="session-stats" id="sessionStatsBar" style="display: none;">
+<div class="session-stats" id="sessionStatsBar" style="display: none !important;">
     <div class="session-stat">
         <span>📊</span>
         <span class="session-stat-value" id="floatingWordCount">0/0</span>
@@ -4945,7 +4966,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="feedback-area" id="feedbackArea" role="status" aria-live="polite"></div>
 
         <!-- Definition/Sentence Display Panel -->
-        <div class="definition-display" id="definitionDisplay" style="display: none; margin: 1rem 0; padding: 1rem; background: linear-gradient(135deg, #FFF8E1, #F3E5AB); border: 2px solid rgba(255, 193, 7, 0.3); border-radius: 12px; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);">
+        <div class="definition-display" id="definitionDisplay" style="display: none !important; margin: 1rem 0; padding: 1rem; background: linear-gradient(135deg, #FFF8E1, #F3E5AB); border: 2px solid rgba(255, 193, 7, 0.3); border-radius: 12px; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);">
             Ready to show definition or sentence...
         </div>
 
@@ -10275,10 +10296,10 @@ class QuizManager {
             floatingStreak.textContent = streak;
         }
         
-        // Show the floating stats bar once quiz starts
-        if (sessionStatsBar && total > 0) {
-            sessionStatsBar.style.display = 'flex';
-        }
+        // sessionStatsBar hidden (display:none !important in HTML)
+        // if (sessionStatsBar && total > 0) {
+        //     sessionStatsBar.style.display = 'flex';
+        // }
 
         // Update honey jar fill level based on QUIZ PROGRESSION (not correctness ratio)
         // This ensures consistency with progress percentage display
