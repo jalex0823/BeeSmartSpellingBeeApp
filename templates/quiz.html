@@ -3159,37 +3159,6 @@ window.BeeSmartAudioFallback = (function() {
         animation: avatarFullRotation 2s ease-in-out;
     }
 
-    /* Correct answer: bounce up/down + 360° spin */
-    @keyframes avatarCorrectBounce {
-        0%   { transform: translateY(0) rotateY(0deg) scale(1); }
-        15%  { transform: translateY(-28px) rotateY(60deg) scale(1.1); }
-        30%  { transform: translateY(-8px) rotateY(140deg) scale(1.05); }
-        50%  { transform: translateY(-22px) rotateY(220deg) scale(1.1); }
-        70%  { transform: translateY(-4px) rotateY(300deg) scale(1.03); }
-        85%  { transform: translateY(-12px) rotateY(340deg) scale(1.05); }
-        100% { transform: translateY(0) rotateY(360deg) scale(1); }
-    }
-    .avatar-correct-bounce {
-        animation: avatarCorrectBounce 1.2s cubic-bezier(0.36, 0.07, 0.19, 0.97);
-    }
-
-    /* Incorrect answer: shake left-right */
-    @keyframes avatarIncorrectShake {
-        0%, 100% { transform: translateX(0); }
-        10%  { transform: translateX(-12px) rotate(-3deg); }
-        20%  { transform: translateX(10px) rotate(2deg); }
-        30%  { transform: translateX(-10px) rotate(-2deg); }
-        40%  { transform: translateX(8px) rotate(1.5deg); }
-        50%  { transform: translateX(-6px) rotate(-1deg); }
-        60%  { transform: translateX(5px) rotate(0.8deg); }
-        70%  { transform: translateX(-3px) rotate(-0.5deg); }
-        80%  { transform: translateX(2px) rotate(0.3deg); }
-        90%  { transform: translateX(-1px); }
-    }
-    .avatar-incorrect-shake {
-        animation: avatarIncorrectShake 0.8s ease-in-out;
-    }
-
     /* Exit Modal Styling */
     .exit-modal {
         position: fixed;
@@ -4691,29 +4660,29 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="dotwave-wrapper">
                                 <canvas id="dotWaveCanvas" width="860" height="260"></canvas>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- 🎯 Session Stats (below visualizer, above sentence) -->
-                    <div class="session-stats" id="sessionStatsBar" style="display: none;">
-                        <div class="session-stat">
-                            <span>📊</span>
-                            <span class="session-stat-value" id="floatingWordCount">0/0</span>
-                        </div>
-                        <div class="session-stat">
-                            <span>🍯</span>
-                            <span class="session-stat-value" id="floatingPoints">0</span>
-                        </div>
-                        <div class="session-stat">
-                            <span>🔥</span>
-                            <span class="session-stat-value" id="floatingStreak">0</span>
-                        </div>
-                    </div>
+                            <!-- 🎯 Inline Session Stats (between waveform/timer and sentence) -->
+                            <div class="session-stats" id="sessionStatsBar" style="display: none;">
+                                <div class="session-stat">
+                                    <span>📊</span>
+                                    <span class="session-stat-value" id="floatingWordCount">0/0</span>
+                                </div>
+                                <div class="session-stat">
+                                    <span>🍯</span>
+                                    <span class="session-stat-value" id="floatingPoints">0</span>
+                                </div>
+                                <div class="session-stat">
+                                    <span>🔥</span>
+                                    <span class="session-stat-value" id="floatingStreak">0</span>
+                                </div>
+                            </div>
 
-                    <!-- Definition / sample sentence (below score pill) -->
-                    <div class="voice-definition" id="voiceDefinition">
-                        🐝 Listen carefully and spell the word! 🐝
-                    </div>
+                            <!-- Definition display inside visualizer -->
+                            <div class="voice-definition" id="voiceDefinition">
+                                🐝 Listen carefully and spell the word! 🐝
+                            </div>
+                        </div>
+                </div>
 
                 <!-- Center-Flowing Amber Wave CSS - compact to avoid overlapping keyboard -->
                 <style>
@@ -4729,16 +4698,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         text-align: center;
                         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto", sans-serif;
                         overflow: visible;
-                        min-height: 100px;
+                        min-height: 100px; /* Room for wave animation (icon removed for more vis space) */
                     }
                     .dotwave-wrapper {
-                        min-height: 80px;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        padding: 4px 12px;
-                        overflow: visible;
+                        min-height: 80px; /* More room for voice vis to animate (per BUG_FIXES_VOICE_VISUALIZER.md) */
                     }
+
                     .voice-header {
                         font-size: 0.95rem;
                         font-weight: 600;
@@ -4748,13 +4713,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         justify-content: center;
                         letter-spacing: 0.02em;
                         margin-bottom: 6px;
-                        gap: 0;
                     }
                     .voice-visualizer.speaking .voice-header { color: var(--beesmart-orange, #EE9323); }
-                    /* Hide bee icon to give voice visualization more room to animate */
+
+                    /* Hide bee icon to give voice visualization more room to animate (per BUG_FIXES_VOICE_VISUALIZER.md) */
                     .voice-bee {
                         display: none !important;
                     }
+                    .voice-header {
+                        gap: 0;
+                    }
+
                     .voice-definition {
                         font-size: 0.85rem;
                         font-weight: 500;
@@ -4765,20 +4734,34 @@ document.addEventListener('DOMContentLoaded', () => {
                         line-height: 1.4;
                         letter-spacing: 0.01em;
                     }
+                    /* Mobile: bring sentence down so it rests clearly beneath honeypot timer */
                     @media (max-width: 480px) {
                         .voice-definition {
                             margin-top: 0.85rem;
                         }
+                        .morph-container.mode-timer .voice-visualizer .voice-definition {
+                            margin-top: 0.85rem;
+                        }
                     }
+
+                    .dotwave-wrapper {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        padding: 4px 12px;
+                        overflow: visible;
+                    }
+
                     .dotwave-wrapper canvas {
                         width: 100%;
                         height: 56px !important;
                         max-height: 56px !important;
-                        filter:
-                            drop-shadow(0 0 4px rgba(255,255,255,0.4))
-                            drop-shadow(0 0 12px rgba(255,200,0,0.4));
-                        display: block;
-                    }
+                                    filter:
+                                        drop-shadow(0 0 4px rgba(255,255,255,0.4))
+                                        drop-shadow(0 0 12px rgba(255,200,0,0.4));
+                                    display: block; /* Remove inline spacing */
+                                }
+                    /* Desktop: taller voice visualization so it's not super thin */
                     @media (min-width: 769px) {
                         .dotwave-wrapper {
                             min-height: 140px;
@@ -10237,7 +10220,6 @@ class QuizManager {
             if (this.smartyBee) {
                 this.smartyBee.onCorrectAnswer();
             }
-            triggerAvatarFeedback('correct');
             
             // Enhanced correct answer celebration
             playThemedSound('correct');
@@ -10336,7 +10318,6 @@ class QuizManager {
                 if (this.smartyBee) {
                     this.smartyBee.onIncorrectAnswer();
                 }
-                triggerAvatarFeedback('incorrect');
                 
                 // Enhanced incorrect answer feedback
                 playThemedSound('incorrect');
@@ -10380,7 +10361,6 @@ class QuizManager {
                 if (this.smartyBee) {
                     this.smartyBee.onIncorrectAnswer();
                 }
-                triggerAvatarFeedback('incorrect');
                 
                 // Show Next Word button so user can advance
                 this.showNextWordButton();
@@ -10581,7 +10561,7 @@ class QuizManager {
             if (secondsLeft >= 0) {
                 this.retryTimeoutId = setTimeout(updateCountdown, 1000);
             } else {
-                // Time's up - show answer and Next Word button
+                // Time's up - show "Next Word" button and the correct answer
                 this.retryAvailable = false;
                 this.hideRetryButton();
                 
@@ -11406,7 +11386,7 @@ class QuizManager {
                                                 ${item.user_answer ? `Your answer: <span style="color: #D32F2F; font-weight: 600;">${item.user_answer}</span>` : '(Skipped or no answer)'}
                                             </div>
                                         </div>
-                        <button onclick="pronounceWordFromReport(&quot;${item.word.replace(/"/g, '&quot;')}&quot;)" style="background: linear-gradient(135deg, #4CAF50, #66BB6A); color: white; border: none; padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3); transition: all 0.2s;">
+                        <button onclick="pronounceWordFromReport(&quot;${item.word.replace(/"/g, '&quot;')}&quot;)" style="background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%); color: white; border: none; padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3); transition: all 0.2s;">
                                             Hear It
                                         </button>
                                     </div>
@@ -11631,41 +11611,27 @@ class QuizManager {
             }
             
             const data = await response.json();
-
-            /* Only update header badge; card shows BeeSmart crest (quizCardCrest) and is not a rank badge */
-            const badgeImgs = [
-                document.getElementById('quizHeaderBadge')
-            ].filter(Boolean);
-            if (!badgeImgs.length) {
-                console.log('ℹ️ No badge image targets found; skipping badge render');
-                return;
+            
+            if (data.success && data.current_class) {
+                const badgeImage = document.getElementById('reportBadgeImage');
+                const buzzDustPoints = document.getElementById('reportBuzzDustPoints');
+                const buzzDustRank = document.getElementById('reportBuzzDustRank');
+                
+                // Update badge image - handle filename mapping (Elite -> Elete typo)
+                const badgeFilename = data.current_class.badge_image
+                    .replace('.glb', '.png')
+                    .replace('Elite.png', 'Elete.png');
+                badgeImage.src = `/static/assets/badges/${badgeFilename}`;
+                badgeImage.alt = `${data.current_class.label} Badge`;
+                
+                // Update points display
+                buzzDustPoints.textContent = (data.total_buzz_dust || 0).toLocaleString();
+                
+                // Update rank label with emoji
+                buzzDustRank.textContent = `${data.current_class.emoji} ${data.current_class.label}`;
+                
+                console.log('✨ Buzz Dust report card loaded:', data);
             }
-
-            const beeClass = (data && data.current_class) ? data.current_class : null;
-            if (!beeClass) {
-                console.log('ℹ️ No current_class returned; skipping badge render');
-                return;
-            }
-
-            // Prefer the api-provided badge image; fall back to a sensible default
-            const raw = beeClass.badge_image || 'Novice.glb';
-            const badgeFileName = String(raw).replace(/\.glb$/i, '.png');
-
-            // Keep special-case correction (Elite -> Elete)
-            const correctedFileName =
-                badgeFileName.toLowerCase() === 'elite.png' ? 'Elete.png' : badgeFileName;
-
-            const totalBuzzDust = __nn(data && data.total_buzz_dust, 0);
-            const nextSrc = `/static/assets/badges/${encodeURIComponent(correctedFileName)}`;
-            badgeImgs.forEach((img) => {
-                try {
-                    img.src = nextSrc;
-                    img.alt = beeClass.label || 'Buzz Dust Badge';
-                    img.title = `${beeClass.label || 'Badge'} - ${totalBuzzDust} Buzz Dust`;
-                } catch (_) {}
-            });
-
-            console.log('✨ Buzz Dust badge displayed', beeClass.label, correctedFileName);
         } catch (error) {
             console.error('Error loading buzz dust report card:', error);
         }
