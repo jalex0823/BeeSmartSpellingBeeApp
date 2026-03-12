@@ -4841,13 +4841,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 case 'skip': return pulse(300);
                                 case 'feedback-correct': return speak(700);
                                 case 'feedback-incorrect': return pulse(520);
-
-                                    // In resume mode, client state can be stale; ensure we always fetch a fresh next word.
-                                    // Also clear any lingering UI lock states that could make resume feel "stuck".
-                                    this.lastPronounceData = null;
-                                    if (this.spellingInput) {
-                                        this.spellingInput.value = '';
-                                    }
                                 default: return pulse(180);
                             }
                         }
@@ -4871,27 +4864,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Store smoothed amplitudes per layer
                     let layerAmplitudes = config.layers.map(() => new Array(config.points).fill(0));
 
-
-                                        // Resume can sometimes desync; try a non-destructive resume advance as a fallback.
-                                        if (this.startMode === 'resume' && typeof window.forceResumeAdvance === 'function') {
-                                            try {
-                                                window.forceResumeAdvance();
-                                            } catch (e) {
-                                                console.warn('forceResumeAdvance fallback failed after skip error:', e);
-                                            }
-                                        }
                     // Draw smooth waveform with multiple translucent layers
                     function drawHorizontalWaveform() {
                         ctx.clearRect(0, 0, W, H);
-                        
 
-                                    if (this.startMode === 'resume' && typeof window.forceResumeAdvance === 'function') {
-                                        try {
-                                            window.forceResumeAdvance();
-                                        } catch (e) {
-                                            console.warn('forceResumeAdvance fallback failed after skip exception:', e);
-                                        }
-                                    }
                         const centerY = H / 2;
                         const buffer = 40; // Increased safety buffer from edges to prevent clipping
                         const maxHeight = (H / 2) - buffer; // Max amplitude with buffer to prevent clipping
@@ -5020,7 +4996,7 @@ document.addEventListener('DOMContentLoaded', () => {
                            style="font-size: 16px;">
                 </div>
                 <script>
-                (function(){ var ua = navigator.userAgent || ''; var cap = window.Capacitor; var isA = /Android/i.test(ua) || (cap && cap.getPlatform && cap.getPlatform() === 'android'); var isI = /iPad|iPhone|iPod/.test(ua); if (isA || isI) { var inp = document.getElementById('spellingInput'); if (inp) { inp.setAttribute('readonly','readonly'); inp.setAttribute('inputmode','none'); } })();
+                (function(){ var ua = navigator.userAgent || ''; var cap = window.Capacitor; var isA = /Android/i.test(ua) || (cap && cap.getPlatform && cap.getPlatform() === 'android'); var isI = /iPad|iPhone|iPod/.test(ua); if (isA || isI) { var inp = document.getElementById('spellingInput'); if (inp) { inp.setAttribute('readonly','readonly'); inp.setAttribute('inputmode','none'); } } })();
                 </script>
                 <!-- Show keyboard button (visible when keyboard is hidden so user can bring it back) -->
                 <button type="button" id="showKeyboardBtn" class="action-btn secondary quiz-show-keyboard-btn" style="display: none; margin-top: 8px; width: 100%; max-width: 260px;" aria-label="Show keyboard">
