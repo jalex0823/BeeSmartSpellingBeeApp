@@ -2125,7 +2125,7 @@ window.BeeSmartAudioFallback = (function() {
         position: relative;
         width: calc(100% + 40px); /* Extend 20px on each side outside card */
         max-width: calc(100vw - 32px); /* iPhone safe area: 16px margin on each side */
-        min-height: 160px; /* Compact: reduced from 200px */
+        min-height: 80px; /* Compact: tightened to reduce blank space */
         max-height: none;
         margin: 0 -20px; /* Negative margin to extend outside card */
         margin-bottom: 0.25rem;
@@ -2140,7 +2140,7 @@ window.BeeSmartAudioFallback = (function() {
         width: 100%;
         max-width: 700px; /* match quiz container width */
         margin: 0 auto; /* remove extra top/bottom margins */
-        min-height: 220px; /* visible area for avatar */
+        min-height: 120px; /* visible area for avatar */
         background: rgba(255, 255, 255, 0.0); /* transparent to blend with quiz */
         overflow: hidden; /* allow internal effects without page overflow */
         /* no border or shadow to integrate naturally */
@@ -2159,9 +2159,9 @@ window.BeeSmartAudioFallback = (function() {
     }
     /* BeeSmart crest logo at top – prominent size (was extremely too small) */
     .quiz-card-crest-avatar .quiz-card-crest {
-        width: clamp(160px, 38vw, 260px);
+        width: clamp(120px, 28vw, 200px);
         height: auto;
-        max-height: 200px;
+        max-height: 150px;
         object-fit: contain;
         filter: drop-shadow(0 6px 14px rgba(238, 147, 35, 0.25));
         opacity: 0.98;
@@ -2170,15 +2170,15 @@ window.BeeSmartAudioFallback = (function() {
         display: none !important; /* Red pill removed per user request */
     }
     .quiz-card-crest-avatar .mascot-3d-container {
-        width: 160px;
-        height: 160px;
-        max-width: 60vw;
-        max-height: 60vw;
+        width: 130px;
+        height: 130px;
+        max-width: 50vw;
+        max-height: 50vw;
         margin: 0 auto;
     }
     @media (max-width: 420px) {
-        .quiz-card-crest-avatar .quiz-card-crest { width: clamp(140px, 36vw, 200px); max-height: 160px; }
-        .quiz-card-crest-avatar .mascot-3d-container { width: 140px; height: 140px; }
+        .quiz-card-crest-avatar .quiz-card-crest { width: clamp(100px, 28vw, 160px); max-height: 120px; }
+        .quiz-card-crest-avatar .mascot-3d-container { width: 110px; height: 110px; }
     }
     
     /* Optional: subtle placeholder while avatar loads */
@@ -2208,7 +2208,7 @@ window.BeeSmartAudioFallback = (function() {
     
     /* Honey jar timer state (countdown mode) – same compact height as voice mode */
     .morph-container.mode-timer {
-        min-height: 200px;
+        min-height: 120px;
         max-height: none;
     }
     
