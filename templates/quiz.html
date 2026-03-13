@@ -1894,17 +1894,13 @@ if ('speechSynthesis' in window) {
         overflow: visible;
         box-shadow: 0 4px 12px rgba(91, 49, 26, 0.08);
         border: 1px solid rgba(238, 147, 35, 0.25);
-        min-height: 100px;
-        max-height: 140px;
         width: 100%;
     }
     .voice-visualizer canvas,
     .voice-visualizer svg,
     #voiceVisualizer canvas,
     #voiceVisualizer svg {
-        height: 90px !important;
-        max-height: 140px !important;
-        min-height: 60px !important;
+        height: auto !important;
     }
 
     /* Generic quiz form spacing normalization */
@@ -2315,7 +2311,7 @@ if ('speechSynthesis' in window) {
         position: relative;
         width: calc(100% + 40px); /* Extend 20px on each side outside card */
         max-width: calc(100vw - 32px); /* iPhone safe area: 16px margin on each side */
-        min-height: 180px; /* Give visualizer/timer a stable slot so it doesn't compress */
+        min-height: 80px; /* Tightened to reduce blank space */
         max-height: none;
         margin: 0 -20px; /* Negative margin to extend outside card */
         margin-bottom: clamp(0.5rem, 1.1vh, 0.85rem);
@@ -2330,7 +2326,7 @@ if ('speechSynthesis' in window) {
         width: 100%;
         max-width: 900px; /* match quiz container width */
         margin: 0 auto; /* remove extra top/bottom margins */
-        min-height: 220px; /* visible area for avatar */
+        min-height: 120px; /* visible area for avatar */
         background: rgba(255, 255, 255, 0.0); /* transparent to blend with quiz */
         overflow: hidden; /* allow internal effects without page overflow */
         /* no border or shadow to integrate naturally */
@@ -2398,7 +2394,7 @@ if ('speechSynthesis' in window) {
     
     /* Honey jar timer state (countdown mode) – same compact height as voice mode */
     .morph-container.mode-timer {
-        min-height: 180px;
+        min-height: 120px;
         max-height: none;
     }
     
@@ -4787,10 +4783,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         text-align: center;
                         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto", sans-serif;
                         overflow: visible;
-                        min-height: 100px; /* Room for wave animation (icon removed for more vis space) */
+                        min-height: 40px; /* Room for wave animation (icon removed for more vis space) */
                     }
                     .dotwave-wrapper {
-                        min-height: 80px; /* More room for voice vis to animate (per BUG_FIXES_VOICE_VISUALIZER.md) */
+                        min-height: 50px; /* More room for voice vis to animate (per BUG_FIXES_VOICE_VISUALIZER.md) */
                     }
 
                     .voice-header {
@@ -4930,13 +4926,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 case 'skip': return pulse(300);
                                 case 'feedback-correct': return speak(700);
                                 case 'feedback-incorrect': return pulse(520);
-
-                                    // In resume mode, client state can be stale; ensure we always fetch a fresh next word.
-                                    // Also clear any lingering UI lock states that could make resume feel "stuck".
-                                    this.lastPronounceData = null;
-                                    if (this.spellingInput) {
-                                        this.spellingInput.value = '';
-                                    }
                                 default: return pulse(180);
                             }
                         }
@@ -4960,27 +4949,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Store smoothed amplitudes per layer
                     let layerAmplitudes = config.layers.map(() => new Array(config.points).fill(0));
 
-
-                                        // Resume can sometimes desync; try a non-destructive resume advance as a fallback.
-                                        if (this.startMode === 'resume' && typeof window.forceResumeAdvance === 'function') {
-                                            try {
-                                                window.forceResumeAdvance();
-                                            } catch (e) {
-                                                console.warn('forceResumeAdvance fallback failed after skip error:', e);
-                                            }
-                                        }
                     // Draw smooth waveform with multiple translucent layers
                     function drawHorizontalWaveform() {
                         ctx.clearRect(0, 0, W, H);
-                        
 
-                                    if (this.startMode === 'resume' && typeof window.forceResumeAdvance === 'function') {
-                                        try {
-                                            window.forceResumeAdvance();
-                                        } catch (e) {
-                                            console.warn('forceResumeAdvance fallback failed after skip exception:', e);
-                                        }
-                                    }
                         const centerY = H / 2;
                         const buffer = Math.min(18, Math.max(8, H * 0.12));
                         const maxHeight = Math.max(10, (H / 2) - buffer);
