@@ -4317,15 +4317,15 @@ if ('speechSynthesis' in window) {
 /* Base override: bigger, rounder, bolder */
 .actions-area.quiz-buttons .action-btn,
 #quizActionButtons .action-btn {
-    border-radius: 14px;
+    border-radius: 28px;
     font-weight: 800;
-    font-size: 0.95rem;
-    min-height: 50px;
-    padding: 0.6rem 0.8rem;
+    font-size: 1rem;
+    min-height: 56px;
+    padding: 0.75rem 1rem;
     letter-spacing: 0.02em;
     border: 3px solid transparent;
     text-transform: none;
-    box-shadow: 0 3px 0 rgba(0,0,0,0.15), 0 4px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 0 rgba(0,0,0,0.15), 0 6px 12px rgba(0,0,0,0.1);
     transition: all 0.15s ease;
 }
 .actions-area.quiz-buttons .action-btn:active,
@@ -4396,18 +4396,18 @@ if ('speechSynthesis' in window) {
     font-size: 1.3rem;
 }
 
-/* Mobile: compact grid buttons */
+/* Mobile: slightly smaller buttons but still chunky */
 @media (max-width: 480px) {
     .actions-area.quiz-buttons .action-btn,
     #quizActionButtons .action-btn {
-        border-radius: 12px;
-        font-size: 0.85rem;
-        min-height: 46px;
-        padding: 0.5rem 0.6rem;
+        border-radius: 22px;
+        font-size: 0.9rem;
+        min-height: 50px;
+        padding: 0.6rem 0.8rem;
     }
     #submitButton {
-        min-height: 50px !important;
-        font-size: 0.95rem !important;
+        min-height: 54px !important;
+        font-size: 1rem !important;
     }
 }
 
