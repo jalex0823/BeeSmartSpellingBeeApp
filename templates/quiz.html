@@ -3108,25 +3108,30 @@ if ('speechSynthesis' in window) {
         margin: 0; /* Remove any default margins */
     }
     
-    /* Exit Button Container - Centered below main grid */
+    /* Exit Button Container - full-width grid matching action buttons */
     .exit-button-container {
-        display: flex;
-        justify-content: center;
-        gap: 1rem;
-        margin-top: 1rem;
-        padding-top: 1rem;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
         border-top: 2px dashed rgba(255, 193, 7, 0.3);
-        flex-wrap: wrap;
+        width: 100%;
+        box-sizing: border-box;
     }
     
     .exit-button-container .action-btn {
-        flex: 1;
-        min-width: 140px;
-        max-width: 250px;
+        width: 100%;
+        min-width: 0;
+        max-width: none;
     }
     
     .exit-button-container .action-btn.exit {
-        width: auto;
+        grid-column: span 2;
+    }
+    
+    .exit-button-container .action-btn.next-word {
+        grid-column: span 2;
     }
     
     /* Retry Button Styling */
@@ -3193,7 +3198,8 @@ if ('speechSynthesis' in window) {
     .action-btn.toggle-stat {
         padding: 0.5rem 0.75rem;
         font-size: 0.8rem;
-        min-width: 100px;
+        width: 100%;
+        min-width: 0;
         background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
         color: #1565C0;
         border: 1px solid rgba(33, 150, 243, 0.3);
@@ -3228,20 +3234,6 @@ if ('speechSynthesis' in window) {
     }
     .stat-toggle-controls .master-toggle {
         grid-column: span 2;
-    }
-
-    /* Exit area: center the Exit Quiz button within the card */
-    .exit-button-container {
-        display: flex !important;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 1rem;
-        width: 100%;
-        margin-top: 0.25rem;
-    }
-    .exit-button-container .action-btn {
-        min-width: 160px;
-        max-width: 280px;
     }
 
     /* Enhanced Magical Sparkles */
