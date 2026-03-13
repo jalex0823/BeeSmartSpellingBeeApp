@@ -5217,6 +5217,26 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <!-- end quiz-card-top (visualizer, timer, sentence) -->
 
+        <!-- Inline Score Panel (between timer and input) -->
+        <div class="inline-score-panel" id="inlineScorePanel">
+            <div class="inline-score-item">
+                <span class="inline-score-number correct" id="inlineCorrect">0</span>
+                <span class="inline-score-label">Correct</span>
+            </div>
+            <div class="inline-score-item">
+                <span class="inline-score-number incorrect" id="inlineIncorrect">0</span>
+                <span class="inline-score-label">Incorrect</span>
+            </div>
+            <div class="inline-score-item">
+                <span class="inline-score-number streak" id="inlineStreak">0</span>
+                <span class="inline-score-label">Streak</span>
+            </div>
+            <div class="inline-score-item">
+                <span class="inline-score-number points" id="inlinePoints">0</span>
+                <span class="inline-score-label">Points</span>
+            </div>
+        </div>
+
         <!-- 2) Answer input row -->
         <div class="answer-and-keyboard">
             <!-- Definition/Sentence Display Panel - above input for visibility -->
@@ -10596,6 +10616,19 @@ class QuizManager {
         document.getElementById('incorrectCount').textContent = incorrect;
         document.getElementById('streakCount').textContent = streak;
         
+        // Update inline score panel (between timer and input)
+        const inlineCorrect = document.getElementById('inlineCorrect');
+        const inlineIncorrect = document.getElementById('inlineIncorrect');
+        const inlineStreak = document.getElementById('inlineStreak');
+        const inlinePoints = document.getElementById('inlinePoints');
+        if (inlineCorrect) inlineCorrect.textContent = correct;
+        if (inlineIncorrect) inlineIncorrect.textContent = incorrect;
+        if (inlineStreak) inlineStreak.textContent = streak;
+        if (inlinePoints) {
+            const pts = Number(this.sessionPoints) || 0;
+            inlinePoints.textContent = pts.toLocaleString();
+        }
+        
         const statsPill = document.getElementById('quizStatsPill');
         const statsCorrect = document.getElementById('quizStatsCorrect');
         const statsIncorrect = document.getElementById('quizStatsIncorrect');
@@ -11233,22 +11266,20 @@ class QuizManager {
     }
     
     toggleStat(statType, buttonElement) {
-        // Special case: 'all' hides the entire score display
+        // Special case: 'all' hides the entire inline score panel
         if (statType === 'all') {
-            const scoreDisplay = document.querySelector('.score-display');
+            const inlinePanel = document.getElementById('inlineScorePanel');
             const toggleText = buttonElement.querySelector('.toggle-text');
             
-            if (scoreDisplay && toggleText) {
-                const isHidden = scoreDisplay.style.display === 'none';
+            if (inlinePanel && toggleText) {
+                const isHidden = inlinePanel.style.display === 'none';
                 
                 if (isHidden) {
-                    // Show the entire stats section
-                    scoreDisplay.style.display = '';
+                    inlinePanel.style.display = '';
                     toggleText.textContent = 'Hide All Stats';
                     buttonElement.classList.remove('stat-hidden');
                 } else {
-                    // Hide the entire stats section
-                    scoreDisplay.style.display = 'none';
+                    inlinePanel.style.display = 'none';
                     toggleText.textContent = 'Show All Stats';
                     buttonElement.classList.add('stat-hidden');
                 }
@@ -11260,31 +11291,26 @@ class QuizManager {
             return;
         }
         
-        // Individual stat toggles
-        const correctNum = document.querySelector('.score-item .score-number.correct');
-        const incorrectNum = document.querySelector('.score-item .score-number.incorrect');
-        const streakNum = document.querySelector('.score-item .score-number.streak');
-        const pointsNum = document.querySelector('.score-item .score-number.points');
-        const statElements = {
-            'correct': correctNum ? correctNum.parentElement : null,
-            'incorrect': incorrectNum ? incorrectNum.parentElement : null,
-            'streak': streakNum ? streakNum.parentElement : null,
-            'points': pointsNum ? pointsNum.parentElement : null
+        // Individual stat toggles - target inline score panel items
+        const inlineStatMap = {
+            'correct': document.getElementById('inlineCorrect'),
+            'incorrect': document.getElementById('inlineIncorrect'),
+            'streak': document.getElementById('inlineStreak'),
+            'points': document.getElementById('inlinePoints')
         };
         
-        const statElement = statElements[statType];
+        const inlineEl = inlineStatMap[statType];
+        const statElement = inlineEl ? inlineEl.closest('.inline-score-item') : null;
         const toggleText = buttonElement.querySelector('.toggle-text');
         
         if (statElement && toggleText) {
             const isHidden = statElement.style.display === 'none';
             
             if (isHidden) {
-                // Show the stat
                 statElement.style.display = '';
                 toggleText.textContent = `Hide ${statType.charAt(0).toUpperCase() + statType.slice(1)}`;
                 buttonElement.classList.remove('stat-hidden');
             } else {
-                // Hide the stat
                 statElement.style.display = 'none';
                 toggleText.textContent = `Show ${statType.charAt(0).toUpperCase() + statType.slice(1)}`;
                 buttonElement.classList.add('stat-hidden');
@@ -12255,6 +12281,15 @@ function startLiveStatusPolling(intervalMs = 15000) {
                 if (iEl) iEl.textContent = data.incorrect;
                 if (sEl) sEl.textContent = data.streak;
                 if (pEl) pEl.textContent = (data.session_points || 0).toLocaleString();
+                // Inline score panel fallback
+                const ic = document.getElementById('inlineCorrect');
+                const ii = document.getElementById('inlineIncorrect');
+                const is_ = document.getElementById('inlineStreak');
+                const ip = document.getElementById('inlinePoints');
+                if (ic) ic.textContent = data.correct;
+                if (ii) ii.textContent = data.incorrect;
+                if (is_) is_.textContent = data.streak;
+                if (ip) ip.textContent = (data.session_points || 0).toLocaleString();
             }
         } catch (e) {
             console.warn('live-status poll failed', e);
