@@ -73,10 +73,10 @@
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0)); /* Reduced padding */
     padding-left: max(4px, env(safe-area-inset-left, 0));
     padding-right: max(4px, env(safe-area-inset-right, 0));
-    background: transparent; /* Blends into .answer-and-keyboard parent */
+    background: transparent; /* Blends into .answer-and-keyboard parent amber gradient */
     border-radius: 0 0 14px 14px; /* Match bottom of parent container */
     border: none;
-    box-shadow: none; /* Parent provides shadow */
+    box-shadow: none; /* Parent provides shadow - unified with input */
     position: relative; /* Normal flow, NOT fixed */
     z-index: 2; /* Above buttons but below modals */
     display: flex;

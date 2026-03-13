@@ -3467,7 +3467,7 @@ window.BeeSmartAudioFallback = (function() {
         padding: 0.7rem 3rem 0.7rem 1rem;
         font-size: 1.05rem;
         text-align: left;
-        background-color: rgba(255, 255, 255, 0.85);
+        background-color: rgba(255, 248, 225, 0.9);
         color: #332300;
         box-sizing: border-box;
     }
@@ -4966,6 +4966,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <!-- 2) Answer input row -->
         <div class="answer-and-keyboard">
+            <!-- Definition/Sentence Display Panel - above input for visibility -->
+            <div class="definition-display" id="definitionDisplay" style="display: none; margin: 0 0 0.5rem 0; padding: 0.75rem 1rem; background: linear-gradient(135deg, rgba(255,248,225,0.95), rgba(243,229,171,0.95)); border: 2px solid rgba(255, 193, 7, 0.3); border-radius: 12px; box-shadow: 0 2px 8px rgba(255, 193, 7, 0.15);">
+                Ready to show definition or sentence...
+            </div>
+
             <!-- Answer area: letter hint + spelling input (in-flow with keyboard) -->
             <div class="answer-area quiz-answer-area" id="answerAreaContainer">
                 <div class="letter-hint hidden" id="letterHint" aria-live="polite">
@@ -5050,11 +5055,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="phonetic-reveal hidden" id="phoneticHint" aria-live="polite"></div>
 
         <div class="feedback-area" id="feedbackArea" role="status" aria-live="polite"></div>
-
-        <!-- Definition/Sentence Display Panel -->
-        <div class="definition-display" id="definitionDisplay" style="display: none !important; margin: 1rem 0; padding: 1rem; background: linear-gradient(135deg, #FFF8E1, #F3E5AB); border: 2px solid rgba(255, 193, 7, 0.3); border-radius: 12px; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);">
-            Ready to show definition or sentence...
-        </div>
 
         <!-- Actions: pronounce, show sentence, submit, skip, honey hint (2 columns) -->
         <div class="actions-area quiz-buttons action-buttons" id="quizActionButtons">
