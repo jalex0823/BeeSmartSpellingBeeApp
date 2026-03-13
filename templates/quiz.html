@@ -3114,7 +3114,7 @@ if ('speechSynthesis' in window) {
         grid-template-columns: 1fr 1fr;
         gap: 0.5rem;
         margin-top: 0.5rem;
-        padding-top: 0.5rem;
+        padding: 0.5rem 8px 0;
         border-top: 2px dashed rgba(255, 193, 7, 0.3);
         width: 100%;
         box-sizing: border-box;
@@ -3227,7 +3227,7 @@ if ('speechSynthesis' in window) {
         grid-template-columns: 1fr 1fr;
         gap: 0.5rem;
         border-top: 2px solid rgba(255, 193, 7, 0.2);
-        padding-top: 0.75rem;
+        padding: 0.75rem 8px 0;
         margin: 0.75rem 0;
         width: 100%;
         box-sizing: border-box;
@@ -3727,6 +3727,43 @@ if ('speechSynthesis' in window) {
         
         html {
             -webkit-overflow-scrolling: touch;
+        }
+    }
+    
+    /* Inline Score Pill - compact icon bar between timer and input */
+    .inline-score-pill {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1.25rem;
+        margin: 0.4rem auto;
+        padding: 0.4rem 1.2rem;
+        width: fit-content;
+        border-radius: 20px;
+        background: rgba(255, 248, 225, 0.85);
+        border: 2px solid rgba(255, 193, 7, 0.35);
+        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.15);
+    }
+    .pill-stat {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: #5d4100;
+        white-space: nowrap;
+        user-select: none;
+    }
+    .pill-stat span {
+        font-variant-numeric: tabular-nums;
+    }
+    @media (max-width: 480px) {
+        .inline-score-pill {
+            gap: 0.9rem;
+            padding: 0.35rem 0.9rem;
+        }
+        .pill-stat {
+            font-size: 0.95rem;
         }
     }
     
@@ -5217,24 +5254,11 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <!-- end quiz-card-top (visualizer, timer, sentence) -->
 
-        <!-- Inline Score Panel (between timer and input) -->
-        <div class="inline-score-panel" id="inlineScorePanel">
-            <div class="inline-score-item">
-                <span class="inline-score-number correct" id="inlineCorrect">0</span>
-                <span class="inline-score-label">Correct</span>
-            </div>
-            <div class="inline-score-item">
-                <span class="inline-score-number incorrect" id="inlineIncorrect">0</span>
-                <span class="inline-score-label">Incorrect</span>
-            </div>
-            <div class="inline-score-item">
-                <span class="inline-score-number streak" id="inlineStreak">0</span>
-                <span class="inline-score-label">Streak</span>
-            </div>
-            <div class="inline-score-item">
-                <span class="inline-score-number points" id="inlinePoints">0</span>
-                <span class="inline-score-label">Points</span>
-            </div>
+        <!-- Inline Score Pill (between timer and input) -->
+        <div class="inline-score-pill" id="inlineScorePanel">
+            <span class="pill-stat" id="pillStatProgress" data-stat="correct">📊 <span id="inlineCorrect">0</span>/<span id="inlineTotal">0</span></span>
+            <span class="pill-stat" id="pillStatPoints" data-stat="points">🍯 <span id="inlinePoints">0</span></span>
+            <span class="pill-stat" id="pillStatStreak" data-stat="streak">🔥 <span id="inlineStreak">0</span></span>
         </div>
 
         <!-- 2) Answer input row -->
@@ -10616,13 +10640,13 @@ class QuizManager {
         document.getElementById('incorrectCount').textContent = incorrect;
         document.getElementById('streakCount').textContent = streak;
         
-        // Update inline score panel (between timer and input)
+        // Update inline score pill (between timer and input)
         const inlineCorrect = document.getElementById('inlineCorrect');
-        const inlineIncorrect = document.getElementById('inlineIncorrect');
+        const inlineTotal = document.getElementById('inlineTotal');
         const inlineStreak = document.getElementById('inlineStreak');
         const inlinePoints = document.getElementById('inlinePoints');
         if (inlineCorrect) inlineCorrect.textContent = correct;
-        if (inlineIncorrect) inlineIncorrect.textContent = incorrect;
+        if (inlineTotal) inlineTotal.textContent = this.totalWords || 0;
         if (inlineStreak) inlineStreak.textContent = streak;
         if (inlinePoints) {
             const pts = Number(this.sessionPoints) || 0;
@@ -11291,16 +11315,8 @@ class QuizManager {
             return;
         }
         
-        // Individual stat toggles - target inline score panel items
-        const inlineStatMap = {
-            'correct': document.getElementById('inlineCorrect'),
-            'incorrect': document.getElementById('inlineIncorrect'),
-            'streak': document.getElementById('inlineStreak'),
-            'points': document.getElementById('inlinePoints')
-        };
-        
-        const inlineEl = inlineStatMap[statType];
-        const statElement = inlineEl ? inlineEl.closest('.inline-score-item') : null;
+        // Individual stat toggles - target pill-stat spans by data-stat attribute
+        const statElement = document.querySelector(`.pill-stat[data-stat="${statType}"]`);
         const toggleText = buttonElement.querySelector('.toggle-text');
         
         if (statElement && toggleText) {
@@ -12281,13 +12297,13 @@ function startLiveStatusPolling(intervalMs = 15000) {
                 if (iEl) iEl.textContent = data.incorrect;
                 if (sEl) sEl.textContent = data.streak;
                 if (pEl) pEl.textContent = (data.session_points || 0).toLocaleString();
-                // Inline score panel fallback
+                // Inline score pill fallback
                 const ic = document.getElementById('inlineCorrect');
-                const ii = document.getElementById('inlineIncorrect');
+                const it = document.getElementById('inlineTotal');
                 const is_ = document.getElementById('inlineStreak');
                 const ip = document.getElementById('inlinePoints');
                 if (ic) ic.textContent = data.correct;
-                if (ii) ii.textContent = data.incorrect;
+                if (it) it.textContent = data.total || 0;
                 if (is_) is_.textContent = data.streak;
                 if (ip) ip.textContent = (data.session_points || 0).toLocaleString();
             }
