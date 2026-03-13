@@ -73,13 +73,10 @@
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0)); /* Reduced padding */
     padding-left: max(4px, env(safe-area-inset-left, 0));
     padding-right: max(4px, env(safe-area-inset-right, 0));
-    background: linear-gradient(180deg, #FFF8E1 0%, #FFECB3 35%, #FFD54F 70%, #FFC107 100%);
-    border-radius: 10px; /* Slightly smaller radius */
-    border: 2px solid rgba(139, 105, 20, 0.28);
-    box-shadow:
-        0 3px 10px rgba(139, 105, 20, 0.14),
-        0 1px 3px rgba(0, 0, 0, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.25); /* Subtle inner highlight */
+    background: transparent; /* Blends into .answer-and-keyboard parent container */
+    border-radius: 0 0 12px 12px; /* Only round bottom corners */
+    border: none;
+    box-shadow: none; /* Parent provides container styling */
     position: relative; /* Normal flow, NOT fixed */
     z-index: 2; /* Above buttons but below modals */
     display: flex;

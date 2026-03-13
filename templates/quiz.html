@@ -683,15 +683,22 @@ if ('speechSynthesis' in window) {
     margin-bottom: 0;
 }
 
-/* Answer + keyboard in same scroll flow; visible gap, no overlap */
+/* Answer + keyboard unified container */
 .answer-and-keyboard {
     display: block;
     margin-bottom: 0.5rem;
-    margin-top: 0; /* No gap between timer and answer */
+    margin-top: 0;
+    background: linear-gradient(180deg, #FFFDE7 0%, #FFF8E1 100%);
+    border-radius: 16px;
+    border: 2px solid rgba(255, 193, 7, 0.35);
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.12);
+    padding: 10px 8px;
 }
 
 .answer-and-keyboard .quiz-answer-area {
-    margin-bottom: 10px;
+    margin-bottom: 4px;
+    background: transparent;
+    padding: 0;
 }
 
 /* F) Hide keyboard: toggle only; never position:fixed */
@@ -839,15 +846,15 @@ if ('speechSynthesis' in window) {
         display: block;
         margin-bottom: 0.5rem;
         margin-top: 0; /* No gap between timer and answer */
+        background: linear-gradient(180deg, #FFFDE7 0%, #FFF8E1 100%);
+        border-radius: 16px;
+        border: 2px solid rgba(255, 193, 7, 0.35);
+        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.12);
+        padding: 10px 8px;
     }
     .answer-and-keyboard .quiz-answer-area {
-        margin-bottom: 10px;
-    }
-    /* F) Hide keyboard: toggle only; never position:fixed */
-    #keyboardHost.is-hidden,
-    .keyboard-host.is-hidden,
-    .keyboard-shell.is-hidden {
-        display: none !important;
+        margin-bottom: 4px;
+        background: transparent;
     }
     /* Keyboard: always visible by default; only hide when .is-hidden */
     /* Styling moved to QuizKeyboard.css - only positioning rules here */
@@ -3208,26 +3215,19 @@ if ('speechSynthesis' in window) {
         background: linear-gradient(135deg, #FFCDD2 0%, #EF9A9A 100%);
     }
 
-    /* Stat Toggle Controls Container (match reference: compact pill row that wraps) */
+    /* Stat Toggle Controls Container - 2-column grid matching action buttons */
     .stat-toggle-controls {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
         gap: 0.5rem;
         border-top: 2px solid rgba(255, 193, 7, 0.2);
-        padding-top: 1rem;
-        margin: 1rem 0 0.75rem;
+        padding-top: 0.75rem;
+        margin: 0.75rem 0;
+        width: 100%;
+        box-sizing: border-box;
     }
-    /* On very small screens, fall back to rows of two; master spans full width */
-    @media (max-width: 420px) {
-        .stat-toggle-controls .action-btn.toggle-stat {
-            flex: 1 1 calc(50% - 0.5rem);
-            max-width: 220px;
-        }
-        .stat-toggle-controls .master-toggle {
-            flex-basis: 100%;
-            max-width: none;
-        }
+    .stat-toggle-controls .master-toggle {
+        grid-column: span 2;
     }
 
     /* Exit area: center the Exit Quiz button within the card */
@@ -4288,15 +4288,15 @@ if ('speechSynthesis' in window) {
 /* Base override: bigger, rounder, bolder */
 .actions-area.quiz-buttons .action-btn,
 #quizActionButtons .action-btn {
-    border-radius: 28px;
+    border-radius: 14px;
     font-weight: 800;
-    font-size: 1rem;
-    min-height: 56px;
-    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    min-height: 50px;
+    padding: 0.6rem 0.8rem;
     letter-spacing: 0.02em;
     border: 3px solid transparent;
     text-transform: none;
-    box-shadow: 0 4px 0 rgba(0,0,0,0.15), 0 6px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 3px 0 rgba(0,0,0,0.15), 0 4px 8px rgba(0,0,0,0.1);
     transition: all 0.15s ease;
 }
 .actions-area.quiz-buttons .action-btn:active,
@@ -4367,18 +4367,18 @@ if ('speechSynthesis' in window) {
     font-size: 1.3rem;
 }
 
-/* Mobile: slightly smaller buttons but still chunky */
+/* Mobile: compact grid buttons */
 @media (max-width: 480px) {
     .actions-area.quiz-buttons .action-btn,
     #quizActionButtons .action-btn {
-        border-radius: 22px;
-        font-size: 0.9rem;
-        min-height: 50px;
-        padding: 0.6rem 0.8rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        min-height: 46px;
+        padding: 0.5rem 0.6rem;
     }
     #submitButton {
-        min-height: 54px !important;
-        font-size: 1rem !important;
+        min-height: 50px !important;
+        font-size: 0.95rem !important;
     }
 }
 
@@ -4984,22 +4984,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     .voice-definition {
-                        font-size: 0.85rem;
-                        font-weight: 500;
-                        color: #5A2C15;
-                        text-shadow: none;
-                        padding: 4px 10px;
-                        margin-top: 4px;
-                        line-height: 1.4;
-                        letter-spacing: 0.01em;
+                        display: none !important; /* Hidden: sentence shown via #definitionDisplay above input */
                     }
-                    /* Mobile: bring sentence down so it rests clearly beneath honeypot timer */
                     @media (max-width: 480px) {
                         .voice-definition {
-                            margin-top: 0.85rem;
+                            display: none !important;
                         }
                         .morph-container.mode-timer .voice-visualizer .voice-definition {
-                            margin-top: 0.85rem;
+                            display: none !important;
                         }
                     }
 
