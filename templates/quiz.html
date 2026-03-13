@@ -3194,21 +3194,36 @@ if ('speechSynthesis' in window) {
         transition: all 0.1s ease;
     }
 
-    /* Stat Toggle Button Styling */
+    /* Stat Toggle Button Styling - compact vertical pill */
     .action-btn.toggle-stat {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.8rem;
-        width: 100%;
+        padding: 0.4rem 0.3rem;
+        font-size: 0.65rem;
         min-width: 0;
-        background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
-        color: #1565C0;
-        border: 1px solid rgba(33, 150, 243, 0.3);
+        width: auto;
+        flex: 1 1 0;
+        min-height: auto;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #E0F7FA 0%, #B2EBF2 100%);
+        color: #00695C;
+        border: 1.5px solid rgba(0, 150, 136, 0.25);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        flex-direction: column;
+        gap: 0.15rem;
+        line-height: 1.1;
+    }
+    .action-btn.toggle-stat .bee-icon {
+        font-size: 1.1rem;
+    }
+    .action-btn.toggle-stat .toggle-text {
+        font-size: 0.6rem;
+        font-weight: 700;
+        white-space: nowrap;
     }
 
     .action-btn.toggle-stat:hover {
-        background: linear-gradient(135deg, #BBDEFB 0%, #90CAF9 100%);
+        background: linear-gradient(135deg, #B2EBF2 0%, #80DEEA 100%);
         transform: translateY(-1px);
-        box-shadow: 0 3px 10px rgba(33, 150, 243, 0.3);
+        box-shadow: 0 3px 8px rgba(0, 150, 136, 0.25);
     }
 
     .action-btn.toggle-stat.stat-hidden {
@@ -3221,19 +3236,16 @@ if ('speechSynthesis' in window) {
         background: linear-gradient(135deg, #FFCDD2 0%, #EF9A9A 100%);
     }
 
-    /* Stat Toggle Controls Container - 2-column grid matching action buttons */
+    /* Stat Toggle Controls Container - single horizontal row */
     .stat-toggle-controls {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.5rem;
+        display: flex;
+        justify-content: center;
+        gap: 0.4rem;
         border-top: 2px solid rgba(255, 193, 7, 0.2);
         padding: 0.75rem 8px 0;
         margin: 0.75rem 0;
         width: 100%;
         box-sizing: border-box;
-    }
-    .stat-toggle-controls .master-toggle {
-        grid-column: span 2;
     }
 
     /* Enhanced Magical Sparkles */
@@ -5395,7 +5407,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         <!-- Stat Toggle Controls -->
         <div class="stat-toggle-controls">
-            <button type="button" class="action-btn toggle-stat master-toggle" id="toggleAllStatsBtn" data-stat="all" title="Hide/Show All Stats" style="background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%); color: #E65100; border-color: rgba(255, 152, 0, 0.3); font-weight: bold;">
+            <button type="button" class="action-btn toggle-stat master-toggle" id="toggleAllStatsBtn" data-stat="all" title="Hide/Show All Stats">
                 <span class="bee-icon" aria-hidden="true">📊</span>
                 <span class="toggle-text">Hide All Stats</span>
             </button>
