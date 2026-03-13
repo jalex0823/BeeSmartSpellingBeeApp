@@ -2505,7 +2505,48 @@ def get_word_info(word):
             formatted = _enforce_safe_prompt_text(formatted)
             _cache_word_info(word_lower, formatted)
             return formatted
-    # PRIORITY 2: Smart fallback - deterministic enrichment
+    # PRIORITY 2: Free Dictionary API (dictionaryapi.dev - free, no key required)
+    try:
+        import requests as _req
+        api_url = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word_lower}"
+        resp = _req.get(api_url, timeout=3)
+        if resp.status_code == 200:
+            entries = resp.json()
+            if isinstance(entries, list) and entries:
+                api_def = ""
+                api_example = ""
+                for entry in entries:
+                    for meaning in (entry.get("meanings") or []):
+                        for defn in (meaning.get("definitions") or []):
+                            d = (defn.get("definition") or "").strip()
+                            ex = (defn.get("example") or "").strip()
+                            if d and not api_def:
+                                api_def = d
+                            if ex and not api_example:
+                                api_example = ex
+                            if api_def and api_example:
+                                break
+                        if api_def and api_example:
+                            break
+                    if api_def and api_example:
+                        break
+                if api_def:
+                    api_def = sanitize_kid_friendly_text(_blank_word(api_def, word))
+                    if api_example:
+                        api_example = sanitize_kid_friendly_text(_blank_word(api_example, word))
+                        formatted = f"{api_def}. Fill in the blank: {api_example}"
+                    else:
+                        formatted = f"{api_def}. Fill in the blank: Can you spell _____ correctly?"
+                    print(f" (free-dict-api) '{word}' → definition + example found")
+                    formatted = _enforce_safe_prompt_text(formatted)
+                    _cache_word_info(word_lower, formatted)
+                    return formatted
+        else:
+            print(f" Free Dictionary API: no entry for '{word}' (status {resp.status_code})")
+    except Exception as _api_err:
+        print(f"️ Free Dictionary API failed for '{word}': {_api_err}")
+
+    # PRIORITY 3: Smart fallback - deterministic enrichment
     try:
         fb = generate_smart_fallback(word)
         definition = sanitize_kid_friendly_text(fb.get("definition", "A word to spell"))
@@ -9996,6 +10037,15 @@ def api_next():
     sentence = (word_rec.get("sentence") or "").strip()
     hint = (word_rec.get("hint") or "").strip()
     existing_def = (word_rec.get("definition") or "").strip()
+
+    # If the sentence field contains the combined format from get_word_info(),
+    # split it so sentence only has the example and definition gets the actual definition.
+    if "Fill in the blank:" in sentence:
+        split_def, split_sent = _parse_enriched(sentence)
+        if split_sent:
+            sentence = split_sent
+        if split_def and not existing_def:
+            existing_def = split_def
 
     # Blanking + sanitization safety for existing fields
     sentence = sanitize_kid_friendly_text(_blank_word(sentence, word))
