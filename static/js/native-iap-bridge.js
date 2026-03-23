@@ -312,11 +312,19 @@
     // This keeps TestFlight from getting stuck in a "web-only" branch.
     try {
       const install_id = await _getInstallIdForServer();
+      var plat = 'apple';
+      try {
+        var cap = window.Capacitor;
+        if (cap && typeof cap.getPlatform === 'function') {
+          var cp = cap.getPlatform();
+          if (cp === 'android') plat = 'google';
+        }
+      } catch (e) { /* ignore */ }
       const out = await _fetchJsonWithTimeout('/api/iap/restore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ platform: 'apple', product_ids: [], install_id })
+        body: JSON.stringify({ platform: plat, product_ids: [], install_id })
       }, 10000);
       const r = out && out.res;
       let data = out ? out.data : null;
