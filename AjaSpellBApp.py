@@ -3170,7 +3170,7 @@ def _public_base_url() -> str:
     # Final fallback (best-effort): use production domain for deployed builds.
     # Dev should set APP_BASE_URL explicitly, but this prevents accidental
     # localhost links in outbound emails if the env var is missing.
-    return 'https://beesmartspelling.app'
+    return 'https://beesmart-spelling-android-sspid.ondigitalocean.app'
 
 
 def _static_url(path: str) -> str:
@@ -6221,7 +6221,7 @@ def _debug_root_status(resp):
                     from urllib.parse import urlparse
                     ref_host = urlparse(referer).netloc
                     # Allow same-site referrals even if Origin was stripped.
-                    if ref_host in (request.host, 'beesmartspelling.app', 'www.beesmartspelling.app'):
+                    if ref_host in (request.host, 'beesmartspelling.app', 'www.beesmartspelling.app', 'beesmart-spelling-android-sspid.ondigitalocean.app'):
                         allow_origin = f"{request.scheme}://{ref_host}" if request.scheme else f"https://{ref_host}"
                 except Exception:
                     pass
