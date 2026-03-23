@@ -64,6 +64,22 @@ class Config:
         if not raw:
             return raw
 
+        # Detect unresolved DigitalOcean App Platform variable bindings (e.g. ${db.DATABASE_URL}).
+        # When the platform fails to resolve, the literal ${...} string leaks through and
+        # SQLAlchemy raises an opaque "Could not parse URL" error.
+        if raw.startswith('${') or '${' in raw:
+            import sys
+            sys.stderr.write(
+                f"\n{'='*70}\n"
+                f" FATAL: DATABASE_URL contains an unresolved variable binding:\n"
+                f"   {raw}\n\n"
+                f" Fix: In DigitalOcean App Platform → Settings → Environment Variables,\n"
+                f" ensure the database component name matches the binding reference.\n"
+                f" Example: ${{db.DATABASE_URL}} where 'db' is the component name.\n"
+                f"{'='*70}\n\n"
+            )
+            return raw  # Let SQLAlchemy raise; the stderr message gives actionable guidance
+
         # Keep SQLite (and any non-postgres) URLs as-is.
         if raw.startswith('sqlite:'):
             return raw
