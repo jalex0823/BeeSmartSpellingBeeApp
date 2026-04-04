@@ -39,14 +39,14 @@
       If you do not agree, do not use the App.
     </p>
 
-    <p>
+    <p id="eulaImportantNotice">
       <strong>Important Notice:</strong> This EULA is concluded between you and Altech Computer Services, LLC only, 
       and not with Apple, Inc. ("Apple"). We, not Apple, are solely responsible for the Licensed Application and its content. 
       This EULA does not provide usage rules that conflict with the Apple Media Services Terms and Conditions.
     </p>
 
     <h2>1. Scope of License</h2>
-    <p>
+    <p id="eulaScope">
       Subject to your compliance with this Agreement, we grant you a limited, non-exclusive, non-transferable, 
       revocable license to use the Licensed Application on any Apple-branded products that you own or control, 
       and as permitted by the Usage Rules set forth in the Apple Media Services Terms and Conditions. 
@@ -73,14 +73,14 @@
     </p>
 
     <h2>4. Maintenance and Support</h2>
-    <p>
+    <p id="eulaMaintenance">
       We are solely responsible for providing any maintenance and support services with respect to the Licensed Application, 
       as specified in this EULA, or as required under applicable law. You acknowledge that Apple has no obligation 
       whatsoever to furnish any maintenance and support services with respect to the Licensed Application.
     </p>
 
     <h2>5. Warranty</h2>
-    <p>
+    <p id="eulaWarranty">
       We are solely responsible for any product warranties, whether express or implied by law, to the extent not 
       effectively disclaimed. In the event of any failure of the Licensed Application to conform to any applicable 
       warranty, you may notify Apple, and Apple will refund the purchase price (if any) for the Licensed Application. 
@@ -90,7 +90,7 @@
     </p>
 
     <h2>6. Product Claims</h2>
-    <p>
+    <p id="eulaClaims">
       You acknowledge that we, not Apple, are responsible for addressing any claims you or any third party may have 
       relating to the Licensed Application or your possession and/or use of the Licensed Application, including, but not limited to:
     </p>
@@ -105,7 +105,7 @@
     </p>
 
     <h2>7. Intellectual Property Rights</h2>
-    <p>
+    <p id="eulaIP">
       You acknowledge that, in the event of any third party claim that the Licensed Application or your possession 
       and use of the Licensed Application infringes that third party's intellectual property rights, we, not Apple, 
       will be solely responsible for the investigation, defense, settlement, and discharge of any such intellectual 
@@ -154,7 +154,8 @@
       content solely to operate, maintain, and improve the App.
     </p>
 
-    <h2>12. Purchases & Subscriptions (Apple App Store)</h2>
+    <h2 id="eulaSubscriptionsHeading">12. Purchases & Subscriptions (Apple App Store)</h2>
+    <div id="eulaSubscriptionsBody">
     <p>
       Some features may be available via in-app purchases or subscriptions ("Subscription"). Purchases are
       processed by Apple through the App Store; we do not store your payment details.
@@ -171,6 +172,7 @@
       <li><strong>Trials/intro offers (if offered):</strong> Any free trial or introductory offer will be shown in the App Store purchase flow. Unused portions of a free trial are forfeited when you purchase a subscription, where applicable.</li>
       <li><strong>Refunds:</strong> Refund requests are handled by Apple under App Store policies. We cannot directly issue App Store refunds.</li>
     </ul>
+    </div>
 
     <h2>13. Privacy</h2>
     <p>
@@ -178,7 +180,7 @@
     </p>
 
     <h2>14. Third Party Beneficiary</h2>
-    <p>
+    <p id="eulaBeneficiary">
       You acknowledge and agree that Apple, and Apple's subsidiaries, are third party beneficiaries of this EULA, 
       and that, upon your acceptance of the terms and conditions of this EULA, Apple will have the right (and will be 
       deemed to have accepted the right) to enforce this EULA against you as a third party beneficiary thereof.
@@ -239,5 +241,72 @@
       <a href="/privacy">Privacy Policy</a> • <a href="/terms">Terms of Service</a>
     </div>
   </footer>
+  <script>
+  (function(){
+    var isAndroid = /Android/i.test(navigator.userAgent || '');
+    try { if (window.Capacitor && window.Capacitor.getPlatform() === 'android') isAndroid = true; } catch(e){}
+    if (!isAndroid) return;
+
+    function setText(id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; }
+
+    setText('eulaImportantNotice',
+      '<strong>Important Notice:</strong> This EULA is concluded between you and Altech Computer Services, LLC only, ' +
+      'and not with Google LLC ("Google"). We, not Google, are solely responsible for the Licensed Application and its content. ' +
+      'This EULA does not provide usage rules that conflict with the Google Play Terms of Service.');
+
+    setText('eulaScope',
+      'Subject to your compliance with this Agreement, we grant you a limited, non-exclusive, non-transferable, ' +
+      'revocable license to use the Licensed Application on any Android device that you own or control, ' +
+      'and as permitted by the Google Play Terms of Service. ' +
+      'The Licensed Application may be accessed and used by other accounts associated with you via Family Library ' +
+      'or other Google Play sharing features.');
+
+    setText('eulaMaintenance',
+      'We are solely responsible for providing any maintenance and support services with respect to the Licensed Application, ' +
+      'as specified in this EULA, or as required under applicable law. You acknowledge that Google has no obligation ' +
+      'whatsoever to furnish any maintenance and support services with respect to the Licensed Application.');
+
+    setText('eulaWarranty',
+      'We are solely responsible for any product warranties, whether express or implied by law, to the extent not ' +
+      'effectively disclaimed. In the event of any failure of the Licensed Application to conform to any applicable ' +
+      'warranty, you may notify Google, and Google will refund the purchase price (if any) for the Licensed Application ' +
+      'in accordance with Google Play refund policies. ' +
+      'To the maximum extent permitted by applicable law, Google will have no other warranty obligation whatsoever with ' +
+      'respect to the Licensed Application, and any other claims, losses, liabilities, damages, costs, or expenses ' +
+      'attributable to any failure to conform to any warranty will be our sole responsibility.');
+
+    setText('eulaClaims',
+      'You acknowledge that we, not Google, are responsible for addressing any claims you or any third party may have ' +
+      'relating to the Licensed Application or your possession and/or use of the Licensed Application, including, but not limited to:');
+
+    setText('eulaIP',
+      'You acknowledge that, in the event of any third party claim that the Licensed Application or your possession ' +
+      'and use of the Licensed Application infringes that third party\u2019s intellectual property rights, we, not Google, ' +
+      'will be solely responsible for the investigation, defense, settlement, and discharge of any such intellectual ' +
+      'property infringement claim.');
+
+    var subHeading = document.getElementById('eulaSubscriptionsHeading');
+    if (subHeading) subHeading.textContent = '12. Purchases & Subscriptions (Google Play)';
+
+    setText('eulaSubscriptionsBody',
+      '<p>Some features may be available via in-app purchases or subscriptions ("Subscription"). Purchases are ' +
+      'processed by Google through Google Play; we do not store your payment details.</p>' +
+      '<p><strong>Current plan availability:</strong> As of the "Last updated" date, the App offers a monthly subscription plan. ' +
+      'Any available plans and current prices are shown in the Google Play purchase flow at the time you confirm.</p>' +
+      '<ul>' +
+      '<li><strong>Billing:</strong> Payment is charged to your Google Play account at confirmation of purchase.</li>' +
+      '<li><strong>Auto-renewal:</strong> Subscriptions renew automatically unless auto-renew is turned off at least 24 hours before the end of the current period.</li>' +
+      '<li><strong>Renewal charge timing:</strong> Your account will be charged for renewal within 24 hours prior to the end of the current period.</li>' +
+      '<li><strong>Manage/cancel:</strong> You can manage and cancel subscriptions in Google Play \u2192 Subscriptions.</li>' +
+      '<li><strong>Trials/intro offers (if offered):</strong> Any free trial or introductory offer will be shown in the Google Play purchase flow. Unused portions of a free trial are forfeited when you purchase a subscription, where applicable.</li>' +
+      '<li><strong>Refunds:</strong> Refund requests are handled by Google under Google Play policies. We cannot directly issue Google Play refunds.</li>' +
+      '</ul>');
+
+    setText('eulaBeneficiary',
+      'You acknowledge and agree that Google, and Google\u2019s subsidiaries, are third party beneficiaries of this EULA, ' +
+      'and that, upon your acceptance of the terms and conditions of this EULA, Google will have the right (and will be ' +
+      'deemed to have accepted the right) to enforce this EULA against you as a third party beneficiary thereof.');
+  })();
+  </script>
 </body>
 </html>

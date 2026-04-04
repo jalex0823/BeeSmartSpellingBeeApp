@@ -1213,12 +1213,22 @@
                             return;
                         }
 
+                        var _restoreIsAndroid = /Android/i.test(navigator.userAgent || '');
+                        try { if (window.Capacitor && window.Capacitor.getPlatform() === 'android') _restoreIsAndroid = true; } catch (e) {}
                         const msg = ok
-                            ? 'Restore started. If Apple needs it, iOS will prompt you to sign in during restore.'
-                            : 'Restore could not run because the in-app purchase bridge is not available yet. If you are in TestFlight, please wait a few seconds and try again. If this continues, reinstall the TestFlight build.';
+                            ? (_restoreIsAndroid
+                                ? 'Restore started. If Google Play needs it, it may prompt you to sign in to your Google account.'
+                                : 'Restore started. If Apple needs it, iOS will prompt you to sign in during restore.')
+                            : (_restoreIsAndroid
+                                ? 'Could not connect to Google Play. Please make sure you are signed into your Google Play account and try again.'
+                                : 'Restore could not run because the in-app purchase bridge is not available yet. If you are in TestFlight, please wait a few seconds and try again. If this continues, reinstall the TestFlight build.');
                         showRestoreDialog('Restore Purchases', msg, ok);
                     } catch (e) {
-                        showRestoreDialog('Restore Purchases', 'Restore could not run because the in-app purchase bridge is not available yet. If you are in TestFlight, please wait a few seconds and try again.', false);
+                        var _errIsAndroid = /Android/i.test(navigator.userAgent || '');
+                        try { if (window.Capacitor && window.Capacitor.getPlatform() === 'android') _errIsAndroid = true; } catch (e2) {}
+                        showRestoreDialog('Restore Purchases', _errIsAndroid
+                            ? 'Could not connect to Google Play. Please make sure you are signed into your Google Play account and try again.'
+                            : 'Restore could not run because the in-app purchase bridge is not available yet. If you are in TestFlight, please wait a few seconds and try again.', false);
                     }
                     return;
                 }
@@ -1355,7 +1365,16 @@
                     } catch (e) {}
                 } else if (ok) {
                     var accountName = (window.__beesmartStoreCopy && window.__beesmartStoreCopy.storeAccountName) ? window.__beesmartStoreCopy.storeAccountName() : 'Apple ID';
-                    showRestoreDialog('No Purchases Found', 'We couldn\'t find any purchases to restore for the current store account on this device. If you previously bought Premium, make sure you\'re signed into the same ' + accountName + ', then try again.', false);
+                    var _noPurchaseIsAndroid = /Android/i.test(navigator.userAgent || '');
+                    try { if (window.Capacitor && window.Capacitor.getPlatform() === 'android') _noPurchaseIsAndroid = true; } catch (e) {}
+                    var noPurchaseMsg = 'We couldn\'t find any purchases to restore for the current store account on this device. If you previously bought Premium, make sure you\'re signed into the same ' + accountName + ', then try again.';
+                    if (_noPurchaseIsAndroid) noPurchaseMsg += ' If you do not have an existing subscription, you can subscribe now.';
+                    showRestoreDialog('No Purchases Found', noPurchaseMsg, false).then(function() {
+                        if (_noPurchaseIsAndroid) {
+                            var subBtn = document.getElementById('subscribeMonthlyBtn');
+                            if (subBtn) subBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    });
                 } else {
                     const err = (reconcilePayload && (reconcilePayload.error || reconcilePayload.message))
                         ? String(reconcilePayload.error || reconcilePayload.message)
@@ -1807,9 +1826,24 @@ function showRestoreDialog(title, message, isSuccess) {
             // IMPORTANT: To keep the Apple purchase sheet presentation reliable,
             // do not await arbitrary preflight calls before invoking purchase.
             if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function')) {
-                alert('Store is still loading. Please wait a moment and tap Start Monthly again.');
-                try { reconcileAndRefreshSubscriptionUI('purchase_bridge_missing'); } catch (e) {}
-                return;
+                var _purchaseIsAndroid = /Android/i.test(navigator.userAgent || '');
+                try { if (window.Capacitor && window.Capacitor.getPlatform() === 'android') _purchaseIsAndroid = true; } catch (e) {}
+                if (_purchaseIsAndroid) {
+                    _setPrimaryCtaState({ disabled: true, label: 'Connecting to Google Play\u2026', variant: 'loading' });
+                    var _bridgeOk = await _waitForIAPBridge(5000);
+                    if (_bridgeOk && window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function') {
+                        // Bridge connected — fall through to launch purchase below.
+                    } else {
+                        _setPrimaryCtaState({ disabled: false, label: 'Start Monthly', variant: 'default' });
+                        alert('Could not connect to Google Play. Please make sure you are signed into your Google Play account and try again.');
+                        try { reconcileAndRefreshSubscriptionUI('purchase_bridge_missing_android'); } catch (e) {}
+                        return;
+                    }
+                } else {
+                    alert('Store is still loading. Please wait a moment and tap Start Monthly again.');
+                    try { reconcileAndRefreshSubscriptionUI('purchase_bridge_missing'); } catch (e) {}
+                    return;
+                }
             }
 
             window.__beesmartPurchaseInFlight = true;
@@ -1895,7 +1929,9 @@ function showRestoreDialog(title, message, isSuccess) {
                         alert('Google Play is taking too long to respond. Please check your connection and try again.');
                     }
                 } catch (_e) { /* ignore */ }
-                var extra = (window.__beesmartStoreCopy && window.__beesmartStoreCopy.purchaseErrorExtra) ? window.__beesmartStoreCopy.purchaseErrorExtra() : 'If you already subscribed on this Apple ID, try Restore Purchases.';
+                var _purchaseErrIsAndroid = /Android/i.test(navigator.userAgent || '');
+                try { if (window.Capacitor && window.Capacitor.getPlatform() === 'android') _purchaseErrIsAndroid = true; } catch (e) {}
+                var extra = (window.__beesmartStoreCopy && window.__beesmartStoreCopy.purchaseErrorExtra) ? window.__beesmartStoreCopy.purchaseErrorExtra() : (_purchaseErrIsAndroid ? 'If you already subscribed with this Google Play account, try Restore Purchases.' : 'If you already subscribed on this Apple ID, try Restore Purchases.');
                 const msg = (!window.IS_REAL_AUTH)
                     ? 'Purchase could not be completed. ' + extra + ' Registration is optional for cross-device access.'
                     : 'Purchase could not be completed. Please try again.';

@@ -87,7 +87,7 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
         call.resolve(out);
     }
 
-    /** On Android there is no OS-level sync like iOS; resolve so the web layer runs reconcile (getOwnedProducts + server). */
+    /** On Android there is no OS-level sync; resolve so the web layer runs reconcile (getOwnedProducts + server). */
     @PluginMethod
     public void restorePurchases(final PluginCall call) {
         JSObject out = new JSObject();

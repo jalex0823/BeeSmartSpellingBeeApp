@@ -137,10 +137,20 @@
           This permanently deletes your BeeSmart account and associated data (quizzes, progress, badges, saved items).
           You can’t undo this.
         </div>
-        <div class="note">
-          Important: Deleting your BeeSmart account does <strong>not</strong> cancel an Apple subscription. To cancel, go to
-          iOS Settings → Apple ID → Subscriptions.
+        <div class="note" id="deleteAccountSubNote">
+          Important: Deleting your BeeSmart account does <strong>not</strong> cancel your subscription. To cancel, go to
+          <span id="cancelSubInstructions">iOS Settings &rarr; Apple ID &rarr; Subscriptions</span>.
         </div>
+        <script>
+          (function(){
+            var isAndroid = /Android/i.test(navigator.userAgent || '');
+            try { if (window.Capacitor && window.Capacitor.getPlatform() === 'android') isAndroid = true; } catch(e){}
+            if (isAndroid) {
+              var el = document.getElementById('cancelSubInstructions');
+              if (el) el.textContent = 'Google Play \u2192 Subscriptions';
+            }
+          })();
+        </script>
 
         <label for="confirmText">Type <strong>DELETE</strong> to confirm</label>
         <input id="confirmText" type="text" inputmode="text" autocomplete="off" placeholder="DELETE" />

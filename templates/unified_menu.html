@@ -752,10 +752,14 @@ function showRestoreDialog(title, message, isSuccess) {
                     // Green validation modal first, then celebration animation.
                     try {
                         setBtn('Restore Purchases', false);
+                        var _menuIsAndroid = /Android/i.test(navigator.userAgent || '');
+                        try { if (window.Capacitor && window.Capacitor.getPlatform() === 'android') _menuIsAndroid = true; } catch (e) {}
                         if (premium || ownedCount > 0) {
                             await showRestoreGreenModal(
                                 'Restore Purchases',
-                                'Restore complete. If iOS asked you to sign in, that’s the normal Apple ID restore step. Tap OK for a little celebration while we finish syncing.'
+                                _menuIsAndroid
+                                    ? 'Restore complete. If Google Play prompted you to sign in, that’s the normal account verification step. Tap OK for a little celebration while we finish syncing.'
+                                    : 'Restore complete. If iOS asked you to sign in, that’s the normal Apple ID restore step. Tap OK for a little celebration while we finish syncing.'
                             );
                             runRestoreGlitterOnly();
                             // IMPORTANT: Avoid a forced reload here.
@@ -771,7 +775,9 @@ function showRestoreDialog(title, message, isSuccess) {
                             // No purchases found — keep messaging honest.
                             await showRestoreGreenModal(
                                 'No Purchases Found',
-                                'We couldn’t find any purchases to restore for the current Apple ID on this device. If you previously bought Premium, make sure you’re signed into the same Apple ID, then try again.'
+                                _menuIsAndroid
+                                    ? 'We couldn’t find any purchases to restore for the current Google Play account on this device. If you previously bought Premium, make sure you’re signed into the same Google Play account, then try again.'
+                                    : 'We couldn’t find any purchases to restore for the current Apple ID on this device. If you previously bought Premium, make sure you’re signed into the same Apple ID, then try again.'
                             );
                         }
                     } catch (e) {
@@ -5255,9 +5261,19 @@ function showRestoreDialog(title, message, isSuccess) {
                                 </a>
                             </div>
                             {% if (registration_billing_mode or 'subscription') == 'subscription' %}
-                            <div style="font-size: 0.85rem; color:#5A2C15; text-align: center; margin-top: 1rem;">
+                            <div id="menuPricingDisclaimer" style="font-size: 0.85rem; color:#5A2C15; text-align: center; margin-top: 1rem;">
                                 A 7‑day introductory offer is included in the subscription. Auto‑renews unless canceled. Pricing shown in the App Store.
                             </div>
+                            <script>
+                            (function(){
+                                var isAndroid = /Android/i.test(navigator.userAgent || '');
+                                try { if (window.Capacitor && window.Capacitor.getPlatform() === 'android') isAndroid = true; } catch(e){}
+                                if (isAndroid) {
+                                    var el = document.getElementById('menuPricingDisclaimer');
+                                    if (el) el.textContent = 'A 7\u2011day introductory offer is included in the subscription. Auto\u2011renews unless canceled. Pricing shown in Google Play.';
+                                }
+                            })();
+                            </script>
                             {% endif %}
 
                             <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #8B4513; text-align: center;">

@@ -559,7 +559,9 @@ registerForm.addEventListener('submit', async function(e) {
             if (!isSub || !sku) return false;
             if (!(window.BeeSmartIAP && typeof window.BeeSmartIAP.purchase === 'function')) return false;
             // Gentle confirm to avoid accidental purchase prompt
-            const proceed = confirm('Start your BeeSmart subscription now? You can manage or cancel in your App Store settings.');
+            var _regIsAndroid = /Android/i.test(navigator.userAgent || '');
+            try { if (window.Capacitor && window.Capacitor.getPlatform() === 'android') _regIsAndroid = true; } catch (e) {}
+            const proceed = confirm('Start your BeeSmart subscription now? You can manage or cancel in your ' + (_regIsAndroid ? 'Google Play' : 'App Store') + ' settings.');
             if (!proceed) return false;
             const platform = (window.BeeSmartIAP && window.BeeSmartIAP.platform)
               ? String(window.BeeSmartIAP.platform).toLowerCase()
