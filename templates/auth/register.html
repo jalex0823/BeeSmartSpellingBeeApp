@@ -5,9 +5,10 @@
 {% block extra_css %}
 <style>
   .page-center { min-height: 92vh; display:flex; align-items:center; justify-content:center; padding: 1.25rem; }
-  .content-card { background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,240,246,0.78)); border-radius:28px; overflow:hidden; box-shadow: 0 18px 45px rgba(255,170,200,0.28); border: 3px solid rgba(255,220,238,0.6); position:relative; animation: cardFloat 6s ease-in-out infinite; max-width: 560px; width:100%; }
+  .content-card { background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,240,246,0.78)); border-radius:28px; overflow:hidden; box-shadow: 0 18px 45px rgba(255,170,200,0.28); border: 3px solid rgba(255,220,238,0.6); position:relative; animation: cardFloat 6s ease-in-out infinite; max-width: 560px; width:100%; will-change: transform; }
+  .android-webview .content-card { animation: none; }
   .content-card::before { content:''; position:absolute; inset:0; left:-100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); animation: shimmer 8s ease-in-out infinite; z-index:1; pointer-events:none; }
-  @keyframes cardFloat { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-6px) } }
+  @keyframes cardFloat { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-3px) } }
   @keyframes shimmer { 0%{ left:-100% } 50%{ left:100% } 100%{ left:100% } }
   .card-header{ text-align:center; padding: 1.5rem 2rem 0.75rem; }
   .card-header h1{ margin:0; font-size:1.75rem; }
@@ -203,6 +204,8 @@
 {% block content %}
 <script src="{{ url_for('static', filename='js/native-iap-bridge.js') }}?v={{ APP_VERSION }}" defer></script>
 <script>
+  // Disable float animation on Android WebView to prevent screen shaking
+  if (/Android/i.test(navigator.userAgent)) { document.documentElement.classList.add('android-webview'); }
   // Expose subscription SKU for native wrappers on the registration page too
   window.SUBSCRIPTION_SKU = "{{ subscription_product_id|default('', true) }}";
   if (!window.SUBSCRIPTION_SKU) { try { window.SUBSCRIPTION_SKU = null; } catch(e){} }
