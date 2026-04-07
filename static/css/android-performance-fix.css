@@ -210,3 +210,86 @@ html.android body.honeycomb-avatar-picker .honeycomb-content {
         touch-action: pan-y;
     }
 }
+
+/* ========================================
+   FIX 10: Android WebView - Global Scroll & Overflow
+   Ensures all pages scroll fully and content is not cut off.
+   ======================================== */
+html.android, html.android body {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: auto !important;
+    min-height: 100vh;
+    -webkit-overflow-scrolling: touch;
+}
+
+html.android .main-container {
+    height: auto !important;
+    min-height: 100vh;
+    overflow-y: visible !important;
+}
+
+/* Ensure buttons and links are tappable on Android */
+html.android button,
+html.android a,
+html.android .action-btn,
+html.android input,
+html.android select {
+    touch-action: manipulation;
+}
+
+/* ========================================
+   FIX 11: Android WebView - Modal Scrollability
+   All modals and dialogs must scroll to bottom.
+   ======================================== */
+html.android [role="dialog"],
+html.android .modal-content,
+html.android .bee-prompt,
+html.android .bee-confirm,
+html.android .restore-celebration-modal {
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Fix fixed-position overlays on Android so they don't block scroll */
+html.android #whatNowModalOverlay,
+html.android .restore-celebration-backdrop {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ========================================
+   FIX 12: Android WebView - Page Transition Flash Prevention
+   Prevents white flash between page navigations.
+   ======================================== */
+html.android {
+    background-color: #FFF9E6 !important;
+}
+html.android body {
+    background-color: #FFF9E6 !important;
+}
+
+/* Disable page-entrance animations that cause flash on Android */
+html.android [style*="animation: fadeIn"],
+html.android [style*="animation:fadeIn"],
+html.android [style*="animation: slideUp"],
+html.android [style*="animation:slideUp"],
+html.android [style*="animation: fadeInUp"],
+html.android [style*="animation:fadeInUp"] {
+    animation: none !important;
+}
+
+/* Prevent GPU compositing flash on Android WebView */
+html.android * {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+/* Restore for elements that need 3D transforms */
+html.android canvas,
+html.android .mascot-3d-container,
+html.android .stage-glb,
+html.android video {
+    -webkit-backface-visibility: visible;
+    backface-visibility: visible;
+}

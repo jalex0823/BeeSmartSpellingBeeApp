@@ -187,6 +187,7 @@
         <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v={{ timestamp }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-fixes.css') }}?v={{ timestamp }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v={{ timestamp }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v={{ timestamp }}">
 
     <!-- Centralized Logo Configuration - CHANGE LOGO HERE -->
     <script src="{{ url_for('static', filename='js/logo-config.js') }}?v={{ timestamp }}"></script>
@@ -597,6 +598,7 @@
     
     {% block extra_css %}{% endblock %}
 </head>
+<script>try{if(/Android/i.test(navigator.userAgent))document.documentElement.classList.add('android');}catch(e){}</script>
 <body class="{% block body_class %}{% endblock %}">
     <!-- Fairy Animation Container -->
     <div class="fairy-container" id="fairyContainer" aria-hidden="true"></div>
