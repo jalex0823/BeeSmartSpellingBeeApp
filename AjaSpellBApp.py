@@ -993,7 +993,18 @@ def home_root_direct():
     
     print(f" [HOME] Passing to template: user_avatar={user_avatar_data is not None}, use_mascot={use_mascot}")
     print("="*80)
-    
+
+    # Auto-load default words if wordbank is empty (ensures Start Quiz works for guests)
+    try:
+        wb = get_wordbank()
+        if not wb or len(wb) == 0:
+            default_words = load_default_wordbank()
+            if default_words:
+                set_wordbank(default_words, is_user_upload=False)
+                print(f" home_root_direct: Auto-loaded {len(default_words)} default words for empty session")
+    except Exception as e:
+        print(f" home_root_direct: Could not auto-load default words: {e}")
+
     # Keep the home menu's Premium CTA price driven by the backend so UI stays future-proof.
     # (This is display copy only; the actual purchase flow still uses StoreKit/Google billing.)
     # Provide all required template variables to avoid 500 errors
@@ -6065,6 +6076,17 @@ def app_home():
                 session.pop('app_review_mode', None)
     except Exception:
         pass
+
+    # Auto-load default words if wordbank is empty (ensures Start Quiz works for guests)
+    try:
+        wb = get_wordbank()
+        if not wb or len(wb) == 0:
+            default_words = load_default_wordbank()
+            if default_words:
+                set_wordbank(default_words, is_user_upload=False)
+                print(f" app_home: Auto-loaded {len(default_words)} default words for empty session")
+    except Exception as e:
+        print(f" app_home: Could not auto-load default words: {e}")
 
     import time
     timestamp = str(int(time.time()))
