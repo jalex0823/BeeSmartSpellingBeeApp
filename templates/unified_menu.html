@@ -141,10 +141,29 @@
             } catch (e) { /* no-op */ }
 
             // Android detection for layout/fallback (e.g. devices below Android 14 / older WebViews).
+            // Includes immediate scroll fix for WebView overflow issues.
             try {
                 var ua = (navigator && navigator.userAgent) ? String(navigator.userAgent) : '';
                 if (/Android/i.test(ua)) {
                     document.documentElement.classList.add('android');
+                    // Immediate scroll fix: force overflow styles before page renders
+                    document.documentElement.style.overflowY = 'auto';
+                    document.documentElement.style.overflowX = 'hidden';
+                    document.documentElement.style.height = 'auto';
+                    document.documentElement.style.minHeight = '100vh';
+                    document.body.style.overflowY = 'auto';
+                    document.body.style.overflowX = 'hidden';
+                    document.body.style.height = 'auto';
+                    document.body.style.minHeight = '100vh';
+                    document.body.style.overscrollBehaviorY = 'auto';
+                    // Fix main container scroll trap
+                    var mainContainer = document.querySelector('.main-container');
+                    if (mainContainer) {
+                        mainContainer.style.height = 'auto';
+                        mainContainer.style.minHeight = '100vh';
+                        mainContainer.style.maxHeight = 'none';
+                        mainContainer.style.overflowY = 'visible';
+                    }
                 }
             } catch (e) { /* no-op */ }
         })();
