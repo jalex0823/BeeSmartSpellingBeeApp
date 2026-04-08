@@ -6,7 +6,7 @@
     <title>Student Dashboard - BeeSmart Spelling</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20250408a">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20250408b">
     <script>
         // Android WebView scroll fix - must run immediately
         (function(){
@@ -29,10 +29,17 @@
             box-sizing: border-box;
         }
 
+        /* CRITICAL: Enable scrolling on all devices (especially Android WebView) */
+        html, body {
+            overflow-x: hidden;
+            overflow-y: auto;
+            height: auto;
+            min-height: 100vh;
+        }
+
         body {
             font-family: 'Comic Sans MS', 'Chalkboard SE', 'Arial Rounded MT Bold', sans-serif;
             background: linear-gradient(135deg, #FFD700 0%, #FF8C00 50%, #FFD700 100%);
-            min-height: 100vh;
             padding: 2rem;
             position: relative;
         }
@@ -51,15 +58,6 @@
             25% { transform: translateY(-30px) translateX(20px); }
             50% { transform: translateY(0) translateX(40px); }
             75% { transform: translateY(30px) translateX(20px); }
-        }
-
-        /* Android WebView scroll fix */
-        html.android, html.android body {
-            overflow-y: auto !important;
-            overflow-x: hidden !important;
-            height: auto !important;
-            min-height: 100vh !important;
-            -webkit-overflow-scrolling: touch !important;
         }
 
         .container {

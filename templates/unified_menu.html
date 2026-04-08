@@ -28,30 +28,19 @@
     {% endif %}
 
     <style>
-        /* Mobile scroll + tap ergonomics */
-        @media not all and (any-pointer: coarse) {
+        /* CRITICAL: Enable scrolling for ALL devices (removed overflow:hidden that was blocking Android WebView) */
+        html, body {
+            overflow-x: hidden;
+            overflow-y: auto; /* CHANGED: was hidden, now auto to allow scrolling */
+            height: auto;
+            min-height: 100vh;
+            -webkit-overflow-scrolling: touch;
+        }
+        /* iOS only: keep the hidden overflow for iOS elastic scroll behavior */
+        @supports (-webkit-touch-callout: none) {
             html, body {
-                height: 100%;
-                overflow-x: hidden;
-                overflow-y: hidden;
-                overscroll-behavior-y: none; /* Changed from contain to none for smoother scrolling */
+                overflow-y: auto; /* Even iOS needs auto now */
             }
-        }
-        /* Android WebView: CRITICAL - Force scroll to fix unscrollable screens */
-        html.android, html.android body {
-            overflow-y: auto !important;
-            overflow-x: hidden !important;
-            height: auto !important;
-            min-height: 100vh !important;
-            overscroll-behavior-y: auto !important;
-            -webkit-overflow-scrolling: touch !important;
-        }
-        /* Ensure main container doesn't trap scroll on Android */
-        html.android .main-container {
-            height: auto !important;
-            min-height: 100vh !important;
-            max-height: none !important;
-            overflow-y: visible !important;
         }
         body {
             /* Keep content out from under iOS home indicator / notch. */
