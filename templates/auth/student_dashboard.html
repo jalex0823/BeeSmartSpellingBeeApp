@@ -6,6 +6,22 @@
     <title>Student Dashboard - BeeSmart Spelling</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20250408a">
+    <script>
+        // Android WebView scroll fix - must run immediately
+        (function(){
+            try {
+                var ua = (navigator && navigator.userAgent) ? String(navigator.userAgent) : '';
+                if (/Android/i.test(ua)) {
+                    document.documentElement.classList.add('android');
+                    document.documentElement.style.overflowY = 'auto';
+                    document.documentElement.style.overflowX = 'hidden';
+                    document.documentElement.style.height = 'auto';
+                    document.documentElement.style.minHeight = '100vh';
+                }
+            } catch (e) {}
+        })();
+    </script>
     <style>
         * {
             margin: 0;
@@ -35,6 +51,15 @@
             25% { transform: translateY(-30px) translateX(20px); }
             50% { transform: translateY(0) translateX(40px); }
             75% { transform: translateY(30px) translateX(20px); }
+        }
+
+        /* Android WebView scroll fix */
+        html.android, html.android body {
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            height: auto !important;
+            min-height: 100vh !important;
+            -webkit-overflow-scrolling: touch !important;
         }
 
         .container {

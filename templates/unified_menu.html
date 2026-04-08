@@ -19,9 +19,9 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/static/android-chrome-192x192.png">
     
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v=20251129">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251129">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20251129">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/BeeSmart.css') }}?v=20250408">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20250408">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20250408a">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/avatar-intro-fx.css') }}?v=20251201">
     {% if current_user.is_authenticated and (current_user.role|default('') != 'guest') %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/avatar-stage-fx.css') }}?v=20260106">
@@ -29,11 +29,29 @@
 
     <style>
         /* Mobile scroll + tap ergonomics */
-        html, body {
-            height: 100%;
-            overflow-x: hidden;
-            overflow-y: hidden;
-            overscroll-behavior-y: none; /* Changed from contain to none for smoother scrolling */
+        @media not all and (any-pointer: coarse) {
+            html, body {
+                height: 100%;
+                overflow-x: hidden;
+                overflow-y: hidden;
+                overscroll-behavior-y: none; /* Changed from contain to none for smoother scrolling */
+            }
+        }
+        /* Android WebView: CRITICAL - Force scroll to fix unscrollable screens */
+        html.android, html.android body {
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            height: auto !important;
+            min-height: 100vh !important;
+            overscroll-behavior-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+        /* Ensure main container doesn't trap scroll on Android */
+        html.android .main-container {
+            height: auto !important;
+            min-height: 100vh !important;
+            max-height: none !important;
+            overflow-y: visible !important;
         }
         body {
             /* Keep content out from under iOS home indicator / notch. */
@@ -116,6 +134,29 @@
 
         document.addEventListener('DOMContentLoaded', initWhatNowModal);
         document.addEventListener('DOMContentLoaded', initIOSOverscrollSuppression);
+        // Android: Final scroll enforcement after DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                if (/Android/i.test(navigator.userAgent)) {
+                    document.documentElement.classList.add('android');
+                    // Force scroll with inline styles as ultimate override
+                    document.documentElement.style.setProperty('overflow-y', 'auto', 'important');
+                    document.documentElement.style.setProperty('overflow-x', 'hidden', 'important');
+                    document.documentElement.style.setProperty('height', 'auto', 'important');
+                    document.body.style.setProperty('overflow-y', 'auto', 'important');
+                    document.body.style.setProperty('overflow-x', 'hidden', 'important');
+                    document.body.style.setProperty('height', 'auto', 'important');
+                    // Fix main-container if present
+                    var mc = document.querySelector('.main-container');
+                    if (mc) {
+                        mc.style.setProperty('height', 'auto', 'important');
+                        mc.style.setProperty('max-height', 'none', 'important');
+                        mc.style.setProperty('overflow-y', 'visible', 'important');
+                    }
+                    console.log('[Android] DOMContentLoaded scroll fix applied');
+                }
+            } catch(e) {}
+        });
         (function(){
             // Performance hard-stop: kill the diagonal/transparent overlay FX that was hurting scroll.
             // We still allow normal gradients/shadows, but disable injected sweep overlays + background FX.
