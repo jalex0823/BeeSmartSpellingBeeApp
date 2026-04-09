@@ -6,6 +6,7 @@
     <title>Student Dashboard - BeeSmart Spelling</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20251129">
     <style>
         * {
             margin: 0;
@@ -676,10 +677,26 @@
                 min-width: 100%;
             }
         }
+
+        /* Android: reduce animations to prevent glitch after avatar change */
+        html.android .stat-highlight::before { animation: none; }
+        html.android .floating-bee { animation-duration: 12s; }
+
+        /* Android WebView: Enable scrolling */
+        html.android, html.android body {
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            height: auto !important;
+            min-height: 100vh;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Android: Ensure content is scrollable */
+        html.android .container {
+            min-height: 100vh;
+            overflow-y: visible;
+        }
     </style>
-    /* Android: reduce animations to prevent glitch after avatar change */
-    html.android .stat-highlight::before { animation: none; }
-    html.android .floating-bee { animation-duration: 12s; }
 </head>
 <body>
     <script>if(/Android/i.test(navigator.userAgent||''))document.documentElement.classList.add('android');</script>
