@@ -1503,10 +1503,28 @@ function buildThumbnailFallbacks(avatar, initialUrl) {
 }
 
 // Check if WebGL is supported
+// NOTE: We intentionally avoid creating a test canvas+context here because doing so
+// consumes one of the browser's limited WebGL context slots (~8-16 depending on device).
+// If we are already near the limit the probe itself would fail and falsely report
+// WebGL as unsupported.  Instead we rely on the API presence check plus a cached
+// result from any previously successful SmartyBee3D render.
 function isWebGLSupported() {
+    // If a SmartyBee3D instance already rendered successfully, WebGL is definitely available.
+    if (window.__webglConfirmedAvailable) return true;
+    // Check only for API presence — no context allocation.
+    if (typeof window.WebGLRenderingContext === 'undefined') return false;
+    // Do a lightweight probe only once and cache it.
     try {
         const canvas = document.createElement('canvas');
-        return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+        const ctx = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        const ok = !!ctx;
+        if (ctx && typeof ctx.getExtension === 'function') {
+            // Immediately lose the context so the slot is freed.
+            const ext = ctx.getExtension('WEBGL_lose_context');
+            if (ext) ext.loseContext();
+        }
+        window.__webglConfirmedAvailable = ok;
+        return ok;
     } catch (e) {
         return false;
     }
@@ -1516,6 +1534,10 @@ function isWebGLSupported() {
 function disposeExistingRenderer() {
     if (avatarViewerState.renderer) {
         try {
+            // forceContextLoss tells the GPU driver to actually release the slot.
+            if (typeof avatarViewerState.renderer.forceContextLoss === 'function') {
+                avatarViewerState.renderer.forceContextLoss();
+            }
             avatarViewerState.renderer.dispose();
             const canvas = avatarViewerState.renderer.domElement;
             if (canvas && canvas.parentNode) {

@@ -4599,6 +4599,15 @@ function showRestoreDialog(title, message, isSuccess) {
                             if (window.avatarControlsInstance) return; // idempotent
                             if (typeof window.SmartyBee3D !== 'function') return;
 
+                            // Destroy the hidden preload instance (created during loading screen)
+                            // so its WebGL context is freed before we create the visible avatar.
+                            try {
+                                if (window.mascotBeePreloaded && typeof window.mascotBeePreloaded.destroy === 'function') {
+                                    window.mascotBeePreloaded.destroy();
+                                    window.mascotBeePreloaded = null;
+                                }
+                            } catch (_de) { /* ignore */ }
+
                             const size = computeAvatarCanvasSize();
 
                             // Create instance in NEW container
@@ -4650,7 +4659,6 @@ function showRestoreDialog(title, message, isSuccess) {
                         }
                     };
 
-                    // Start ASAP so the honey loader can wait on readiness.
                     const startWithPoll = (maxWaitMs = 8000) => {
                         const startedAt = Date.now();
                         const tick = () => {
@@ -4684,14 +4692,12 @@ function showRestoreDialog(title, message, isSuccess) {
                     }, { once: true });
                 })();
                 </script>
-                
-                <!-- Defensive stub: ensure window.setCurrentAvatar exists before any early calls
-                     If the real API hasn't been defined yet, this safely captures the
-                     requested id and defers application until initialization completes. -->
+
+                <!-- Defensive stub: ensure window.setCurrentAvatar exists before any early calls -->
                 <script>
                     if (typeof window.setCurrentAvatar !== 'function') {
                         window.setCurrentAvatar = function(id){
-                            try { window.__initialAvatarId = id; } catch(_e) { /* noop */ }
+                            try { window.__initialAvatarId = id; } catch(_e) {}
                         };
                     }
                 </script>
@@ -4701,10 +4707,8 @@ function showRestoreDialog(title, message, isSuccess) {
                     (function(){
                         const initialId = "{{ current_user.avatar_id|default('mascot-bee') }}";
                         if (typeof window.setCurrentAvatar === 'function') {
-                            // If API already exists, apply immediately
                             try { window.setCurrentAvatar(initialId); } catch(e) { console.warn('setCurrentAvatar early call failed:', e); }
                         } else {
-                            // Defer until the avatar script defines the function
                             window.__initialAvatarId = initialId;
                         }
                     })();
@@ -17102,6 +17106,64 @@ const avatarsUrl = '/api/avatars' + (/iPhone|iPad|iPod/i.test(ua) ? '?platform=a
                     this.updateProgress(34, ' Avatar preload skipped');
                 }
 
+                // Check 2.6: Prefetch ALL avatar GLB files into the browser cache so the
+                // picker loads each model instantly without a network round-trip.
+                const check2d = this.addCheck('Avatar Catalog Prefetch', 'Prefetching...', '');
+                this.updateProgress(35, ' Prefetching avatar models...');
+                try {
+                    const ALL_AVATAR_GLBS = [
+                        'AlBee','BKBee','BrotherBee','BudaBee','BuilderBee','BuzzBee',
+                        'CoolBee','CutieBee','DetectiveBee','DivaBee','DoctorBee','ExplorerBee',
+                        'FairyBee','FireFighterBee','Frankenbee','GamerBee','HoneyComb',
+                        'InventorBee','JRockBee','KnightBee','LumberjackBee','MascotBee',
+                        'MotorBee','NurseBee','OBee','PlumberBee','ProfessorBee','QueenBee',
+                        'RoboBee','RockerBee','SCBee','SeaBee','SelfieBee','SingerBee',
+                        'SpaceBee','SuperBee','TechnoBee','UmpireBee','VampBee','WareBee',
+                        'XrayBee','YardStickBee','YetiBee','ZomBee'
+                    ].map(n => `/static/assets/avatars/glb_files/${n}.glb`);
+
+                    // Use <link rel="prefetch"> — browser-native, non-blocking, populates
+                    // HTTP cache so GLTFLoader hits it immediately when the picker opens.
+                    // Fall back to a low-priority fetch if prefetch is unsupported.
+                    const prefetchOne = (url) => new Promise((resolve) => {
+                        try {
+                            const link = document.createElement('link');
+                            link.rel = 'prefetch';
+                            link.as = 'fetch';
+                            link.crossOrigin = 'anonymous';
+                            link.href = url;
+                            link.onload  = () => resolve(true);
+                            link.onerror = () => resolve(false);
+                            document.head.appendChild(link);
+                            // Resolve after 8 s regardless — prefetch is best-effort.
+                            setTimeout(() => resolve(true), 8000);
+                        } catch (_e) {
+                            // Fallback: fire-and-forget low-priority fetch.
+                            try {
+                                fetch(url, { method: 'GET', cache: 'force-cache', credentials: 'same-origin',
+                                             headers: { 'Range': 'bytes=0-0' } })
+                                    .catch(() => {});
+                            } catch (_e2) {}
+                            resolve(true);
+                        }
+                    });
+
+                    // Kick off all prefetches in parallel (non-blocking for the rest of checks).
+                    const prefetchPromise = Promise.allSettled(ALL_AVATAR_GLBS.map(prefetchOne));
+                    // Wait up to 6 s for the first batch to land before moving on.
+                    await Promise.race([prefetchPromise, this.delay(6000)]);
+
+                    this.updateCheck(check2d, `Ready (${ALL_AVATAR_GLBS.length} models)`, '', 37);
+                    this.updateProgress(37, ' Avatar models prefetched');
+
+                    // Keep prefetching in background if not done yet (non-blocking).
+                    prefetchPromise.catch(() => {});
+                } catch (prefetchErr) {
+                    console.warn(' Avatar GLB prefetch error:', prefetchErr);
+                    this.updateCheck(check2d, 'Skipped', 'ℹ', 37);
+                    this.updateProgress(37, ' Avatar prefetch skipped');
+                }
+
                 // Check 2.75: Avatar Rendering (auth-gated) — do not dismiss loader until ready.
                 // This check turns "Ready" only when the 3D avatar controller reports readiness.
                 // Guests skip this gate.
@@ -17752,6 +17814,7 @@ const avatarsUrl = '/api/avatars' + (/iPhone|iPad|iPod/i.test(ua) ? '?platform=a
                 // Mark globally too, so any other code paths (failsafes/timeouts)
                 // don't try to "finish" a second time.
                 try { window.__honeyLoaderDismissed = true; } catch (_e) {}
+                try { window.dispatchEvent(new CustomEvent('honeyLoaderDismissed')); } catch (_e) {}
                 // Requirement: Matrix Rain runs during all system checks/loading,
                 // and stops JUST BEFORE the main menu becomes visible.
                 // We stop it in `finalize()` (end of loader exit) so it doesn't

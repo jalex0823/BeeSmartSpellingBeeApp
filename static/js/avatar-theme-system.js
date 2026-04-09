@@ -282,6 +282,16 @@ AVATAR_THEMES['jrock-bee'] = {
     personality: 'rockstar'
 };
 
+AVATAR_THEMES['lumberjack-bee'] = {
+    primary: '#8B4513',
+    secondary: '#228B22',
+    accent: '#FFD700',
+    bgGradient: 'linear-gradient(135deg, #3B1F0A 0%, #228B22 60%, #8B4513 100%)',
+    borderGlow: '0 0 40px rgba(139, 69, 19, 0.8)',
+    personality: 'rugged',
+    soundCue: 'mascot-bee.mp3'
+};
+
 // Avatar Theme Manager Class
 class AvatarThemeManager {
     constructor() {
@@ -502,7 +512,8 @@ class AvatarThemeManager {
                 mechanical: "System initialized. Spelling mode activated. 🤖",
                 aquatic: "Dive deep into spelling! 🌊",
                 heroic: "With great spelling comes great responsibility! 🦸",
-                irish: "Top o' the mornin'! Let's spell! 🍀"
+                irish: "Top o' the mornin'! Let's spell! 🍀",
+                rugged: "Timber! Let's chop through these words! 🪓"
             }
         };
 

@@ -276,6 +276,9 @@ class SmartyBee3D {
             return false;
         }
 
+        // Mark WebGL as confirmed available so other components skip their probe.
+        try { window.__webglConfirmedAvailable = true; } catch (_e) {}
+
         this.renderer.setSize(this.options.width, this.options.height);
         // iOS Safari is prone to WebGL memory pressure; cap DPR for stability.
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
