@@ -400,6 +400,11 @@ class SmartyBee3D {
         this._glbLoadAttempts = (this._glbLoadAttempts || 0) + 1;
         const attempt = this._glbLoadAttempts;
 
+        // IMPORTANT: Do NOT cache-bust on the first attempt — that defeats the browser's HTTP
+        // cache and the prefetch we inject during the loading screen. Only bust on retries
+        // (attempt >= 2) to recover from stale service-worker caches.
+        const shouldBust = attempt >= 2;
+
         try {
             await this._waitForGLTFLoader(5000);
         } catch (e) {
@@ -412,7 +417,7 @@ class SmartyBee3D {
             return;
         }
 
-        const glbUrl = this._withCacheBuster(basePath);
+        const glbUrl = shouldBust ? this._withCacheBuster(basePath) : basePath;
         console.log(`🐝 Loading GLB model: ${avatarName} (attempt ${attempt})`, glbUrl);
 
         let loader;
