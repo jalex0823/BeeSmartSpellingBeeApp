@@ -268,6 +268,7 @@ class SmartyBee3D {
                 antialias: true,
                 powerPreference: 'high-performance'
             });
+            window.__webglConfirmedAvailable = true;
         } catch (e) {
             // WebGL context could not be created (hardware acceleration disabled, too many contexts, etc.)
             this.webglDisabled = true;
@@ -409,7 +410,10 @@ class SmartyBee3D {
             return;
         }
 
-        const glbUrl = this._withCacheBuster(basePath);
+        // Only cache-bust on retries (attempt >= 2) to recover from stale service-worker caches.
+        // First load should use the browser/prefetch cache for instant display.
+        const shouldBust = attempt >= 2;
+        const glbUrl = shouldBust ? this._withCacheBuster(basePath) : basePath;
         console.log(`🐝 Loading GLB model: ${avatarName} (attempt ${attempt})`, glbUrl);
 
         let loader;
