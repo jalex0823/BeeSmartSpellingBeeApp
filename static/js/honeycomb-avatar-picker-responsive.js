@@ -1503,31 +1503,18 @@ function buildThumbnailFallbacks(avatar, initialUrl) {
 }
 
 // Check if WebGL is supported
-// NOTE: We intentionally avoid creating a test canvas+context here because doing so
-// consumes one of the browser's limited WebGL context slots (~8-16 depending on device).
-// If we are already near the limit the probe itself would fail and falsely report
-// WebGL as unsupported.  Instead we rely on the API presence check plus a cached
-// result from any previously successful SmartyBee3D render.
+// We do NOT create a test canvas/context here — doing so consumes one of the
+// browser's limited WebGL context slots and will fail when near the limit,
+// producing a false negative.  The actual WebGLRenderer creation inside
+// load3DAvatarGLB is wrapped in its own try/catch and is the real gate.
+// Here we only verify the API is present (not disabled by browser flags).
 function isWebGLSupported() {
-    // If a SmartyBee3D instance already rendered successfully, WebGL is definitely available.
+    // Cached positive result from a previous successful SmartyBee3D or picker render.
     if (window.__webglConfirmedAvailable) return true;
-    // Check only for API presence — no context allocation.
+    // Hard negative: WebGL API not present at all (very old browser / disabled flag).
     if (typeof window.WebGLRenderingContext === 'undefined') return false;
-    // Do a lightweight probe only once and cache it.
-    try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-        const ok = !!ctx;
-        if (ctx && typeof ctx.getExtension === 'function') {
-            // Immediately lose the context so the slot is freed.
-            const ext = ctx.getExtension('WEBGL_lose_context');
-            if (ext) ext.loseContext();
-        }
-        window.__webglConfirmedAvailable = ok;
-        return ok;
-    } catch (e) {
-        return false;
-    }
+    // API present — assume supported and let the renderer creation prove otherwise.
+    return true;
 }
 
 // Dispose existing WebGL context to prevent "too many contexts" error
@@ -1586,6 +1573,7 @@ function load3DAvatarGLB(avatar, containerId) {
             powerPreference: 'high-performance',
             failIfMajorPerformanceCaveat: false
         });
+        window.__webglConfirmedAvailable = true;
     } catch (e) {
         console.error('Failed to create WebGL renderer:', e);
         throw new Error('WebGL context creation failed');
