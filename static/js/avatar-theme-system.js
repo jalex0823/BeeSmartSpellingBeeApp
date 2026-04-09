@@ -292,6 +292,206 @@ AVATAR_THEMES['lumberjack-bee'] = {
     soundCue: 'mascot-bee.mp3'
 };
 
+AVATAR_THEMES['gamer-bee'] = {
+    primary: '#7B2FBE',
+    secondary: '#00FF9C',
+    accent: '#FFD700',
+    bgGradient: 'linear-gradient(135deg, #1a0033 0%, #7B2FBE 50%, #00FF9C 100%)',
+    borderGlow: '0 0 40px rgba(123, 47, 190, 0.9)',
+    personality: 'competitive',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['doc-bee'] = {
+    primary: '#FFFFFF',
+    secondary: '#00BFFF',
+    accent: '#FF6B6B',
+    bgGradient: 'linear-gradient(135deg, #FFFFFF 0%, #E0FFFF 100%)',
+    borderGlow: '0 0 30px rgba(0, 206, 209, 0.8)',
+    personality: 'caring',
+    soundCue: 'doctor-bee.mp3'
+};
+
+AVATAR_THEMES['bk-bee'] = {
+    primary: '#CC0000',
+    secondary: '#FF6600',
+    accent: '#FFD700',
+    bgGradient: 'linear-gradient(135deg, #CC0000 0%, #FF6600 100%)',
+    borderGlow: '0 0 30px rgba(204, 0, 0, 0.8)',
+    personality: 'bold',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['buzz-bee'] = {
+    primary: '#FFD700',
+    secondary: '#FF8C00',
+    accent: '#FFA500',
+    bgGradient: 'linear-gradient(135deg, #FFD700 0%, #FF8C00 100%)',
+    borderGlow: '0 0 40px rgba(255, 215, 0, 1)',
+    personality: 'energetic',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['fairy-bee'] = {
+    primary: '#FF9AD5',
+    secondary: '#C774E8',
+    accent: '#FFD700',
+    bgGradient: 'linear-gradient(135deg, #FF9AD5 0%, #C774E8 50%, #9AD8FF 100%)',
+    borderGlow: '0 0 40px rgba(199, 116, 232, 0.9)',
+    personality: 'magical',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['firefighter-bee'] = {
+    primary: '#FF2400',
+    secondary: '#FFD700',
+    accent: '#FF6600',
+    bgGradient: 'linear-gradient(135deg, #FF2400 0%, #FF6600 50%, #FFD700 100%)',
+    borderGlow: '0 0 40px rgba(255, 36, 0, 0.9)',
+    personality: 'brave',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['honey-comb'] = {
+    primary: '#FFD700',
+    secondary: '#FF8C00',
+    accent: '#FFA500',
+    bgGradient: 'linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%)',
+    borderGlow: '0 0 40px rgba(255, 215, 0, 1)',
+    personality: 'sweet',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['j-rock-bee'] = {
+    primary: '#8B00FF',
+    secondary: '#000000',
+    accent: '#FFD700',
+    bgGradient: 'linear-gradient(135deg, #0f0f0f 0%, #4b0082 100%)',
+    borderGlow: '0 0 40px rgba(139, 0, 255, 0.9)',
+    personality: 'rockstar',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['motor-bee'] = {
+    primary: '#FF4500',
+    secondary: '#000000',
+    accent: '#FFD700',
+    bgGradient: 'linear-gradient(135deg, #000000 0%, #FF4500 100%)',
+    borderGlow: '0 0 30px rgba(255, 69, 0, 0.8)',
+    personality: 'daring',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['nurse-bee'] = {
+    primary: '#FF69B4',
+    secondary: '#FFFFFF',
+    accent: '#FF1493',
+    bgGradient: 'linear-gradient(135deg, #FF69B4 0%, #FFFFFF 100%)',
+    borderGlow: '0 0 30px rgba(255, 105, 180, 0.8)',
+    personality: 'caring',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['plumber-bee'] = {
+    primary: '#1565C0',
+    secondary: '#E53935',
+    accent: '#FFD700',
+    bgGradient: 'linear-gradient(135deg, #1565C0 0%, #E53935 100%)',
+    borderGlow: '0 0 30px rgba(21, 101, 192, 0.8)',
+    personality: 'hardworking',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['sc-bee'] = {
+    primary: '#228B22',
+    secondary: '#FFD700',
+    accent: '#32CD32',
+    bgGradient: 'linear-gradient(135deg, #006400 0%, #228B22 100%)',
+    borderGlow: '0 0 30px rgba(34, 139, 34, 0.8)',
+    personality: 'sporty',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['selfie-bee'] = {
+    primary: '#FF69B4',
+    secondary: '#FFD700',
+    accent: '#FF1493',
+    bgGradient: 'linear-gradient(135deg, #FF69B4 0%, #FFD700 100%)',
+    borderGlow: '0 0 40px rgba(255, 105, 180, 0.9)',
+    personality: 'glamorous',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['singer-bee'] = {
+    primary: '#9C27B0',
+    secondary: '#FFD700',
+    accent: '#E040FB',
+    bgGradient: 'linear-gradient(135deg, #9C27B0 0%, #FFD700 100%)',
+    borderGlow: '0 0 40px rgba(156, 39, 176, 0.9)',
+    personality: 'musical',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['techno-bee'] = {
+    primary: '#00E5FF',
+    secondary: '#1A237E',
+    accent: '#FFD700',
+    bgGradient: 'linear-gradient(135deg, #1A237E 0%, #00E5FF 100%)',
+    borderGlow: '0 0 40px rgba(0, 229, 255, 0.9)',
+    personality: 'mechanical',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['umpire-bee'] = {
+    primary: '#000000',
+    secondary: '#FFFFFF',
+    accent: '#FFD700',
+    bgGradient: 'linear-gradient(135deg, #000000 0%, #444444 100%)',
+    borderGlow: '0 0 30px rgba(255, 215, 0, 0.8)',
+    personality: 'authoritative',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['xray-bee'] = {
+    primary: '#4FC3F7',
+    secondary: '#0D47A1',
+    accent: '#FFFFFF',
+    bgGradient: 'linear-gradient(135deg, #0D47A1 0%, #4FC3F7 100%)',
+    borderGlow: '0 0 40px rgba(79, 195, 247, 0.9)',
+    personality: 'analytical',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['yard-stick-bee'] = {
+    primary: '#8D6E63',
+    secondary: '#FFD700',
+    accent: '#A1887F',
+    bgGradient: 'linear-gradient(135deg, #5D4037 0%, #8D6E63 100%)',
+    borderGlow: '0 0 30px rgba(141, 110, 99, 0.8)',
+    personality: 'precise',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['yeti-bee'] = {
+    primary: '#E0F7FA',
+    secondary: '#4FC3F7',
+    accent: '#FFFFFF',
+    bgGradient: 'linear-gradient(135deg, #E0F7FA 0%, #4FC3F7 50%, #B3E5FC 100%)',
+    borderGlow: '0 0 40px rgba(224, 247, 250, 0.9)',
+    personality: 'mysterious',
+    soundCue: 'mascot-bee.mp3'
+};
+
+AVATAR_THEMES['al-bee'] = AVATAR_THEMES['al-bee'] || {
+    primary: '#FFD700',
+    secondary: '#FF8C00',
+    accent: '#FFA500',
+    bgGradient: 'linear-gradient(135deg, #FFD700 0%, #FF8C00 100%)',
+    borderGlow: '0 0 30px rgba(255, 215, 0, 0.8)',
+    personality: 'friendly',
+    soundCue: 'mascot-bee.mp3'
+};
+
 // Avatar Theme Manager Class
 class AvatarThemeManager {
     constructor() {
