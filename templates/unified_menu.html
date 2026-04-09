@@ -4668,6 +4668,16 @@ function showRestoreDialog(title, message, isSuccess) {
                         startWithPoll();
                     }
 
+                    // FAILSAFE: If 3D avatar fails to initialize, allow loading to proceed anyway
+                    // This prevents the "stuck at 99%" issue when WebGL/Three.js fails on Android
+                    setTimeout(() => {
+                        if (!window.avatarControlsReady) {
+                            console.warn('[Avatar] 3D initialization timed out, allowing loading to proceed');
+                            window.avatarControlsReady = true;
+                            try { window.dispatchEvent(new CustomEvent('avatarControlsReady')); } catch(_e) {}
+                        }
+                    }, 10000); // 10 second fallback timeout
+
                     // Fallback: try again after full load in case scripts were delayed.
                     window.addEventListener('load', () => {
                         if (!window.avatarControlsInstance) startWithPoll(6000);
