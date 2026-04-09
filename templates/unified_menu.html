@@ -49,6 +49,15 @@
             -webkit-tap-highlight-color: transparent;
             z-index: 10010;
         }
+
+        /* Android WebView: Make main container scrollable */
+        /* Works WITH native WebView settings in MainActivity.java */
+        html.android .main-container {
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: auto;
+        }
     </style>
 
     <script>
