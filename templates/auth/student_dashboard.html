@@ -1162,38 +1162,31 @@
         const viewerWrap = document.getElementById('userAvatar3DWrapper');
         const isAndroid = /Android/i.test(navigator.userAgent || '');
 
-        // Android WebView often fails to render WebGL/Three.js - prefer thumbnail for reliable display
-        if (isAndroid) {
+        // Try 3D GLB avatar first on all devices (including Android)
+        // WebGL fixes now handle context management properly
+        if (viewerWrap) viewerWrap.style.display = 'block';
+        if (imgWrap) imgWrap.style.display = 'none';
+        try {
+            if (typeof load3DAvatar === 'function') {
+                const avatarName = avatarData.name || avatarData.id || 'Your Avatar';
+                const glbUrl = (avatarData.urls && avatarData.urls.glb) || avatarData.model_url || `/static/assets/avatars/glb_files/${avatarData.id}.glb`;
+                load3DAvatar(glbUrl, avatarName, avatarData.id);
+            } else {
+                console.warn('3D viewer not available; falling back to image.');
+                if (imgEl && avatarData.urls && avatarData.urls.thumbnail) {
+                    imgEl.src = avatarData.urls.thumbnail;
+                }
+                if (viewerWrap) viewerWrap.style.display = 'none';
+                if (imgWrap) imgWrap.style.display = 'block';
+            }
+        } catch (e) {
+            console.warn('Failed to init 3D avatar, using image fallback:', e);
             if (viewerWrap) viewerWrap.style.display = 'none';
             if (imgWrap) imgWrap.style.display = 'block';
             const thumbUrl = (avatarData.urls && avatarData.urls.thumbnail) || avatarData.thumbnail_url || (avatarData.urls && avatarData.urls.fallback) || '/static/assets/avatars/fallback.png';
             if (imgEl) {
                 imgEl.src = thumbUrl;
                 imgEl.onerror = function() { this.src = '/static/assets/avatars/fallback.png'; };
-            }
-        } else {
-            if (viewerWrap) viewerWrap.style.display = 'block';
-            if (imgWrap) imgWrap.style.display = 'none';
-            try {
-                if (typeof load3DAvatar === 'function') {
-                    const avatarName = avatarData.name || avatarData.id || 'Your Avatar';
-                    const glbUrl = (avatarData.urls && avatarData.urls.glb) || avatarData.model_url || `/static/assets/avatars/glb_files/${avatarData.id}.glb`;
-                    load3DAvatar(glbUrl, avatarName, avatarData.id);
-                } else {
-                    console.warn('3D viewer not available; falling back to image.');
-                    if (imgEl && avatarData.urls && avatarData.urls.thumbnail) {
-                        imgEl.src = avatarData.urls.thumbnail;
-                    }
-                    if (viewerWrap) viewerWrap.style.display = 'none';
-                    if (imgWrap) imgWrap.style.display = 'block';
-                }
-            } catch (e) {
-                console.warn('Failed to init 3D avatar, using image fallback:', e);
-                if (viewerWrap) viewerWrap.style.display = 'none';
-                if (imgWrap) imgWrap.style.display = 'block';
-                if (imgEl && avatarData.urls && avatarData.urls.thumbnail) {
-                    imgEl.src = avatarData.urls.thumbnail;
-                }
             }
         }
         {% else %}
