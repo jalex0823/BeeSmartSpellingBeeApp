@@ -4626,6 +4626,15 @@ function showRestoreDialog(title, message, isSuccess) {
                             if (window.avatarControlsInstance) return; // idempotent
                             if (typeof window.SmartyBee3D !== 'function') return;
 
+                            // Destroy the hidden preload instance (created during loading screen)
+                            // so its WebGL context is freed before we create the visible avatar.
+                            try {
+                                if (window.mascotBeePreloaded && typeof window.mascotBeePreloaded.destroy === 'function') {
+                                    window.mascotBeePreloaded.destroy();
+                                    window.mascotBeePreloaded = null;
+                                }
+                            } catch (_de) { /* ignore */ }
+
                             const size = computeAvatarCanvasSize();
 
                             // Create instance in NEW container
@@ -4694,6 +4703,16 @@ function showRestoreDialog(title, message, isSuccess) {
                     } else {
                         startWithPoll();
                     }
+
+                    // FAILSAFE: If 3D avatar fails to initialize, allow loading to proceed anyway
+                    // This prevents the "stuck at 99%" issue when WebGL/Three.js fails on Android
+                    setTimeout(() => {
+                        if (!window.avatarControlsReady) {
+                            console.warn('[Avatar] 3D initialization timed out, allowing loading to proceed');
+                            window.avatarControlsReady = true;
+                            try { window.dispatchEvent(new CustomEvent('avatarControlsReady')); } catch(_e) {}
+                        }
+                    }, 10000); // 10 second fallback timeout
 
                     // Fallback: try again after full load in case scripts were delayed.
                     window.addEventListener('load', () => {
