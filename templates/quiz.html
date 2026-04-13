@@ -4188,6 +4188,619 @@ window.BeeSmartAudioFallback = (function() {
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 </style>
 
+<!-- ═══════════════════════════════════════════════════════════
+     MOBILE QUIZ UI/UX CLEANUP — compact, polished, kid-friendly
+     Targets phones (max-width: 600px). Desktop is untouched.
+     ═══════════════════════════════════════════════════════════ -->
+<style>
+@media (max-width: 600px) {
+
+    /* ── BACKGROUND: ensure gradient covers full viewport height ──
+         Use scroll attachment (Android-safe) but guarantee min-height fills screen.
+         The gradient is defined from 0-100% so it scales with the element height. */
+    .quiz-page {
+        background-attachment: scroll !important;
+        min-height: 100vh !important;
+        min-height: 100dvh !important;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+        padding-top: max(4px, env(safe-area-inset-top)) !important;
+        padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    }
+
+    /* ── CARD: unified background, oval corners, subtle depth ── */
+    .quiz-card {
+        margin-top: 0.25rem !important;
+        border-radius: 32px !important;
+        border-width: 1.5px !important;
+        min-height: auto !important;
+        background: rgba(255, 253, 245, 0.92) !important;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(255, 193, 7, 0.12) !important;
+        backdrop-filter: blur(6px) !important;
+        -webkit-backdrop-filter: blur(6px) !important;
+    }
+    .quiz-card .quiz-card-content {
+        background: transparent !important;
+    }
+    .card-scroll {
+        padding: 10px 10px 18px 10px !important;
+    }
+
+    /* ── CREST + AVATAR: compact inline row ── */
+    .quiz-card-crest-avatar {
+        flex-direction: row !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 10px !important;
+        padding: 6px 0 2px !important;
+    }
+    .quiz-card-crest-avatar .quiz-card-crest {
+        width: 72px !important;
+        max-height: 72px !important;
+        flex-shrink: 0;
+    }
+    .quiz-card-crest-avatar .mascot-3d-container {
+        width: 80px !important;
+        height: 80px !important;
+        max-width: 80px !important;
+        max-height: 80px !important;
+        flex-shrink: 0;
+    }
+
+    /* ── TOP CARD: reduce excess vertical spacing ── */
+    .quiz-card-top {
+        gap: 0.15rem !important;
+        padding-bottom: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+    /* ── VOICE VISUALIZER: focal point, prominent ── */
+    .voice-visualizer,
+    #voiceVisualizer {
+        padding: 0.35rem 0.5rem !important;
+        margin-bottom: 6px !important;
+        border-radius: 14px !important;
+    }
+    .voice-card.speaking-mode {
+        padding: 4px 6px 4px !important;
+        margin: 0 auto 0.15rem auto !important;
+        min-height: 32px !important;
+    }
+    .voice-header {
+        font-size: 0.85rem !important;
+        margin-bottom: 4px !important;
+    }
+    .dotwave-wrapper {
+        min-height: 60px !important;
+        padding: 2px 8px !important;
+    }
+    .dotwave-wrapper canvas {
+        height: 70px !important;
+        max-height: 70px !important;
+    }
+    /* Definition/sentence line beneath visualizer */
+    .voice-definition {
+        font-size: 0.82rem !important;
+        padding: 3px 8px !important;
+        margin-top: 0.15rem !important;
+        line-height: 1.35 !important;
+    }
+
+    /* ── SESSION STATS BAR: compact ── */
+    .session-stats {
+        padding: 0.35rem 0.8rem !important;
+        gap: 0.6rem !important;
+        border-radius: 12px !important;
+        margin: 2px 0 !important;
+    }
+    .session-stat { font-size: 0.85rem !important; }
+    .session-stat > span:first-child { font-size: 1.1rem !important; }
+    .session-stat-value { font-size: 1rem !important; }
+
+    /* ── MORPH CONTAINER: tighter ── */
+    .morph-container {
+        margin-top: 0 !important;
+    }
+    .morph-content {
+        margin-top: 0 !important;
+    }
+    /* Timer jar: slightly smaller on phone */
+    .jar-svg {
+        width: 120px !important;
+        height: 144px !important;
+    }
+    .honey-jar-wrapper .timer-number {
+        font-size: 2.6rem !important;
+    }
+    .countdown-container .honey-jar-timer {
+        margin-bottom: 0.15rem !important;
+    }
+
+    /* ── ANSWER + KEYBOARD SECTION: compact card ── */
+    .answer-and-keyboard {
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+        padding: 10px 8px 4px 8px !important;
+        border-radius: 14px !important;
+    }
+    .quiz-answer-area {
+        padding: 2px 6px !important;
+    }
+    /* Input field */
+    .bee-input input[type="text"] {
+        font-size: 16px !important;
+        padding: 10px 12px !important;
+    }
+    /* Buzzy pill and start silent */
+    .buzzy-pill {
+        max-width: 260px !important;
+        margin: 8px auto !important;
+        padding: 12px 16px !important;
+        font-size: 0.95rem !important;
+        border-radius: 999px !important;
+    }
+    #startSilentBtn {
+        max-width: 200px !important;
+        margin: 4px auto 2px !important;
+        padding: 8px 12px !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* ── DEFINITION/SENTENCE DISPLAY PANEL ── */
+    #definitionDisplay {
+        margin: 0 0 0.35rem 0 !important;
+        padding: 0.6rem 0.75rem !important;
+        border-radius: 10px !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* ── ACTION BUTTONS: 2-col grid, compact, no overlap ── */
+    .actions-area.quiz-buttons,
+    #quizActionButtons {
+        gap: 8px !important;
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    .actions-area.quiz-buttons .action-btn,
+    #quizActionButtons .action-btn {
+        min-height: 46px !important;
+        padding: 0.5rem 0.6rem !important;
+        font-size: 0.82rem !important;
+        border-radius: 18px !important;
+        box-shadow: 0 3px 0 rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08) !important;
+    }
+    #quizActionButtons .action-btn .bee-icon {
+        font-size: 1.1rem !important;
+    }
+    #submitButton {
+        min-height: 50px !important;
+        font-size: 0.95rem !important;
+    }
+
+    /* ── STAT TOGGLES: smaller pills ── */
+    .stat-toggle-controls {
+        padding-top: 0.5rem !important;
+        margin: 0.5rem 0 0.35rem !important;
+        gap: 0.35rem !important;
+    }
+    .stat-toggle-controls .action-btn.toggle-stat {
+        min-height: 36px !important;
+        padding: 0.3rem 0.5rem !important;
+        font-size: 0.72rem !important;
+        border-radius: 14px !important;
+    }
+
+    /* ── EXIT / SECONDARY BUTTONS ── */
+    .exit-button-container.secondary-buttons {
+        gap: 8px !important;
+        margin-bottom: 0.5rem !important;
+    }
+    .exit-button-container .action-btn {
+        min-height: 44px !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* ── FEEDBACK AREA ── */
+    .feedback-area {
+        font-size: 0.9rem !important;
+        padding: 0.4rem 0.6rem !important;
+        margin: 0.25rem 0 !important;
+    }
+
+    /* ── GENERIC SPACING TIGHTENING ── */
+    .quiz-container h1,
+    .quiz-container h2,
+    .quiz-container h3,
+    .quiz-container p {
+        margin-top: 0.2rem !important;
+        margin-bottom: 0.2rem !important;
+    }
+
+    /* ── HIDE ALL OVERLAY / DECORATIVE FIXED ELEMENTS ON MOBILE ── */
+    .floating-bee,
+    #beeSwarmCanvas,
+    .sparkle,
+    .buzz-dust-sparkle,
+    .star-burst,
+    .confetti,
+    .word-of-day-banner,
+    .points-popup {
+        display: none !important;
+    }
+    /* Progress tracker: hide on mobile (it floats over content) */
+    .progress-tracker {
+        display: none !important;
+    }
+    /* Mobile exit button: keep, but nothing else fixed-decorative */
+
+    /* ── LETTER HINT ── */
+    .letter-hint {
+        margin: 0.2rem 0 !important;
+        font-size: 0.9rem !important;
+    }
+}
+
+/* Extra-small phones (≤ 380px) */
+@media (max-width: 380px) {
+    .quiz-card-crest-avatar .quiz-card-crest {
+        width: 56px !important;
+        max-height: 56px !important;
+    }
+    .quiz-card-crest-avatar .mascot-3d-container {
+        width: 64px !important;
+        height: 64px !important;
+        max-width: 64px !important;
+        max-height: 64px !important;
+    }
+    .dotwave-wrapper canvas {
+        height: 56px !important;
+        max-height: 56px !important;
+    }
+    .actions-area.quiz-buttons .action-btn,
+    #quizActionButtons .action-btn {
+        min-height: 42px !important;
+        padding: 0.4rem 0.5rem !important;
+        font-size: 0.78rem !important;
+    }
+    .card-scroll {
+        padding: 8px 6px 14px 6px !important;
+    }
+}
+</style>
+
+<!-- ═══════════════════════════════════════════════════════════
+     QUIZ UX ENHANCEMENTS — animations, feedback, interactivity
+     All-screen (desktop + mobile). Purely additive.
+     ═══════════════════════════════════════════════════════════ -->
+<style>
+/* ── KEYFRAME ANIMATIONS ── */
+@keyframes cardEntrance {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes correctFlash {
+    0%   { box-shadow: 0 0 0 0 rgba(76,175,80,0.5); }
+    40%  { box-shadow: 0 0 0 12px rgba(76,175,80,0.25); }
+    100% { box-shadow: 0 0 0 0 rgba(76,175,80,0); }
+}
+@keyframes incorrectShake {
+    0%, 100% { transform: translateX(0); }
+    15%      { transform: translateX(-6px); }
+    30%      { transform: translateX(5px); }
+    45%      { transform: translateX(-4px); }
+    60%      { transform: translateX(3px); }
+    75%      { transform: translateX(-2px); }
+}
+@keyframes scalePop {
+    0%   { transform: scale(0.6); opacity: 0; }
+    60%  { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+@keyframes submitGlow {
+    0%, 100% { box-shadow: 0 5px 0 #E09100, 0 0 12px rgba(255,193,7,0.3); }
+    50%      { box-shadow: 0 5px 0 #E09100, 0 0 22px rgba(255,193,7,0.6), 0 0 40px rgba(255,193,7,0.2); }
+}
+@keyframes streakFire {
+    0%, 100% { text-shadow: 0 0 6px rgba(255,107,0,0.4); }
+    50%      { text-shadow: 0 0 14px rgba(255,107,0,0.8), 0 0 28px rgba(255,60,0,0.3); }
+}
+@keyframes streakGoldBorder {
+    0%, 100% { border-color: rgba(255,193,7,0.35); }
+    50%      { border-color: rgba(255,193,7,0.85); }
+}
+@keyframes streakLegendPulse {
+    0%, 100% { box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 0 0 0 rgba(255,215,0,0); }
+    50%      { box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 0 20px 4px rgba(255,215,0,0.25); }
+}
+@keyframes avatarBounce {
+    0%, 100% { transform: translateY(0); }
+    30%      { transform: translateY(-12px) scale(1.05); }
+    50%      { transform: translateY(-6px); }
+    70%      { transform: translateY(-3px); }
+}
+@keyframes avatarShake {
+    0%, 100% { transform: rotate(0deg); }
+    20%      { transform: rotate(-8deg); }
+    40%      { transform: rotate(6deg); }
+    60%      { transform: rotate(-4deg); }
+    80%      { transform: rotate(2deg); }
+}
+@keyframes starReveal {
+    from { transform: scale(0) rotate(-30deg); opacity: 0; }
+    to   { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* ── CARD ENTRANCE ANIMATION ── */
+.quiz-card {
+    animation: cardEntrance 0.5s ease-out;
+}
+
+/* ── BUTTON PRESS TRANSITIONS (all buttons) ── */
+.action-btn {
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.2s ease !important;
+}
+.action-btn:active {
+    transform: translateY(2px) scale(0.96) !important;
+}
+@media (hover: hover) {
+    .action-btn:hover {
+        transform: scale(1.02);
+    }
+}
+
+/* ── SESSION STATS FADE-IN ── */
+.session-stats {
+    animation: fadeInUp 0.4s ease-out;
+}
+
+/* ── SUBMIT BUTTON: glow when input has text ── */
+#submitButton.has-input {
+    animation: submitGlow 1.6s ease-in-out infinite !important;
+    opacity: 1 !important;
+    filter: none !important;
+}
+#submitButton:not(.has-input) {
+    opacity: 0.55;
+    filter: grayscale(0.3);
+}
+
+/* ── ANIMATED FEEDBACK: correct / incorrect / almost ── */
+.feedback-area.feedback-success {
+    animation: correctFlash 0.6s ease-out, fadeInUp 0.3s ease-out !important;
+}
+.feedback-area.feedback-error {
+    animation: incorrectShake 0.5s ease-out, fadeInUp 0.3s ease-out !important;
+}
+.feedback-area.feedback-almost {
+    animation: incorrectShake 0.4s ease-out, fadeInUp 0.3s ease-out !important;
+}
+.feedback-area .feedback-title {
+    display: block;
+    animation: scalePop 0.4s ease-out;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+/* ── STREAK VISUAL ESCALATION ── */
+.quiz-card.streak-hot #floatingStreak {
+    animation: streakFire 1s ease-in-out infinite;
+    color: #FF6B00 !important;
+    font-weight: 900 !important;
+}
+.quiz-card.streak-fire {
+    animation: streakGoldBorder 1.5s ease-in-out infinite !important;
+    border-color: rgba(255,193,7,0.7) !important;
+}
+.quiz-card.streak-fire .session-stats {
+    box-shadow: 0 4px 0 #A06800, 0 6px 14px rgba(255,152,0,0.35), 0 0 16px rgba(255,215,0,0.3) !important;
+}
+.quiz-card.streak-legend {
+    animation: streakLegendPulse 2s ease-in-out infinite !important;
+    border-color: #FFD700 !important;
+}
+
+/* ── AVATAR REACTIONS ── */
+.mascot-3d-container.avatar-celebrate {
+    animation: avatarBounce 0.6s ease-out;
+}
+.mascot-3d-container.avatar-shake {
+    animation: avatarShake 0.5s ease-out;
+}
+
+/* ── PROGRESS RING (SVG around crest) ── */
+.progress-ring-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.progress-ring-svg {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    pointer-events: none;
+    transform: rotate(-90deg);
+}
+.progress-ring-bg {
+    fill: none;
+    stroke: rgba(255,193,7,0.15);
+    stroke-width: 3;
+}
+.progress-ring-fg {
+    fill: none;
+    stroke: #FFB300;
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s ease;
+}
+
+/* ── LETTER-COUNT BLANKS ── */
+.letter-blanks {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin: 6px 0 2px;
+    flex-wrap: wrap;
+}
+.letter-blank {
+    width: 22px;
+    height: 28px;
+    border-bottom: 2.5px solid rgba(255,193,7,0.5);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #FFB300;
+    transition: border-color 0.2s, color 0.2s;
+}
+.letter-blank.filled {
+    border-color: #4CAF50;
+    color: #2e7d32;
+}
+
+/* ── PROGRESSIVE DISCLOSURE: hide helper buttons until first wrong ── */
+.quiz-card.helpers-hidden #showDefinitionButton,
+.quiz-card.helpers-hidden #showSentenceButton,
+.quiz-card.helpers-hidden #getHintButton,
+.quiz-card.helpers-hidden #skipButton {
+    display: none !important;
+}
+.quiz-card:not(.helpers-hidden) #showDefinitionButton,
+.quiz-card:not(.helpers-hidden) #showSentenceButton,
+.quiz-card:not(.helpers-hidden) #getHintButton,
+.quiz-card:not(.helpers-hidden) #skipButton {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+/* ── MOBILE: hide stat toggle controls → gear icon + bottom sheet ── */
+@media (max-width: 600px) {
+    .stat-toggle-controls {
+        display: none !important;
+    }
+    .stat-gear-btn {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: rgba(255,248,225,0.9);
+        border: 1.5px solid rgba(255,193,7,0.3);
+        font-size: 1.1rem;
+        cursor: pointer;
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        transition: transform 0.2s;
+    }
+    .stat-gear-btn:active { transform: scale(0.9); }
+    .stat-sheet-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.35);
+        z-index: 9998;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s;
+    }
+    .stat-sheet-overlay.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    .stat-sheet {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #FFFDF5;
+        border-radius: 20px 20px 0 0;
+        padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+        z-index: 9999;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+    }
+    .stat-sheet-overlay.open .stat-sheet {
+        transform: translateY(0);
+    }
+    .stat-sheet-handle {
+        width: 40px;
+        height: 4px;
+        background: #ccc;
+        border-radius: 2px;
+        margin: 0 auto 12px;
+    }
+    .stat-sheet-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #5d4100;
+        text-align: center;
+        margin-bottom: 12px;
+    }
+    .stat-sheet .stat-toggle-controls {
+        display: flex !important;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+    }
+    /* Keyboard always visible on mobile */
+    .keyboard-host.is-hidden,
+    .keyboard-shell.is-hidden {
+        display: block !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+    #showKeyboardBtn {
+        display: none !important;
+    }
+}
+@media (min-width: 601px) {
+    .stat-gear-btn { display: none !important; }
+    .stat-sheet-overlay { display: none !important; }
+}
+
+/* ── COMPLETION: star rating + buzzy message ── */
+.completion-stars {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 1rem 0;
+}
+.completion-star {
+    font-size: 2.5rem;
+    filter: grayscale(1) opacity(0.3);
+    transition: filter 0.3s;
+}
+.completion-star.earned {
+    filter: none;
+    animation: starReveal 0.4s ease-out backwards;
+}
+.completion-star.earned:nth-child(2) { animation-delay: 0.15s; }
+.completion-star.earned:nth-child(3) { animation-delay: 0.3s; }
+.completion-star.earned:nth-child(4) { animation-delay: 0.45s; }
+.completion-star.earned:nth-child(5) { animation-delay: 0.6s; }
+
+.buzzy-message {
+    background: linear-gradient(135deg, #FFF8E1, #FFE0B2);
+    border: 2px solid rgba(255,193,7,0.3);
+    border-radius: 16px;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-size: 1rem;
+    color: #5d4100;
+    text-align: center;
+    animation: fadeInUp 0.5s ease-out 0.8s backwards;
+}
+.buzzy-message .buzzy-avatar { font-size: 1.8rem; margin-bottom: 4px; }
+</style>
+
 {# Load 3D/avatar scripts needed by the quiz page. #}
 {% block three_js %}
     <!-- Three.js core + loaders (local vendor; avoid CDN + duplicate Three.js warnings) -->
@@ -4516,14 +5129,19 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 
     <!-- Quiz Card: entire content in .card-scroll, scrolls as one stack -->
-    <div class="quiz-card" id="quizCard">
+    <div class="quiz-card helpers-hidden" id="quizCard">
+        <!-- Gear button: opens stat toggles bottom sheet (mobile only) -->
+        <button type="button" class="stat-gear-btn" id="statGearBtn" aria-label="Settings" title="Toggle stat visibility">&#9881;</button>
         <div class="quiz-content quiz-card-content" id="quizScroll">
         <div class="card-scroll">
         <!-- 1) Visualizer + Timer + Sentence (top of stack) -->
         <div class="quiz-card-top">
         <!-- Crest + user's chosen avatar (centered on card) -->
         <div class="quiz-card-crest-avatar">
+            <div class="progress-ring-wrap" id="progressRingWrap">
             <img id="quizCardCrest" class="quiz-card-crest" src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Spelling Bee" title="BeeSmart Crest">
+            <svg class="progress-ring-svg" id="progressRingSvg" width="84" height="84"><circle class="progress-ring-bg" cx="42" cy="42" r="38"/><circle class="progress-ring-fg" id="progressRingFg" cx="42" cy="42" r="38" stroke-dasharray="238.76" stroke-dashoffset="238.76"/></svg>
+            </div>
             <div id="mascotBee3D" class="mascot-3d-container" aria-label="Your avatar"></div>
             {% if user_name %}
             <div id="avatarNameBadge" style="
@@ -4978,6 +5596,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="hint-letters" id="hintLetters"></span>
                 </div>
 
+                <!-- Letter count blanks (filled as user types) -->
+                <div class="letter-blanks" id="letterBlanks" style="display:none;"></div>
+
                 <!-- Answer Input Field -->
                 <div class="bee-input" id="beeInputWrapper">
                     <input type="text"
@@ -5248,6 +5869,223 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- 3D Bee Swarm Canvas -->
 <canvas id="beeSwarmCanvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3;"></canvas>
+
+<!-- Stat toggles bottom sheet (mobile only) -->
+<div class="stat-sheet-overlay" id="statSheetOverlay">
+    <div class="stat-sheet">
+        <div class="stat-sheet-handle"></div>
+        <div class="stat-sheet-title">Stat Visibility</div>
+        <div class="stat-toggle-controls" id="statSheetToggles"></div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     QUIZ UX ENHANCEMENTS — JavaScript hooks
+     Submit glow, letter blanks, progressive disclosure, streak
+     escalation, avatar reactions, progress ring, gear sheet,
+     completion stars + buzzy message.
+     ═══════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+    'use strict';
+
+    // ── 1. SUBMIT BUTTON GLOW when input has text ──
+    function initSubmitGlow() {
+        var inp = document.getElementById('spellingInput');
+        var btn = document.getElementById('submitButton');
+        if (!inp || !btn) return;
+        function sync() {
+            if (inp.value.trim().length > 0) {
+                btn.classList.add('has-input');
+            } else {
+                btn.classList.remove('has-input');
+            }
+        }
+        inp.addEventListener('input', sync);
+        inp.addEventListener('change', sync);
+        inp.addEventListener('keyup', sync);
+        // Poll for programmatic changes (custom keyboard sets value directly)
+        setInterval(sync, 300);
+    }
+
+    // ── 2. LETTER BLANKS — show letter count, fill as user types ──
+    var _currentWordLength = 0;
+    window._beeSetLetterBlanks = function(wordLength) {
+        _currentWordLength = wordLength;
+        var container = document.getElementById('letterBlanks');
+        if (!container) return;
+        if (!wordLength || wordLength < 1) { container.style.display = 'none'; return; }
+        container.style.display = 'flex';
+        var html = '';
+        for (var i = 0; i < wordLength; i++) {
+            html += '<div class="letter-blank" data-idx="' + i + '"></div>';
+        }
+        container.innerHTML = html;
+    };
+
+    function syncLetterBlanks() {
+        var container = document.getElementById('letterBlanks');
+        var inp = document.getElementById('spellingInput');
+        if (!container || !inp || !_currentWordLength) return;
+        var val = inp.value || '';
+        var blanks = container.querySelectorAll('.letter-blank');
+        for (var i = 0; i < blanks.length; i++) {
+            if (i < val.length) {
+                blanks[i].textContent = val[i].toUpperCase();
+                blanks[i].classList.add('filled');
+            } else {
+                blanks[i].textContent = '';
+                blanks[i].classList.remove('filled');
+            }
+        }
+    }
+
+    function initLetterBlanks() {
+        var inp = document.getElementById('spellingInput');
+        if (!inp) return;
+        inp.addEventListener('input', syncLetterBlanks);
+        setInterval(syncLetterBlanks, 400);
+    }
+
+    // ── 3. PROGRESSIVE DISCLOSURE — reveal helpers after first wrong ──
+    window._beeRevealHelpers = function() {
+        var card = document.getElementById('quizCard');
+        if (card) card.classList.remove('helpers-hidden');
+    };
+    window._beeHideHelpers = function() {
+        var card = document.getElementById('quizCard');
+        if (card) card.classList.add('helpers-hidden');
+    };
+
+    // ── 4. STREAK VISUAL ESCALATION ──
+    window._beeUpdateStreakVisual = function(streak) {
+        var card = document.getElementById('quizCard');
+        if (!card) return;
+        card.classList.remove('streak-hot', 'streak-fire', 'streak-legend');
+        if (streak >= 10) {
+            card.classList.add('streak-legend');
+        } else if (streak >= 5) {
+            card.classList.add('streak-fire');
+        } else if (streak >= 3) {
+            card.classList.add('streak-hot');
+        }
+    };
+
+    // ── 5. AVATAR REACTIONS ──
+    window._beeAvatarReact = function(type) {
+        var avatar = document.getElementById('mascotBee3D');
+        if (!avatar) return;
+        avatar.classList.remove('avatar-celebrate', 'avatar-shake');
+        // Force reflow for re-animation
+        void avatar.offsetWidth;
+        if (type === 'correct') {
+            avatar.classList.add('avatar-celebrate');
+        } else if (type === 'incorrect' || type === 'shake') {
+            avatar.classList.add('avatar-shake');
+        }
+        setTimeout(function() {
+            avatar.classList.remove('avatar-celebrate', 'avatar-shake');
+        }, 700);
+    };
+
+    // ── 6. PROGRESS RING ──
+    window._beeUpdateProgressRing = function(current, total) {
+        var fg = document.getElementById('progressRingFg');
+        if (!fg || !total) return;
+        var circumference = 238.76; // 2 * PI * 38
+        var pct = Math.min(1, (current - 1) / total);
+        var offset = circumference * (1 - pct);
+        fg.style.strokeDashoffset = offset;
+    };
+
+    // ── 7. GEAR BUTTON + STAT SHEET (mobile) ──
+    function initStatSheet() {
+        var gearBtn = document.getElementById('statGearBtn');
+        var overlay = document.getElementById('statSheetOverlay');
+        var sheetToggles = document.getElementById('statSheetToggles');
+        if (!gearBtn || !overlay || !sheetToggles) return;
+
+        // Clone existing stat toggle buttons into the sheet
+        var origToggles = document.querySelector('.card-scroll .stat-toggle-controls');
+        if (origToggles) {
+            var clones = origToggles.cloneNode(true);
+            clones.id = '';
+            // Re-wire cloned buttons to trigger the originals
+            var cloneBtns = clones.querySelectorAll('button');
+            var origBtns = origToggles.querySelectorAll('button');
+            for (var i = 0; i < cloneBtns.length; i++) {
+                (function(idx) {
+                    cloneBtns[idx].addEventListener('click', function() {
+                        if (origBtns[idx]) origBtns[idx].click();
+                        // Sync text
+                        setTimeout(function() {
+                            var origText = origBtns[idx].querySelector('.toggle-text');
+                            var cloneText = cloneBtns[idx].querySelector('.toggle-text');
+                            if (origText && cloneText) cloneText.textContent = origText.textContent;
+                        }, 50);
+                    });
+                })(i);
+            }
+            sheetToggles.appendChild(clones);
+        }
+
+        gearBtn.addEventListener('click', function() {
+            overlay.classList.add('open');
+        });
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) overlay.classList.remove('open');
+        });
+        // Swipe down to close
+        var startY = 0;
+        var sheet = overlay.querySelector('.stat-sheet');
+        if (sheet) {
+            sheet.addEventListener('touchstart', function(e) {
+                startY = e.touches[0].clientY;
+            }, { passive: true });
+            sheet.addEventListener('touchmove', function(e) {
+                if (e.touches[0].clientY - startY > 60) {
+                    overlay.classList.remove('open');
+                }
+            }, { passive: true });
+        }
+    }
+
+    // ── 8. COMPLETION STARS + BUZZY MESSAGE ──
+    window._beeCompletionExtras = function(percentage, studentName) {
+        // Star rating: 1 star per 20% (min 0, max 5)
+        var starCount = Math.min(5, Math.max(0, Math.round(percentage / 20)));
+        var starsHTML = '<div class="completion-stars">';
+        for (var i = 0; i < 5; i++) {
+            starsHTML += '<span class="completion-star' + (i < starCount ? ' earned' : '') + '">&#11088;</span>';
+        }
+        starsHTML += '</div>';
+
+        // Buzzy message based on performance
+        var msgs = {
+            5: "Buzzy says: INCREDIBLE! You're the ultimate spelling champion! I'm so proud of you!",
+            4: "Buzzy says: WOW! You're buzzing with brilliance! Keep up the amazing work!",
+            3: "Buzzy says: Great effort! You're getting stronger with every word!",
+            2: "Buzzy says: Nice try! Every bee learns at their own pace. You're doing great!",
+            1: "Buzzy says: Keep going! Practice makes perfect, and I believe in you!",
+            0: "Buzzy says: Don't give up! Every spelling bee started just like you. Let's try again!"
+        };
+        var msg = msgs[starCount] || msgs[3];
+        var name = (studentName || '').trim();
+        if (name) msg = msg.replace("You're", name + ", you're").replace("you're", name + ", you're");
+
+        var buzzyHTML = '<div class="buzzy-message"><div class="buzzy-avatar">&#128029;</div>' + msg + '</div>';
+
+        return starsHTML + buzzyHTML;
+    };
+
+    // ── INIT on DOMContentLoaded ──
+    document.addEventListener('DOMContentLoaded', function() {
+        initSubmitGlow();
+        initLetterBlanks();
+        initStatSheet();
+    });
+})();
+</script>
 
 {% endblock %}
 
@@ -9325,6 +10163,17 @@ class QuizManager {
 
             // Back-compat alias (older code paths referenced currentWord)
             this.currentWord = this.currentWordData;
+
+            // ── UX ENHANCEMENTS: letter blanks, progress ring, hide helpers ──
+            if (typeof window._beeSetLetterBlanks === 'function') {
+                window._beeSetLetterBlanks((data.word || '').length);
+            }
+            if (typeof window._beeUpdateProgressRing === 'function') {
+                window._beeUpdateProgressRing(questionNumber, __nn(data.total, this.totalWords));
+            }
+            if (typeof window._beeHideHelpers === 'function') {
+                window._beeHideHelpers();
+            }
             
             // Don't animate mascot on every question - keep it calm during gameplay
             // Mascot will only animate when answers are submitted
@@ -10146,6 +10995,13 @@ class QuizManager {
             if (window.BeeVoiceViz && window.BeeVoiceViz.react) {
                 window.BeeVoiceViz.react(isCorrect ? 'feedback-correct' : (isAlmostRight ? 'feedback-incorrect' : 'feedback-incorrect'));
             }
+            // ── UX ENHANCEMENTS: avatar reaction + streak visual + reveal helpers ──
+            if (typeof window._beeAvatarReact === 'function') {
+                window._beeAvatarReact(isCorrect ? 'correct' : 'incorrect');
+            }
+            if (!isCorrect && typeof window._beeRevealHelpers === 'function') {
+                window._beeRevealHelpers();
+            }
         } catch (e) {}
         const feedbackArea = document.getElementById('feedbackArea');
         feedbackArea.style.display = 'block';
@@ -10380,6 +11236,11 @@ class QuizManager {
         }
         if (floatingStreak) {
             floatingStreak.textContent = streak;
+        }
+
+        // ── UX ENHANCEMENT: streak visual escalation ──
+        if (typeof window._beeUpdateStreakVisual === 'function') {
+            window._beeUpdateStreakVisual(streak);
         }
         
         if (sessionStatsBar && total > 0) {
@@ -11257,7 +12118,13 @@ class QuizManager {
         }
         const oneWinHTML = oneWinText ? '<div class="one-win-banner" role="status">' + oneWinText + '</div>' : '';
 
+        // ── UX ENHANCEMENT: star rating + buzzy message ──
+        const completionExtrasHTML = (typeof window._beeCompletionExtras === 'function')
+            ? window._beeCompletionExtras(percentage, this.studentName)
+            : '';
+
         document.getElementById('completionStats').innerHTML = `
+            ${completionExtrasHTML}
             <div class="report-card">
                 <div class="report-header">
                     <h2>📚 ${(() => {
