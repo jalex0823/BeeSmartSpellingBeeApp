@@ -281,15 +281,11 @@ html.android [style*="animation:fadeInUp"] {
 }
 
 /* Prevent GPU compositing flash on Android WebView */
-html.android * {
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-}
-/* Restore for elements that need 3D transforms */
+/* NOTE: Removed blanket backface-visibility:hidden - it forces GPU layer creation on every
+   element which kills native scroll in Android WebView. Only apply to specific 3D elements. */
 html.android canvas,
 html.android .mascot-3d-container,
-html.android .stage-glb,
-html.android video {
+html.android .stage-glb {
     -webkit-backface-visibility: visible;
     backface-visibility: visible;
 }
