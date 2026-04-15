@@ -90,6 +90,8 @@ class MatrixRain {
         this.canvas.style.width = w + 'px';
         this.canvas.style.height = h + 'px';
         
+        // Reset transform before scaling to prevent compounding on resize
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         // Scale context to match device pixel ratio
         this.ctx.scale(dpr, dpr);
         
