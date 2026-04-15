@@ -1886,15 +1886,21 @@ function setupTouchGestures(canvas, camera, model) {
     let lastTouchY = 0;
     let isTouching = false;
     
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isDraggingHorizontal = false;
+
     // Handle touch start
     canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
         isTouching = true;
         
         if (e.touches.length === 1) {
-            // Single touch - prepare for rotation
+            // Single touch - record start position, decide axis on first move
             lastTouchX = e.touches[0].clientX;
             lastTouchY = e.touches[0].clientY;
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            isDraggingHorizontal = false;
             touchStartRotation = model.rotation.y;
             
             // Disable auto-rotate during manual interaction
@@ -1904,24 +1910,39 @@ function setupTouchGestures(canvas, camera, model) {
             }
         } else if (e.touches.length === 2) {
             // Two finger touch - prepare for pinch zoom
+            e.preventDefault();
             const dx = e.touches[0].clientX - e.touches[1].clientX;
             const dy = e.touches[0].clientY - e.touches[1].clientY;
             touchStartDistance = Math.sqrt(dx * dx + dy * dy);
         }
-    }, { passive: false });
+    }, { passive: true });
     
     // Handle touch move
     canvas.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        
         if (e.touches.length === 1) {
-            // Single touch - rotate model
             const deltaX = e.touches[0].clientX - lastTouchX;
-            model.rotation.y += deltaX * 0.01;
-            
+            const deltaY = e.touches[0].clientY - lastTouchY;
+
+            // Determine axis on first significant move
+            if (!isDraggingHorizontal) {
+                if (Math.abs(deltaX) > Math.abs(deltaY) + 3) {
+                    isDraggingHorizontal = true;
+                } else if (Math.abs(deltaY) > Math.abs(deltaX) + 3) {
+                    // Vertical swipe - let the page scroll
+                    return;
+                }
+            }
+
+            if (isDraggingHorizontal) {
+                e.preventDefault();
+                // Single touch - rotate model
+                model.rotation.y += deltaX * 0.01;
+            }
+
             lastTouchX = e.touches[0].clientX;
             lastTouchY = e.touches[0].clientY;
         } else if (e.touches.length === 2) {
+            e.preventDefault();
             // Two finger touch - pinch to zoom
             const dx = e.touches[0].clientX - e.touches[1].clientX;
             const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -1935,9 +1956,10 @@ function setupTouchGestures(canvas, camera, model) {
             }
         }
     }, { passive: false });
-    
+
     // Handle touch end
     canvas.addEventListener('touchend', (e) => {
+        isDraggingHorizontal = false;
         if (e.touches.length === 0) {
             isTouching = false;
             touchStartDistance = 0;
