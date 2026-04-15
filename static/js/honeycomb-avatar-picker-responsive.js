@@ -2315,23 +2315,14 @@ function chooseAvatar() {
                 });
             }
             
-            // Redirect after brief delay to show success
-            // Android: immediate redirect + replace to avoid dashboard glitch (WebView navigation/bfcache issues)
+            // Redirect after brief delay to show success and let the WebView compositor finish
             var redirectUrl = data.redirect || '/';
-            if (isAndroid) {
-                // Cache-bust to ensure fresh dashboard render after avatar change
-                var sep = redirectUrl.indexOf('?') >= 0 ? '&' : '?';
-                redirectUrl = redirectUrl + sep + '_av=' + Date.now();
-                console.log('🔀 Redirecting (Android): ' + redirectUrl);
-                window.location.replace(redirectUrl);
-            } else {
-                setTimeout(function() {
-                    console.log('🔀 Redirecting to: ' + redirectUrl);
-                    requestAnimationFrame(function() {
-                        window.location.href = redirectUrl;
-                    });
-                }, 1000);
-            }
+            setTimeout(function() {
+                console.log('🔀 Redirecting to: ' + redirectUrl);
+                requestAnimationFrame(function() {
+                    window.location.replace(redirectUrl);
+                });
+            }, isAndroid ? 600 : 1000);
         } else {
             throw new Error(data.error || 'Unknown error');
         }

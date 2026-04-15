@@ -196,6 +196,7 @@ html.android body.honeycomb-avatar-picker {
 html.android body.honeycomb-avatar-picker {
     background-attachment: scroll !important;
     touch-action: pan-y;
+    isolation: isolate;
 }
 html.android body.honeycomb-avatar-picker * {
     touch-action: pan-y;
