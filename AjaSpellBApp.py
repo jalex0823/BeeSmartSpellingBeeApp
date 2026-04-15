@@ -14232,6 +14232,12 @@ def logout():
 
     resp = redirect(url_for('home'))
     try:
+        # Explicitly delete the Flask-Login remember_token cookie.
+        # login_user(remember=True) sets this persistent cookie; it survives session.clear()
+        # and will silently re-authenticate the user on the next request if not removed.
+        remember_cookie = app.config.get('REMEMBER_COOKIE_NAME', 'remember_token')
+        resp.delete_cookie(remember_cookie)
+        resp.delete_cookie('remember_token')  # also delete default name as safety net
         # Ensure cookies used for anonymous restore / install tracking are cleared.
         resp.delete_cookie('anon_restore_id')
         resp.delete_cookie('beesmart_anon_restore_id')
