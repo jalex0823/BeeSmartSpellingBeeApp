@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-fonts.css') }}?v=20251129">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/android-performance-fix.css') }}?v=20260414">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/avatar-intro-fx.css') }}?v=20251201">
+    <script src="{{ url_for('static', filename='js/avatar-display-manager.js') }}?v=20260415" defer></script>
     {% if current_user.is_authenticated and (current_user.role|default('') != 'guest') %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/avatar-stage-fx.css') }}?v=20260106">
     {% endif %}

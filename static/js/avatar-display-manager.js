@@ -51,6 +51,13 @@
         try { mascot.parentElement.style.display = 'none'; } catch(_){}
       }
 
+      // Show the guest carousel wrapper immediately (don't wait for GLB load)
+      if (guestWrap) {
+        guestWrap.style.display = 'block';
+        var canvasWrap = document.getElementById('guestAvatar3D');
+        if (canvasWrap) canvasWrap.style.display = 'block';
+      }
+
       // Initialize a fast 2D carousel immediately, then upgrade to 3D when Three.js is ready.
       // This prevents getting stuck in PNG mode if initialization happens before vendor scripts load.
       try {
