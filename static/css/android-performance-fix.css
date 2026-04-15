@@ -181,13 +181,27 @@ html.android body.honeycomb-avatar-picker .loading-overlay {
 
 /* ========================================
    FIX 9: Honeycomb Avatar Picker - scrollable on Android
+   background-attachment:fixed breaks scroll entirely on Android WebView/Chrome.
+   Must be overridden to scroll or local to allow native page scroll.
    ======================================== */
+html.android,
 html.android body.honeycomb-avatar-picker {
+    height: auto !important;
+    min-height: 100vh;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: auto !important;
+}
+html.android body.honeycomb-avatar-picker {
+    background-attachment: scroll !important;
     touch-action: pan-y;
-    min-height: 100vh;
+}
+html.android body.honeycomb-avatar-picker * {
+    touch-action: pan-y;
+}
+html.android body.honeycomb-avatar-picker canvas {
+    touch-action: none;
 }
 html.android body.honeycomb-avatar-picker .honeycomb-content {
     min-height: 0;
