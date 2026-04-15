@@ -193,21 +193,15 @@ html.android body.honeycomb-avatar-picker .honeycomb-content {
     min-height: 0;
     flex: 1;
 }
-/* Grid container as scroll area on mobile so grid scrolls reliably */
+/* Grid container: let page body scroll naturally, no height cap */
 @media screen and (max-width: 767px) {
     html.android body.honeycomb-avatar-picker .honeycomb-content {
         display: flex;
         flex-direction: column;
-        min-height: 0;
     }
     html.android body.honeycomb-avatar-picker .honeycomb-grid-container {
         flex: 1 1 auto;
-        min-height: 0;
-        max-height: 55vh;
-        overflow-y: auto;
-        overflow-x: hidden;
-        -webkit-overflow-scrolling: touch;
-        touch-action: pan-y;
+        overflow: visible;
     }
 }
 
