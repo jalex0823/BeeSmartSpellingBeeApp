@@ -14219,20 +14219,13 @@ def dev_peek_reset_token():
 
 
 @app.route('/auth/logout')
-@login_required
 def logout():
     """Log out current user"""
     # Clear any client-side IAP state handoffs so premium UI cannot appear
     # to remain "active" after signing out.
     logout_user()
     try:
-        session.pop('iap_entitlements', None)
-        session.pop('iap_owned_products', None)
-        session.pop('iap_last_restore_at', None)
-        session.pop('iap_install_id', None)
-        # Legacy/alternate keys (best-effort; safe if absent)
-        session.pop('owned_products', None)
-        session.pop('entitlements', None)
+        session.clear()
     except Exception:
         # Non-fatal: logout should always succeed.
         pass
