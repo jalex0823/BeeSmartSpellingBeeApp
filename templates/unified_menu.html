@@ -1224,10 +1224,12 @@
         }
         /* Guest carousel 3D canvas host: match registered avatar viewer sizing */
         #guestAvatar3D {
-            display: none;
+            display: block;
             position: relative;
-            width: min(400px, 92vw);
-            height: min(400px, 92vw);
+            width: min(300px, 86vw);
+            height: min(300px, 86vw);
+            min-width: 240px;
+            min-height: 240px;
             margin: 0 auto;
         }
         /* Ensure PNG fallback matches 3D canvas size and has a soft card look */
@@ -13081,6 +13083,18 @@ const avatarsUrl = '/api/avatars' + (/iPhone|iPad|iPod/i.test(ua) ? '?platform=a
                         existing.forEach((c) => { try { c.remove(); } catch (_) {} });
                     } catch (_) {}
                     canvasWrap.appendChild(canvas);
+
+                    // Force a resize after append so renderer picks up real CSS dimensions
+                    requestAnimationFrame(() => {
+                        try {
+                            const r = canvasWrap.getBoundingClientRect();
+                            const w = Math.max(240, Math.round(r.width || canvasWrap.clientWidth || 300));
+                            const h = Math.max(240, Math.round(r.height || canvasWrap.clientHeight || 300));
+                            renderer.setSize(w, h);
+                            camera.aspect = w / h;
+                            camera.updateProjectionMatrix();
+                        } catch (_) {}
+                    });
 
                     // Keep renderer in sync with CSS sizing
                     const onResize = () => {
