@@ -9649,40 +9649,42 @@ def api_upload_manual_words():
         
         if len(verify_wb) != len(enriched):
             print(f"WARNING /api/upload-manual-words: Wordbank size mismatch! Set {len(enriched)}, got {len(verify_wb)}")
-        
+
         return jsonify({"ok": True, "count": len(enriched)})
-        
+
     except Exception as e:
         return jsonify({"ok": False, "error": f"Processing error: {str(e)}"}), 500
 
-# ── Coloring Book QR Scanner Word Sets ───────────────────────────────────────
-# Static lookup table: set_id (from QR code) → word list.
-# Add new coloring book sets here as they are published.
+# ── Coloring Book QR Scanner Word Sets (A-Z alphabet pages) ──────────────────
+# One entry per letter. QR code on each coloring book page encodes the letter.
+# 10 kid-friendly spelling words per letter, all starting with that letter.
 _COLORING_BOOK_SETS = {
-    "a-set-01": {
-        "title": "Animals Chapter 1",
-        "words": ["cat", "dog", "bird", "fish", "frog", "duck", "bear", "wolf", "deer", "lion"],
-    },
-    "a-set-02": {
-        "title": "Animals Chapter 2",
-        "words": ["tiger", "elephant", "giraffe", "zebra", "monkey", "parrot", "turtle", "rabbit", "horse", "snake"],
-    },
-    "b-set-01": {
-        "title": "Nature Chapter 1",
-        "words": ["tree", "flower", "grass", "cloud", "rain", "snow", "sun", "moon", "star", "wind"],
-    },
-    "b-set-02": {
-        "title": "Nature Chapter 2",
-        "words": ["river", "ocean", "mountain", "forest", "desert", "island", "valley", "canyon", "lake", "pond"],
-    },
-    "c-set-01": {
-        "title": "Colors & Shapes",
-        "words": ["red", "blue", "green", "yellow", "orange", "purple", "circle", "square", "triangle", "diamond"],
-    },
-    "d-set-01": {
-        "title": "Food Fun",
-        "words": ["apple", "banana", "orange", "grape", "melon", "berry", "bread", "cheese", "honey", "pizza"],
-    },
+    "a": {"title": "Letter A Words", "words": ["apple", "ant", "arrow", "angel", "anchor", "album", "acorn", "almond", "apron", "axe"]},
+    "b": {"title": "Letter B Words", "words": ["ball", "bear", "bird", "book", "boat", "brush", "bread", "brick", "bridge", "butterfly"]},
+    "c": {"title": "Letter C Words", "words": ["cat", "cake", "cloud", "clock", "chair", "crown", "candle", "crayon", "castle", "carrot"]},
+    "d": {"title": "Letter D Words", "words": ["dog", "duck", "drum", "door", "daisy", "diamond", "dragon", "dress", "desk", "dolphin"]},
+    "e": {"title": "Letter E Words", "words": ["egg", "eagle", "earth", "elf", "engine", "elbow", "easel", "empty", "email", "exit"]},
+    "f": {"title": "Letter F Words", "words": ["fish", "frog", "flag", "flower", "flute", "feather", "fence", "forest", "fox", "fruit"]},
+    "g": {"title": "Letter G Words", "words": ["goat", "grape", "gift", "globe", "glove", "grass", "guitar", "ghost", "giraffe", "golden"]},
+    "h": {"title": "Letter H Words", "words": ["hat", "heart", "horse", "house", "honey", "hammer", "harp", "helmet", "hill", "hummingbird"]},
+    "i": {"title": "Letter I Words", "words": ["ice", "igloo", "iris", "iron", "island", "insect", "inch", "ink", "ivy", "invite"]},
+    "j": {"title": "Letter J Words", "words": ["jar", "jet", "jewel", "jungle", "juggle", "jacket", "jump", "jelly", "journal", "jaguar"]},
+    "k": {"title": "Letter K Words", "words": ["kite", "king", "kitten", "knife", "knight", "koala", "kettle", "kernel", "kayak", "kingdom"]},
+    "l": {"title": "Letter L Words", "words": ["lion", "leaf", "lamp", "lemon", "ladder", "lizard", "lantern", "letter", "lighthouse", "library"]},
+    "m": {"title": "Letter M Words", "words": ["moon", "map", "mouse", "mirror", "music", "mango", "medal", "mountain", "magnet", "monarch"]},
+    "n": {"title": "Letter N Words", "words": ["nest", "night", "nose", "nurse", "needle", "napkin", "noodle", "nugget", "network", "notebook"]},
+    "o": {"title": "Letter O Words", "words": ["owl", "ocean", "orange", "oven", "olive", "orbit", "onion", "outfit", "oxen", "oyster"]},
+    "p": {"title": "Letter P Words", "words": ["pig", "pen", "pizza", "planet", "parrot", "pumpkin", "pencil", "puzzle", "palace", "penguin"]},
+    "q": {"title": "Letter Q Words", "words": ["queen", "quilt", "quail", "quest", "quiet", "quarter", "quick", "quote", "quarry", "qualify"]},
+    "r": {"title": "Letter R Words", "words": ["rain", "rose", "rabbit", "rocket", "river", "rainbow", "ribbon", "ruler", "robot", "radish"]},
+    "s": {"title": "Letter S Words", "words": ["sun", "star", "snake", "snow", "sheep", "shell", "spider", "sword", "strawberry", "submarine"]},
+    "t": {"title": "Letter T Words", "words": ["tree", "tiger", "train", "turtle", "torch", "trophy", "trumpet", "thunder", "tomato", "telescope"]},
+    "u": {"title": "Letter U Words", "words": ["umbrella", "unicorn", "uniform", "universe", "uncle", "useful", "unique", "uphill", "urgent", "umpire"]},
+    "v": {"title": "Letter V Words", "words": ["violin", "vine", "volcano", "village", "vessel", "violet", "vase", "vapor", "valley", "voyage"]},
+    "w": {"title": "Letter W Words", "words": ["wolf", "whale", "wagon", "water", "witch", "wizard", "window", "wreath", "walrus", "waterfall"]},
+    "x": {"title": "Letter X Words", "words": ["xylophone", "x-ray", "xenon", "xerox", "xbox", "xylem", "x-axis", "xenia", "xebec", "xenial"]},
+    "y": {"title": "Letter Y Words", "words": ["yarn", "yak", "yoga", "yolk", "yacht", "yellow", "yield", "yogurt", "yodel", "yearbook"]},
+    "z": {"title": "Letter Z Words", "words": ["zebra", "zoo", "zero", "zipper", "zombie", "zeppelin", "zucchini", "zigzag", "zenith", "zodiac"]},
 }
 
 @app.route('/wordlists/from-set', methods=['POST'])
