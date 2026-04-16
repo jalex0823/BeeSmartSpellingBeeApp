@@ -9655,6 +9655,83 @@ def api_upload_manual_words():
     except Exception as e:
         return jsonify({"ok": False, "error": f"Processing error: {str(e)}"}), 500
 
+# ── Coloring Book QR Scanner Word Sets ───────────────────────────────────────
+# Static lookup table: set_id (from QR code) → word list.
+# Add new coloring book sets here as they are published.
+_COLORING_BOOK_SETS = {
+    "a-set-01": {
+        "title": "Animals Chapter 1",
+        "words": ["cat", "dog", "bird", "fish", "frog", "duck", "bear", "wolf", "deer", "lion"],
+    },
+    "a-set-02": {
+        "title": "Animals Chapter 2",
+        "words": ["tiger", "elephant", "giraffe", "zebra", "monkey", "parrot", "turtle", "rabbit", "horse", "snake"],
+    },
+    "b-set-01": {
+        "title": "Nature Chapter 1",
+        "words": ["tree", "flower", "grass", "cloud", "rain", "snow", "sun", "moon", "star", "wind"],
+    },
+    "b-set-02": {
+        "title": "Nature Chapter 2",
+        "words": ["river", "ocean", "mountain", "forest", "desert", "island", "valley", "canyon", "lake", "pond"],
+    },
+    "c-set-01": {
+        "title": "Colors & Shapes",
+        "words": ["red", "blue", "green", "yellow", "orange", "purple", "circle", "square", "triangle", "diamond"],
+    },
+    "d-set-01": {
+        "title": "Food Fun",
+        "words": ["apple", "banana", "orange", "grape", "melon", "berry", "bread", "cheese", "honey", "pizza"],
+    },
+}
+
+@app.route('/wordlists/from-set', methods=['POST'])
+@login_required
+def wordlists_from_set():
+    """Load a coloring book word set into the session wordbank via QR code.
+
+    Expects JSON body: { "set_id": "a-set-01" }
+    Returns the word list on success, or an error code on failure.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        set_id = str(data.get('set_id', '')).strip().lower()
+
+        if not set_id:
+            return jsonify({'error': 'missing_set_id', 'message': 'No set_id provided.'}), 400
+
+        word_set = _COLORING_BOOK_SETS.get(set_id)
+        if not word_set:
+            return jsonify({'error': 'set_not_found', 'message': f'Word set "{set_id}" not found.'}), 404
+
+        title = word_set['title']
+        raw_words = word_set['words']
+
+        # Build wordbank rows compatible with set_wordbank()
+        rows = [{'word': w, 'sentence': '', 'hint': ''} for w in raw_words if w]
+
+        # Check if user already has this exact set loaded
+        existing_wb = get_wordbank() or []
+        existing_words = {r.get('word', '').lower() for r in existing_wb}
+        set_words = {w.lower() for w in raw_words}
+        already_loaded = set_words == existing_words
+
+        if not already_loaded:
+            set_wordbank(rows, is_user_upload=True)
+
+        return jsonify({
+            'ok': True,
+            'created': not already_loaded,
+            'list': {'title': title, 'set_id': set_id},
+            'words': raw_words,
+        })
+
+    except Exception as e:
+        print(f"ERROR /wordlists/from-set: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'server_error', 'message': 'Something went wrong. Please try again.'}), 500
+
 @app.route('/api/next', methods=['POST'])
 def api_next():
     """Get the next word in the quiz sequence."""
