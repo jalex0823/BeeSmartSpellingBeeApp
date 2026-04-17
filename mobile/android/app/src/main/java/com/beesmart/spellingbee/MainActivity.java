@@ -1,5 +1,6 @@
 package com.beesmart.spellingbee;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.webkit.WebSettings;
@@ -8,10 +9,19 @@ import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+
+	private GooglePayPlugin googlePayPlugin;
+
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		registerPlugin(BeeSmartIAPPlugin.class);
+		registerPlugin(GooglePayPlugin.class);
+		try {
+			googlePayPlugin = (GooglePayPlugin) getBridge().getPlugin("GooglePayPlugin").getInstance();
+		} catch (Exception e) {
+			// Plugin resolves on first use
+		}
 
 		// Configure WebView for smooth scrolling and proper touch handling
 		try {
@@ -53,6 +63,14 @@ public class MainActivity extends BridgeActivity {
 		} catch (Exception e) {
 			// Bridge may not be ready yet; ignore
 			e.printStackTrace();
+		}
+	}
+
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+		if (googlePayPlugin != null) {
+			googlePayPlugin.handleActivityResult(requestCode, resultCode, data);
 		}
 	}
 }
