@@ -7,6 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.types import TypeDecorator
+from sqlalchemy import UniqueConstraint
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import uuid
@@ -521,6 +522,16 @@ class User(UserMixin, db.Model):
         # Add purchased avatars
         if self.purchased_avatars:
             unlocked.extend(self.purchased_avatars)
+
+        # Add avatars unlocked by server-granted entitlements (e.g., Coloring Book reward)
+        try:
+            ents = UserEntitlement.query.filter_by(user_id=self.id, entitlement_type='avatar').all()
+            for e in (ents or []):
+                k = str(getattr(e, 'entitlement_key', '') or '').strip()
+                if k.startswith('avatar.'):
+                    unlocked.append(k[len('avatar.'):].replace('_', '-'))
+        except Exception:
+            pass
         
         # Add avatars unlocked via Honey Points
         honey_points = self.honey_points or 0
@@ -2002,3 +2013,58 @@ class WordBankStorage(db.Model):
             db.session.commit()
             return True
         return False
+
+
+class UserEntitlement(db.Model):
+    __tablename__ = 'user_entitlements'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    entitlement_type = db.Column(db.String(50), nullable=False, index=True)
+    entitlement_key = db.Column(db.String(200), nullable=False, index=True)
+    source = db.Column(db.String(100), nullable=True, index=True)
+    source_id = db.Column(db.String(100), nullable=True)
+    granted_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'entitlement_type', 'entitlement_key', name='uq_user_entitlements_user_type_key'),
+    )
+
+
+class WordSet(db.Model):
+    __tablename__ = 'word_sets'
+
+    set_id = db.Column(db.String(50), primary_key=True)
+    letter = db.Column(db.String(2), nullable=False, index=True)
+    words_json = db.Column(db.JSON, nullable=False, default=list)
+    active = db.Column(db.Boolean, default=True, index=True)
+
+
+class ColoringBookList(db.Model):
+    __tablename__ = 'coloring_book_lists'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    source_set_id = db.Column(db.String(50), db.ForeignKey('word_sets.set_id'), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    status = db.Column(db.String(20), default='active', index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    completed_at = db.Column(db.DateTime)
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'source_set_id', name='uq_coloring_book_lists_user_set'),
+    )
+
+
+class ColoringBookListItem(db.Model):
+    __tablename__ = 'coloring_book_list_items'
+
+    id = db.Column(db.Integer, primary_key=True)
+    list_id = db.Column(db.Integer, db.ForeignKey('coloring_book_lists.id'), nullable=False, index=True)
+    word = db.Column(db.String(100), nullable=False, index=True)
+    is_completed = db.Column(db.Boolean, default=False, index=True)
+    completed_at = db.Column(db.DateTime)
+
+    __table_args__ = (
+        UniqueConstraint('list_id', 'word', name='uq_coloring_book_list_items_list_word'),
+    )

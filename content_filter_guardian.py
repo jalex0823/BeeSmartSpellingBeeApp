@@ -103,53 +103,178 @@ class ContentViolationTracker:
 
 # Enhanced inappropriate words list with categories
 ENHANCED_INAPPROPRIATE_WORDS = {
-    # Original list + new additions
     'profanity': {
-        "damn", "damned", "hell", "hells", "crap", "sucks", "piss", "pissed",
-        "shit", "fuck", "bitch", "asshole", "bastard", "dumbass"
+        # NOTE: "dam"/"dams" removed — legitimate geography/engineering word
+        # NOTE: "hell"/"hells" removed — legitimate in literature/geography
+        "damn", "damned", "crap", "crappy", "sucks", "piss", "pissed",
+        "shit", "shits", "shitty", "bullshit",
+        "fuck", "fucks", "fucker", "fuckers", "fucked", "fucking", "fuckhead", "fuckheads",
+        "motherfucker", "motherfuckers", "motherfucking",
+        "bitch", "bitches", "bitchy",
+        "ass", "asses", "asshole", "assholes", "jackass", "smartass", "dumbass", "dumbasses",
+        "bastard", "bastards",
+        "dick", "dicks", "cock", "cocks", "prick", "pricks",
+        "cunt", "cunts", "twat", "twats",
+        "slut", "sluts", "slutty", "whore", "whores", "whorish",
+        "boob", "boobs", "tit", "tits", "titty", "titties",
+        "arse", "arses",
+        "douche", "douchebag", "douchebags",
+        "turd", "turds", "fart", "farts",
+        # NOTE: "screw"/"screwed"/"screwing" removed — primary meaning is hardware/mechanics
     },
     'sexual_content': {
-        "sex", "sexy", "porn", "orgasm", "penis", "vagina", "breast", "breasts",
-        "ejaculation", "ejaculations", "erection", "masturbate", "prostitute",
-        "nude", "naked", "horny", "arousal", "climax", "intercourse",
-        # CRITICAL: Child safety - block all pedophilia/abuse terms
-        "pedophile", "pedophiles", "pedophilia", "pedophilic", "paedophile", "paedophilia",
+        "sex", "sexy", "porn", "pornography", "pornographic",
+        "orgasm", "orgasms", "penis", "vagina", "vulva",
+        "breast", "breasts", "nipple", "nipples",
+        "ejaculation", "ejaculations", "erection", "masturbate", "masturbation",
+        "prostitute", "prostitution", "prostitutes",
+        "nude", "nudity", "naked",
+        "horny", "arousal", "aroused",
+        # NOTE: "climax" removed — literary term (plot climax)
+        "intercourse", "erotic", "erotica",
+        "sexuality", "genitals", "genital",
+        # NOTE: "lust"/"lustful"/"lusty" removed — archaic/literary vocabulary
+        "fetish", "fetishes", "pervert", "perverts", "perverted",
+        "fornicate", "fornication",
+        "seduce", "seduction", "seducing",
+        "obscene", "obscenity",
+        "sexting",
+        # Child safety terms
+        "pedophile", "pedophiles", "pedophilia", "pedophilic", "paedophile", "paedophiles", "paedophilia",
         "molest", "molestation", "molester", "molesting", "molesters",
-        "rape", "rapist", "raping", "rapes", "raped",
-        "incest", "incestuous", "abuse", "abuser", "abusive", "abusing",
-        "predator", "predators", "groom", "grooming", "groomer", "groomers",
+        "rape", "rapist", "rapists", "raping", "rapes", "raped",
+        "incest", "incestuous",
+        "abuse", "abuser", "abusers", "abusive", "abusing",
+        # NOTE: "predator"/"predators" removed — biology (predator/prey) vocabulary
+        "groom", "grooming", "groomer", "groomers",
         "statutory", "underage", "preteen", "preteens", "tweener", "tweeners",
-        "victim", "victims", "exploit", "exploitation", "exploiting",
-        "erotic", "sexuality", "genitals", "genital"
+        # NOTE: "victim"/"victims" removed — standard legal/social vocabulary
+        "exploit", "exploitation", "exploiting", "exploiter", "exploiters",
     },
     'violence': {
-        "kill", "killing", "killer", "murder", "murderer", "suicide", "weapon", 
-        "gun", "shoot", "shooting", "bomb", "explosive", "stab", "stabbing",
-        "violence", "violent", "assault", "assaults", "assaulting", "assaulted",
-        "attack", "terrorism", "terrorist", "harass", "harassment", "harassing"
+        "kill", "killing", "killer", "killers",
+        "murder", "murderer", "murderers", "murdering",
+        "suicide", "suicidal",
+        # NOTE: "weapon"/"weapons" removed — history/social studies vocabulary
+        # NOTE: "gun"/"guns" removed — legitimate uses (starter gun, spray gun)
+        # NOTE: "knife"/"knives" removed — cooking/kitchen vocabulary
+        "rifle", "rifles", "pistol", "pistols", "shotgun", "shotguns",
+        "shoot", "shooting", "shootings", "shooter", "shooters",
+        "stab", "stabbing", "stabbings", "stabbed",
+        "bomb", "bombs", "bombing", "bombings", "explosive", "explosives",
+        "grenade", "grenades",
+        "offing", "offed",
+        "violent", "violence",
+        "slay", "slaying", "slayings", "slaughter", "slaughtered", "slaughtering",
+        # NOTE: "harm"/"harming"/"harmful" removed — standard vocabulary
+        "torture", "torturing", "tortured", "torturous",
+        "massacre", "massacred", "massacring",
+        # NOTE: "execute"/"executing" removed — computing vocabulary; keep direct execution refs
+        "execution", "executions",
+        "behead", "beheading", "beheadings",
+        "mutilate", "mutilation", "mutilating",
+        "decapitate", "decapitation",
+        "strangle", "strangling", "strangled",
+        "terrorism", "terrorist", "terrorists",
+        "hostage", "hostages",
+        "genocide",
+        "assault", "assaults", "assaulting", "assaulted",
+        "harass", "harassment", "harassing", "harasser",
     },
     'drugs_alcohol': {
-        "drug", "drugs", "cocaine", "marijuana", "heroin", "meth", "drunk", "alcohol",
-        "weed", "pot", "high", "stoned", "overdose", "addiction"
+        # NOTE: "drug"/"drugs" removed — medical/pharmacy vocabulary
+        # NOTE: "coke" removed — common soda name
+        # NOTE: "weed"/"pot" removed — gardening vocabulary
+        # NOTE: "stoned" removed — stones context
+        "cocaine",
+        "marijuana", "cannabis",
+        "heroin", "meth", "methamphetamine",
+        "overdose", "overdosed", "overdosing",
+        "addiction", "addicted", "addictive",
+        "hallucinate", "hallucination", "hallucinations",
+        "drunk", "drunken", "drunkenness",
+        "alcohol", "alcoholic", "alcoholism",
+        "beer", "liquor", "whiskey", "vodka", "tequila",
+        "cigarette", "cigarettes",
+        # NOTE: "smoking"/"smoked" removed — BBQ/cooking vocabulary
+        "tobacco",
+        "vape", "vaping", "vaper",
+        "narcotic", "narcotics",
+        "opium", "opioid", "opioids",
+        # NOTE: "crack" removed — crack in wall, crack of dawn
+        # NOTE: "acid" removed — chemistry/science vocabulary
+        "ecstasy",
+        "lsd",
     },
     'hate_speech': {
-        "racist", "sexist", "nazi", "hate", "terrorism", "terrorist", "extremist"
+        "racist", "racism",
+        "sexist", "sexism",
+        "nazi", "nazis",
+        # NOTE: "hate" removed — standard vocabulary word
+        "nigger", "niggers", "nigga", "niggas",
+        "chink", "chinks",
+        "spic", "spics",
+        "kike", "kikes",
+        "gook", "gooks",
+        "wetback", "wetbacks",
+        "cracker",
+        "honky", "honkies",
+        "fag", "fags", "faggot", "faggots",
+        "dyke", "dykes",
+        "retard", "retards", "retarded",
+        # NOTE: "moron"/"idiot"/"imbecile" removed — common informal vocabulary
+        "cripple", "cripples",
+        "bigot", "bigots", "bigoted", "bigotry",
+        "extremist", "extremists", "extremism",
+        "supremacist", "supremacists",
+        "homophobic", "homophobia",
+        "transphobic", "transphobia",
+        "xenophobic", "xenophobia",
     },
     'disturbing_content': {
-        "death", "die", "dying", "blood", "bloody", "torture", "pain", "suffering",
-        "corpse", "suicide", "self-harm",
-        "sadism", "sadist", "sadistic"
+        # NOTE: "death"/"die"/"dying" removed — standard vocabulary
+        # NOTE: "blood"/"bloody" removed — biology/medicine; "bloodshed" kept
+        # NOTE: "skull"/"skulls" removed — anatomy/biology vocabulary
+        "bloodshed",
+        "corpse", "corpses",
+        "sadism", "sadist", "sadistic",
+        "gore", "gory",
+        "cannibal", "cannibalism",
+        "necrophilia",
+        "self-harm", "selfharm",
+        # NOTE: "cutting" removed — common vocabulary (cutting paper, haircut, etc.)
+    },
+    'religious_content': {
+        "god", "gods", "goddess", "goddesses",
+        "jesus", "christ", "christian", "christians", "christianity",
+        "allah", "islam", "muslim", "muslims",
+        "jew", "jews", "jewish", "judaism",
+        "hindu", "hindus", "hinduism",
+        "buddha", "buddhist", "buddhists", "buddhism",
+        "sikh", "sikhs", "sikhism",
+        "church", "churches", "mosque", "mosques", "temple", "temples", "synagogue", "synagogues",
+        "bible", "quran", "koran", "torah", "gospel", "scripture", "scriptures",
+        "prayer", "prayers", "pray", "praying",
+        "pastor", "pastors", "priest", "priests", "rabbi", "rabbis", "imam", "imams",
     },
     'spam_patterns': {
-        # Common spam/inappropriate patterns
-        "wtf", "omg", "lol", "rofl", "stfu", "gtfo", "af", "thot"
-    }
+        "wtf", "stfu", "gtfo", "omfg",
+        "thot",
+        "simp",
+    },
 }
 
-# Flatten all inappropriate words
+# Flatten all inappropriate words from the categories above
 ALL_INAPPROPRIATE_WORDS = set()
 for category_words in ENHANCED_INAPPROPRIATE_WORDS.values():
     ALL_INAPPROPRIATE_WORDS.update(category_words)
+
+# Also merge from AjaSpellBApp authoritative list when available
+try:
+    from AjaSpellBApp import INAPPROPRIATE_WORDS as _APP_WORDS
+    ALL_INAPPROPRIATE_WORDS.update({str(w).strip().lower() for w in _APP_WORDS if str(w or '').strip()})
+except Exception:
+    pass
 
 # Global violation tracker instance
 violation_tracker = ContentViolationTracker()
@@ -206,9 +331,10 @@ def get_kid_friendly_violation_message(word: str, category: str, violation_count
         'profanity': "uses words that aren't polite or respectful",
         'sexual_content': "includes grown-up topics not suitable for kids",
         'violence': "describes harmful or scary things",
-        'drugs_alcohol': "mentions substances that aren't healthy for children",
-        'hate_speech': "contains mean or hurtful language",
-        'disturbing_content': "includes topics that might be scary or upsetting",
+        'drugs_alcohol': "mentions substances that aren't safe for kids",
+        'hate_speech': "contains hurtful language about people",
+        'disturbing_content': "describes things that may be too scary or upsetting",
+        'religious_content': "includes religious terms we don't use in this word list",
         'spam_patterns': "looks like random letters or spam"
     }
     

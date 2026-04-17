@@ -18,9 +18,9 @@ from AjaSpellBApp import app, normalize, get_word_info, generate_smart_fallback,
 
 
 def _is_auth_required(resp) -> bool:
-    """Helper: some endpoints intentionally return 403 for guests."""
+    """Helper: some endpoints intentionally return 401/403 for guests."""
     try:
-        if resp.status_code != 403:
+        if resp.status_code not in (401, 403):
             return False
         data = json.loads(resp.data)
         return bool(data.get('auth_required')) or str(data.get('error')) == 'auth_required'
@@ -106,8 +106,8 @@ class TestCompleteApp(unittest.TestCase):
         
         # Should return error about no file, but endpoint should exist
         # Image upload is typically auth-gated.
-        self.assertIn(response.status_code, [200, 405, 403])
-        if response.status_code == 403:
+        self.assertIn(response.status_code, [200, 405, 401, 403])
+        if response.status_code in (401, 403):
             self.assertTrue(_is_auth_required(response))
             return
         
@@ -125,8 +125,8 @@ class TestCompleteApp(unittest.TestCase):
             
             # Test image upload endpoint when OCR is available
             response = self.app.get('/api/upload/image')
-            # If the endpoint is auth-gated, accept 403 auth_required.
-            if response.status_code == 403:
+            # If the endpoint is auth-gated, accept 401/403 auth_required.
+            if response.status_code in (401, 403):
                 self.assertTrue(_is_auth_required(response))
                 return
             self.assertEqual(response.status_code, 200)  # GET should now be OK

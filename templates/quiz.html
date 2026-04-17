@@ -104,98 +104,170 @@ window.initializeGlobalVoice = function() {
     if ('speechSynthesis' in window) {
         const voices = speechSynthesis.getVoices();
         if (voices.length > 0) {
-            window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(voices);
+            const preferFemale = (function() {
+                try { return localStorage.getItem('beesmart_voice_gender') !== 'male'; } catch (_) { return true; }
+            })();
+            window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(voices, preferFemale);
             window.QUIZ_VOICE_INITIALIZED = true;
             console.log(
-                '🎤 Global voice initialized:',
+                '🎤 Global voice initialized (' + (preferFemale ? 'female' : 'male') + ' preferred):',
                 (window.QUIZ_CACHED_VOICE && window.QUIZ_CACHED_VOICE.name) ? window.QUIZ_CACHED_VOICE.name : 'Default'
             );
         }
     }
 };
 
-// Global function to select best natural female voice - British/standard English preferred
-function selectBestFemaleVoiceGlobal(voices) {
+// Global function to select best natural voice - preferFemale=true (default) scores female voices higher;
+// set preferFemale=false to prefer male voices. Falls back to opposite gender if no match found.
+function selectBestFemaleVoiceGlobal(voices, preferFemale) {
     if (!voices || voices.length === 0) return null;
-    
-    const scoredVoices = voices
-        .filter(v => v && v.lang && String(v.lang).toLowerCase().indexOf('en') === 0)
-        .map(voice => {
-            let score = 0;
-            const name = voice.name.toLowerCase();
-            const lang = voice.lang.toLowerCase();
-            
-            // Prefer British English first, then standard English (educational standard)
-            if (lang.includes('en-gb') || lang.includes('en-uk')) score += 70;
-            else if (lang.includes('en-us')) score += 50;
-            else if (lang.includes('en-au')) score += 40;
-            else if (lang.includes('en')) score += 30;
-            
-            // Local voices sound better
-            if (voice.localService) score += 30;
-            
-            // Premium natural-sounding female voices (British/standard preferred)
-            const premiumVoices = {
-                'kate': 110, 'serena': 105, 'samantha': 100, 'ava': 95, 'emma': 92,
-                'joanna': 90, 'karen': 88, 'moira': 87, 'salli': 85, 'kendra': 85,
-                'susan': 80, 'victoria': 82, 'nova': 78, 'allison': 76, 'zira': 75
-            };
-            
-            for (const [voiceName, points] of Object.entries(premiumVoices)) {
-                if (name.includes(voiceName)) {
-                    score += points;
-                    break;
-                }
-            }
-            
-            return { voice, score };
-        })
-        .sort((a, b) => b.score - a.score);
-    
-    return scoredVoices.length > 0 ? scoredVoices[0].voice : null;
+    if (preferFemale === undefined) preferFemale = true;
+
+    const femaleNames = ['kate','serena','samantha','ava','emma','joanna','karen','moira','salli',
+                         'kendra','susan','victoria','nova','allison','zira','aria','jenny'];
+    const maleNames   = ['daniel','david','alex','thomas','oliver','fred','ralph','bruce',
+                         'matthew','mark','ryan','james','guy','luca','aaron'];
+
+    const scoreVoice = (voice) => {
+        let score = 0;
+        const name = voice.name.toLowerCase();
+        const lang = voice.lang.toLowerCase();
+
+        // Language preference — US English first (National Spelling Bee standard)
+        if (lang.includes('en-us')) score += 70;
+        else if (lang.includes('en-gb') || lang.includes('en-uk')) score += 50;
+        else if (lang.includes('en-au')) score += 40;
+        else if (lang.startsWith('en')) score += 30;
+
+        // Local voices sound better
+        if (voice.localService) score += 30;
+
+        // Quality hints
+        if (name.includes('natural') || name.includes('premium') || name.includes('neural')) score += 60;
+
+        // Gender scoring — preferred gender gets a big boost, opposite gets a fallback bonus
+        const isFemaleNamed = femaleNames.some(n => name.includes(n)) || name.includes('female') || name.includes('woman');
+        const isMaleNamed   = maleNames.some(n => name.includes(n))   || name.includes('male');
+        if (preferFemale) {
+            if (isFemaleNamed) score += 120;
+            else if (isMaleNamed) score += 10;  // fallback
+        } else {
+            if (isMaleNamed)   score += 120;
+            else if (isFemaleNamed) score += 10;  // fallback
+        }
+
+        return score;
+    };
+
+    const enVoices = voices.filter(v => v && v.lang && String(v.lang).toLowerCase().startsWith('en'));
+    if (enVoices.length === 0) return null;
+
+    return enVoices
+        .map(v => ({ voice: v, score: scoreVoice(v) }))
+        .sort((a, b) => b.score - a.score)[0].voice;
 }
 
-// Android: Try native Capacitor TTS when Web Speech API fails (WebView often has no sound)
-// Requires @capacitor-community/text-to-speech and "npx cap sync android" from mobile/ so the plugin is in the build.
-// Retries once after 400ms if plugin not ready. Uses en-US (Android/plugin default); falls back to 'en' if unsupported.
+// Native Capacitor TTS — works on Android and iOS Capacitor builds.
+// Priority order:
+//   1. @capawesome-team/capacitor-speech-synthesis  (SpeechSynthesis plugin — supports pitch/rate/volume/voiceId)
+//   2. @capacitor-community/text-to-speech          (TextToSpeech plugin — legacy fallback)
+//   3. returns false  -> caller falls back to Web Speech API
+// Run "npx cap sync" from the mobile/ directory after adding either plugin.
 window.BeeSmartTryNativeTTS = async function(text, opts) {
-    if (!text || !/Android/i.test(navigator.userAgent)) return false;
-    function getTTS() {
-        var cap = window.Capacitor;
-        if (!cap || !cap.Plugins) return null;
-        return cap.Plugins.TextToSpeech || cap.Plugins['TextToSpeech'] || null;
+    if (!text) return false;
+    var isNative = window.Capacitor && typeof window.Capacitor.getPlatform === 'function';
+    if (!isNative && !/Android/i.test(navigator.userAgent)) return false;
+
+    var rate  = (opts && opts.rate  != null) ? opts.rate  : 0.90;
+    var pitch = (opts && opts.pitch != null) ? opts.pitch : 1.1;
+    var cap   = window.Capacitor;
+    var Plugins = cap && cap.Plugins;
+    if (!Plugins) return false;
+
+    // ── Path 1: @capawesome-team/capacitor-speech-synthesis ──────────────────
+    // Plugin key is 'CapacitorSpeechSynthesis'. Supports pitch, rate, volume, language, voiceURI.
+    var SS = Plugins.CapacitorSpeechSynthesis || Plugins['CapacitorSpeechSynthesis'] || null;
+    if (SS && typeof SS.speak === 'function') {
+        try {
+            // Resolve best voiceURI from cached native voices if available
+            var voiceURI = null;
+            try {
+                if (typeof SS.getVoices === 'function') {
+                    var vRes = await SS.getVoices();
+                    var nVoices = (vRes && vRes.voices) || [];
+                    var preferFemale = true;
+                    try { preferFemale = localStorage.getItem('beesmart_voice_gender') !== 'male'; } catch (_) {}
+                    // Score and pick best matching voice
+                    var femaleKws = ['samantha','kate','serena','ava','emma','karen','victoria','aria','jenny','zira','nova'];
+                    var maleKws   = ['daniel','david','thomas','oliver','fred','matthew','mark','guy','aaron'];
+                    var scored = nVoices
+                        .filter(v => v && v.language && String(v.language).toLowerCase().startsWith('en'))
+                        .map(v => {
+                            var n = (v.name || '').toLowerCase();
+                            var s = 0;
+                            if (v.language && v.language.toLowerCase().includes('en-us')) s += 50;
+                            var isFem = femaleKws.some(k => n.includes(k));
+                            var isMal = maleKws.some(k => n.includes(k));
+                            s += preferFemale ? (isFem ? 120 : isMal ? 10 : 0) : (isMal ? 120 : isFem ? 10 : 0);
+                            return { v, s };
+                        })
+                        .sort((a, b) => b.s - a.s);
+                    if (scored.length > 0) voiceURI = scored[0].v.voiceURI || scored[0].v.identifier || null;
+                }
+            } catch (_) {}
+
+            var speakOpts = {
+                text:     String(text),
+                language: 'en-US',
+                pitch:    pitch,
+                rate:     rate,
+                volume:   0.9,
+                queueStrategy: 1  // QueueStrategy.Add = 1
+            };
+            if (voiceURI) speakOpts.voiceURI = voiceURI;
+
+            await SS.speak(speakOpts);
+            console.log('✅ CapacitorSpeechSynthesis spoke:', text);
+            return true;
+        } catch (e) {
+            console.warn('CapacitorSpeechSynthesis.speak failed, trying TextToSpeech fallback:', e);
+        }
     }
-    function trySpeak(TTS, locale) {
+
+    // ── Path 2: @capacitor-community/text-to-speech (legacy) ─────────────────
+    function getLegacyTTS() {
+        return (Plugins.TextToSpeech || Plugins['TextToSpeech']) || null;
+    }
+    function tryLegacySpeak(TTS, locale) {
         if (!TTS || typeof TTS.speak !== 'function') return Promise.resolve(false);
-        var rate = (opts && opts.rate) != null ? opts.rate : 0.95;
-        var pitch = (opts && opts.pitch) != null ? opts.pitch : 1.0;
         return TTS.speak({
-            text: String(text),
-            lang: locale || 'en-US',
-            rate: rate,
-            pitch: pitch,
+            text:   String(text),
+            lang:   locale || 'en-US',
+            rate:   rate,
+            pitch:  pitch,
             volume: 1.0
-        }).then(function() { return true; }).catch(function(e) { console.warn('Native TTS speak failed:', e); return false; });
+        }).then(() => true).catch(e => { console.warn('TextToSpeech speak failed:', e); return false; });
     }
     try {
-        var TTS = getTTS();
-        if (TTS && typeof TTS.speak === 'function') {
-            var ok = await trySpeak(TTS, 'en-US');
+        var TTS = getLegacyTTS();
+        if (TTS) {
+            var ok = await tryLegacySpeak(TTS, 'en-US');
             if (ok) return true;
-            ok = await trySpeak(TTS, 'en');
-            return ok;
-        }
-        await new Promise(function(r) { setTimeout(r, 400); });
-        TTS = getTTS();
-        if (TTS && typeof TTS.speak === 'function') {
-            var ok = await trySpeak(TTS, 'en-US');
+            ok = await tryLegacySpeak(TTS, 'en');
             if (ok) return true;
-            return await trySpeak(TTS, 'en');
         }
-        console.warn('Android TTS: Plugin not found after retry. Run "npx cap sync android" from mobile/.');
+        // One retry after 400ms (plugin may not be ready immediately)
+        await new Promise(r => setTimeout(r, 400));
+        TTS = getLegacyTTS();
+        if (TTS) {
+            var ok = await tryLegacySpeak(TTS, 'en-US');
+            if (ok) return true;
+            return await tryLegacySpeak(TTS, 'en');
+        }
+        console.warn('Native TTS: no plugin found. Run "npx cap sync" from mobile/.');
         return false;
     } catch (e) {
-        console.warn('Native TTS failed:', e);
+        console.warn('Native TTS fallback failed:', e);
         return false;
     }
 };
@@ -238,18 +310,21 @@ window.BeeSmartTTSSmokeTest = async function() {
 };
 
 // Single session voice - use everywhere so only one voice is heard
+// Reads beesmart_voice_gender from localStorage ('female'|'male'); defaults to female.
 function getQuizSessionVoice() {
     if (window.QUIZ_CACHED_VOICE) return window.QUIZ_CACHED_VOICE;
     if ('speechSynthesis' in window && speechSynthesis.getVoices().length > 0) {
         const isAndroid = /Android/i.test(navigator.userAgent) || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
         const voices = speechSynthesis.getVoices();
+        const preferFemale = (function() {
+            try { return localStorage.getItem('beesmart_voice_gender') !== 'male'; } catch (_) { return true; }
+        })();
         // Android: STRONGLY prefer LOCAL (on-device) voices - remote voices often fail silently, no sound
         if (isAndroid) {
             const localEn = voices.filter(v => v.localService && v.lang && String(v.lang).toLowerCase().indexOf('en') === 0);
             window.QUIZ_CACHED_VOICE = localEn.length > 0 ? localEn[0] : null;
-            // If no local voice, leave null - browser default often works better than remote
         } else {
-            window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(voices);
+            window.QUIZ_CACHED_VOICE = selectBestFemaleVoiceGlobal(voices, preferFemale);
         }
         return window.QUIZ_CACHED_VOICE;
     }
@@ -285,19 +360,46 @@ if ('speechSynthesis' in window) {
     // Try immediate initialization
     setTimeout(window.initializeGlobalVoice, 100);
 }
+
+// Pre-recorded audio fallback — used when neither Web Speech API nor Capacitor TTS is available.
+// Clips live in /static/audio/words/<word>.mp3 (lowercase, spaces->underscores).
+// Falls back to a generic "listen.mp3" prompt if the word clip is missing.
+// Usage: BeeSmartAudioFallback.play('elephant', onDoneCallback)
+window.BeeSmartAudioFallback = (function() {
+    function _slug(word) {
+        return String(word || '').toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    }
+    function _play(src, onDone) {
+        try {
+            var audio = new Audio(src);
+            audio.volume = 1.0;
+            audio.onended = function() { if (onDone) onDone(); };
+            audio.onerror = function() { if (onDone) onDone(); };
+            audio.play().catch(function() { if (onDone) onDone(); });
+        } catch (_) { if (onDone) onDone(); }
+    }
+    return {
+        play: function(word, onDone) {
+            if (!word) { if (onDone) onDone(); return; }
+            var slug = _slug(word);
+            var primary  = '/static/audio/words/' + slug + '.mp3';
+            var fallback = '/static/audio/words/listen.mp3';
+            try {
+                var audio = new Audio(primary);
+                audio.volume = 1.0;
+                audio.onended = function() { if (onDone) onDone(); };
+                audio.onerror = function() {
+                    console.warn('BeeSmartAudioFallback: no clip for "' + word + '", using generic prompt');
+                    _play(fallback, onDone);
+                };
+                audio.play().catch(function() { _play(fallback, onDone); });
+            } catch (_) { _play(fallback, onDone); }
+        }
+    };
+})();
 </script>
 
 <style>
-    /* BeeSmart theme (style guide): #FFF4C6 light yellow, #EE9323 orange, #5B311A dark brown, #3DB4A4 teal, #F3F5F5 cream */
-    :root {
-        --page-gutter: 10px;
-        --beesmart-light-yellow: #FFF4C6;
-        --beesmart-orange: #EE9323;
-        --beesmart-dark-brown: #5B311A;
-        --beesmart-teal: #3DB4A4;
-        --beesmart-cream: #F3F5F5;
-    }
-
     /* B) Page scroll (preferred): allow full-page scroll to bottom */
     html, body {
         height: 100%;
@@ -390,9 +492,9 @@ if ('speechSynthesis' in window) {
     .quiz-answer-area {
         position: static;
         z-index: auto;
-        background: linear-gradient(180deg, #FFFDE7 0%, #FFF8E1 100%);
+        background: transparent;
         padding: 4px 8px;
-        margin-bottom: 0.25rem; /* Base margin, overridden by .answer-and-keyboard .quiz-answer-area */
+        margin-bottom: 0;
     }
 
     /* Standalone buttons (not in the 2-column grids) should be centered in the card */
@@ -498,9 +600,10 @@ if ('speechSynthesis' in window) {
         margin: 0 auto;
         overflow: hidden;
         box-sizing: border-box;
-        border-radius: 18px;
-        background: #FFFDE7;
-        border: 1px solid rgba(238, 147, 35, 0.15);
+        border-radius: 22px;
+        background: transparent;
+        border: 2px solid rgba(255, 193, 7, 0.35);
+        box-shadow: 0 2px 12px rgba(255, 193, 7, 0.1);
     }
     .quiz-card .quiz-card-content {
         padding: 0;
@@ -509,6 +612,7 @@ if ('speechSynthesis' in window) {
         flex-direction: column;
         flex: 1;
         overflow: hidden;
+        background: transparent;
     }
     /* Card content should not trap scroll; let the page scroll */
     .card-scroll {
@@ -585,18 +689,23 @@ if ('speechSynthesis' in window) {
         flex-direction: column;
         align-items: center;
         justify-content: flex-start;
-        gap: 1rem; /* Even spacing between avatar and question area (timer/sentence) */
-        padding-bottom: 0.65rem;
-        margin-bottom: 0.5rem;
+        gap: 0.25rem; /* Tight spacing for compact layout */
+        padding-bottom: 0.25rem;
+        margin-bottom: 0.25rem;
     }
-    /* Answer + keyboard in same scroll flow; visible gap, no overlap */
+    /* Answer + keyboard unified form container */
     .answer-and-keyboard {
         display: block;
-        margin-bottom: 1rem; /* Increased spacing */
-        margin-top: 1rem; /* Added top margin for separation */
+        margin-bottom: 1rem;
+        margin-top: 1rem;
+        background: linear-gradient(180deg, #FFF8E1 0%, #FFE082 40%, #FFD54F 100%);
+        border-radius: 18px;
+        padding: 12px 10px 4px 10px;
+        border: 2px solid rgba(255, 179, 0, 0.25);
+        box-shadow: 0 4px 16px rgba(255, 179, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.4);
     }
     .answer-and-keyboard .quiz-answer-area {
-        margin-bottom: 16px; /* Increased spacing between answer area and keyboard */
+        margin-bottom: 6px; /* Small gap between input and keyboard */
     }
     /* F) Hide keyboard: toggle only; never position:fixed */
     #keyboardHost.is-hidden,
@@ -765,19 +874,7 @@ if ('speechSynthesis' in window) {
     }
 
     .quiz-header {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem; /* Reduced from 1rem */
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 20px;
-        padding: 1rem; /* Reduced from 1.5rem */
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        border: 2px solid rgba(255, 193, 7, 0.2);
-        margin-bottom: 1.5rem;
-        /* No sticky scrolling per iOS/Safari guidelines */
-        position: static;
-        top: auto;
-        z-index: auto;
+        display: none !important;
     }
     
     /* Mobile exit button - hidden by default, shown on mobile */
@@ -841,8 +938,6 @@ if ('speechSynthesis' in window) {
         background: linear-gradient(135deg, #F7931E 0%, #FF6B35 100%);
         transform: translateY(-1px);
         box-shadow: 0 6px 16px rgba(255, 107, 53, 0.35);
-        color: white;
-        text-decoration: none;
     }
     
     .exit-button .exit-icon {
@@ -952,7 +1047,17 @@ if ('speechSynthesis' in window) {
         overflow: hidden;
         animation: honeyJarGlow 3s ease-in-out infinite;
     }
-    
+    /* Honey Jar Glow Animation */
+    @keyframes honeyJarGlow {
+        0%, 100% { 
+            box-shadow: 0 0 16px rgba(255, 193, 7, 0.5);
+            transform: scale(1);
+        }
+        50% { 
+            box-shadow: 0 0 20px rgba(255, 193, 7, 0.7);
+            transform: scale(1.02);
+        }
+    }
     .honey-jar-inline .honey-jar::before {
         content: '';
         position: absolute;
@@ -964,7 +1069,6 @@ if ('speechSynthesis' in window) {
         background: linear-gradient(180deg, #FFCC80 0%, #FB8C00 100%);
         box-shadow: 0 2px 6px rgba(251, 140, 0, 0.4);
     }
-    
     .honey-jar-inline .honey-jar-label {
         font-size: 0.65rem;
         font-weight: 600;
@@ -1173,6 +1277,11 @@ if ('speechSynthesis' in window) {
         opacity: 0;
         transform: translateY(-10px);
         transition: opacity 0.3s ease, transform 0.3s ease;
+        padding: 8px 10px;
+        border-radius: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
     }
     
     .countdown-container.active {
@@ -1214,26 +1323,26 @@ if ('speechSynthesis' in window) {
     }
     /* Space between honeypot timer and sentence below (mobile: sentence rests clearly beneath timer) */
     .countdown-container .honey-jar-timer {
-        margin-bottom: 0.65rem;
+        margin-bottom: 0.25rem;
     }
     @media (max-width: 480px) {
         .countdown-container .honey-jar-timer {
-            margin-bottom: 0.9rem;
+            margin-bottom: 0.35rem;
         }
     }
     
-    /* SVG Jar Styling - compact on mobile */
+    /* SVG Jar Styling - bigger on mobile */
     .jar-svg {
-        width: 68px;
-        height: 80px;
+        width: 110px;
+        height: 130px;
         filter: drop-shadow(0 6px 16px rgba(255, 193, 7, 0.4));
         transition: all 0.3s ease;
     }
-    /* Desktop: larger honey jar (was too small) */
+    /* Desktop: even larger honey jar */
     @media (min-width: 769px) {
         .jar-svg {
-            width: 130px;
-            height: 155px;
+            width: 140px;
+            height: 168px;
         }
     }
     
@@ -1296,7 +1405,7 @@ if ('speechSynthesis' in window) {
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        font-size: 1.5rem;
+        font-size: 2.2rem;
         font-weight: 900;
         color: #5d4100;
         text-shadow: 
@@ -1309,20 +1418,20 @@ if ('speechSynthesis' in window) {
     /* Desktop: larger timer number to match jar size */
     @media (min-width: 769px) {
         .honey-jar-wrapper .timer-number {
-            font-size: 2.75rem;
+            font-size: 2.8rem;
         }
     }
     
     .timer-label {
-        font-size: 0.75rem;
-        font-weight: 600;
+        font-size: 0.9rem;
+        font-weight: 700;
         color: #6d4c00;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
     @media (min-width: 769px) {
         .timer-label {
-            font-size: 0.9rem;
+            font-size: 1.05rem;
         }
     }
     
@@ -1605,17 +1714,7 @@ if ('speechSynthesis' in window) {
         overflow: visible;
         box-shadow: 0 4px 12px rgba(91, 49, 26, 0.08);
         border: 1px solid rgba(238, 147, 35, 0.25);
-        min-height: 100px;
-        max-height: 200px;
         width: 100%;
-    }
-    .voice-visualizer canvas,
-    .voice-visualizer svg,
-    #voiceVisualizer canvas,
-    #voiceVisualizer svg {
-        height: 90px !important;
-        max-height: 140px !important;
-        min-height: 60px !important;
     }
 
     /* Generic quiz form spacing normalization */
@@ -2006,7 +2105,7 @@ if ('speechSynthesis' in window) {
         min-height: 0;
         max-height: none;
         overflow: visible;
-        margin-bottom: 0.6rem; /* Balanced gap below sentence */
+        margin-bottom: 0.2rem; /* Compact gap below sentence */
         width: 100%;
     }
     
@@ -2026,11 +2125,11 @@ if ('speechSynthesis' in window) {
         position: relative;
         width: calc(100% + 40px); /* Extend 20px on each side outside card */
         max-width: calc(100vw - 32px); /* iPhone safe area: 16px margin on each side */
-        min-height: 200px; /* Reduced from 320px – give voice vis room without huge empty space */
+        min-height: 80px; /* Compact: tightened to reduce blank space */
         max-height: none;
         margin: 0 -20px; /* Negative margin to extend outside card */
-        margin-bottom: 0.65rem;
-        margin-top: 0.6rem;
+        margin-bottom: 0.25rem;
+        margin-top: 0.15rem;
         transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: visible; /* Allow content to extend */
     }
@@ -2041,7 +2140,7 @@ if ('speechSynthesis' in window) {
         width: 100%;
         max-width: 700px; /* match quiz container width */
         margin: 0 auto; /* remove extra top/bottom margins */
-        min-height: 220px; /* visible area for avatar */
+        min-height: 120px; /* visible area for avatar */
         background: rgba(255, 255, 255, 0.0); /* transparent to blend with quiz */
         overflow: hidden; /* allow internal effects without page overflow */
         /* no border or shadow to integrate naturally */
@@ -2054,15 +2153,15 @@ if ('speechSynthesis' in window) {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 10px;
-        padding: 10px 0 6px;
+        gap: 4px;
+        padding: 6px 0 2px;
         text-align: center;
     }
     /* BeeSmart crest logo at top – prominent size (was extremely too small) */
     .quiz-card-crest-avatar .quiz-card-crest {
-        width: clamp(160px, 38vw, 260px);
+        width: clamp(120px, 28vw, 200px);
         height: auto;
-        max-height: 200px;
+        max-height: 150px;
         object-fit: contain;
         filter: drop-shadow(0 6px 14px rgba(238, 147, 35, 0.25));
         opacity: 0.98;
@@ -2071,15 +2170,15 @@ if ('speechSynthesis' in window) {
         display: none !important; /* Red pill removed per user request */
     }
     .quiz-card-crest-avatar .mascot-3d-container {
-        width: 160px;
-        height: 160px;
-        max-width: 60vw;
-        max-height: 60vw;
+        width: 130px;
+        height: 130px;
+        max-width: 50vw;
+        max-height: 50vw;
         margin: 0 auto;
     }
     @media (max-width: 420px) {
-        .quiz-card-crest-avatar .quiz-card-crest { width: clamp(140px, 36vw, 200px); max-height: 160px; }
-        .quiz-card-crest-avatar .mascot-3d-container { width: 140px; height: 140px; }
+        .quiz-card-crest-avatar .quiz-card-crest { width: clamp(100px, 28vw, 160px); max-height: 120px; }
+        .quiz-card-crest-avatar .mascot-3d-container { width: 110px; height: 110px; }
     }
     
     /* Optional: subtle placeholder while avatar loads */
@@ -2109,7 +2208,7 @@ if ('speechSynthesis' in window) {
     
     /* Honey jar timer state (countdown mode) – same compact height as voice mode */
     .morph-container.mode-timer {
-        min-height: 200px;
+        min-height: 120px;
         max-height: none;
     }
     
@@ -2128,17 +2227,15 @@ if ('speechSynthesis' in window) {
         pointer-events: auto;
     }
     
-    /* Timer layer - ABSOLUTE positioned to overlap visualizer */
+    /* Timer layer - STATIC positioned to maintain sentence position */
     .morph-content .countdown-container {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) scale(1); /* Center and full scale */
+        position: static;
         opacity: 0;
         transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
         pointer-events: none;
         display: flex !important; /* Override hidden class */
-        margin: 0; /* Remove default margin */
+        margin: 0 0 10px 0; /* Reserve stable slot above sentence so text does not jump */
+        min-height: 120px;
     }
     
     /* When morphing to timer mode */
@@ -2174,10 +2271,7 @@ if ('speechSynthesis' in window) {
     }
     .morph-container.mode-timer .countdown-container {
         position: static !important;
-        top: auto !important;
-        left: auto !important;
         transform: none !important;
-        margin: 0 0 10px 0 !important;
         pointer-events: auto;
     }
 
@@ -3366,14 +3460,14 @@ if ('speechSynthesis' in window) {
     .bee-input input[type="text"] {
         width: 100%;
         max-width: none;
-        border: 3px solid #FFC107;
-        border-radius: 16px; /* Slightly smaller radius */
-        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
+        border: 2px solid rgba(160, 90, 0, 0.3);
+        border-radius: 14px;
+        box-shadow: inset 0 2px 6px rgba(0,0,0,0.06), 0 2px 4px rgba(255,179,0,0.1);
         transition: box-shadow 0.3s ease, transform 0.2s ease;
-        padding: 0.7rem 3rem 0.7rem 1rem; /* Right padding for voice button icon */
-        font-size: 1.05rem; /* Further reduced */
-        text-align: left; /* Left align to accommodate voice button */
-        background-color: #FFFDE7; /* Light yellow background to match reference */
+        padding: 0.7rem 3rem 0.7rem 1rem;
+        font-size: 1.05rem;
+        text-align: left;
+        background-color: rgba(255, 248, 225, 0.9);
         color: #332300;
         box-sizing: border-box;
     }
@@ -3533,22 +3627,21 @@ if ('speechSynthesis' in window) {
         }
     }
     
-    /* Session Points Tracker */
+    /* Session Points Tracker – inline under waveform/timer */
     .session-stats {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
+        position: static;
         display: flex;
+        justify-content: center;
         gap: 1.5rem;
         background: linear-gradient(135deg, rgba(255, 193, 7, 0.95), rgba(255, 152, 0, 0.95));
-        padding: 0.8rem 1.5rem;
+        padding: 0.6rem 1.2rem;
         border-radius: 50px;
         box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
-        z-index: 100;
-        /* Remove any inner white oval/ring highlight */
+        z-index: auto;
         border: none;
-        transition: transform 0.3s ease, opacity 0.3s ease;
+        transition: opacity 0.3s ease;
+        margin: 0.25rem auto 0.25rem;
+        max-width: fit-content;
     }
 
     /* Defensive: if any theme adds a glossy inner oval via pseudo-elements, disable it */
@@ -3557,42 +3650,7 @@ if ('speechSynthesis' in window) {
         content: none !important;
         background: transparent !important;
     }
-    
-    .session-stats.collapsed {
-        transform: translateX(-50%) translateY(-70px);
-        opacity: 0.3;
-    }
-    
-    .stats-toggle-btn {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: rgba(255, 255, 255, 0.3);
-        border: 2px solid rgba(255, 255, 255, 0.5);
-        border-radius: 50%;
-        width: 28px;
-        height: 28px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        color: #5A2C15;
-        transition: all 0.3s ease;
-        padding: 0;
-        line-height: 1;
-    }
-    
-    .stats-toggle-btn:hover {
-        background: rgba(255, 255, 255, 0.5);
-        transform: translateY(-50%) scale(1.1);
-    }
-    
-    .session-stats.collapsed .stats-toggle-btn {
-        transform: translateY(-50%) rotate(180deg);
-    }
-    
+
     .session-stat {
         display: flex;
         align-items: center;
@@ -3909,9 +3967,8 @@ if ('speechSynthesis' in window) {
     
     @media (max-width: 768px) {
         .session-stats {
-            top: 10px;
             gap: 1rem;
-            padding: 0.6rem 1rem;
+            padding: 0.5rem 0.8rem;
         }
         
         .session-stat {
@@ -3954,7 +4011,794 @@ if ('speechSynthesis' in window) {
     }
 </style>
 <style>
+/* ═══════════════════════════════════════════════════════════
+   KID-FRIENDLY UI ENHANCEMENTS
+   1) Sky-to-grass background gradient
+   2) Chunky, color-coded action buttons
+   3) Golden game-style score panel
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── 1. SKY / GRASS BACKGROUND ── */
+.quiz-page {
+    background: linear-gradient(
+        180deg,
+        #87CEEB 0%,        /* sky blue */
+        #B0E0F0 18%,       /* lighter sky */
+        #FFF8E1 38%,       /* warm horizon */
+        #F5EFCF 52%,       /* sandy transition */
+        #A8D48C 70%,       /* light grass */
+        #7BC856 88%,       /* green grass */
+        #5DAE3B 100%       /* darker grass base */
+    ) !important;
+}
+
+/* ── 2. CHUNKY COLOR-CODED BUTTONS ── */
+/* Base override: bigger, rounder, bolder */
+.actions-area.quiz-buttons .action-btn,
+#quizActionButtons .action-btn {
+    border-radius: 28px;
+    font-weight: 800;
+    font-size: 1rem;
+    min-height: 56px;
+    padding: 0.75rem 1rem;
+    letter-spacing: 0.02em;
+    border: 3px solid transparent;
+    text-transform: none;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.15), 0 6px 12px rgba(0,0,0,0.1);
+    transition: all 0.15s ease;
+}
+.actions-area.quiz-buttons .action-btn:active,
+#quizActionButtons .action-btn:active {
+    box-shadow: 0 1px 0 rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1);
+    transform: translateY(2px) scale(0.97);
+}
+
+/* 🔊 Pronounce Word – warm orange (like reference speaker button) */
+#speakButton {
+    background: linear-gradient(180deg, #FF9A3E 0%, #E67E22 100%) !important;
+    color: #fff !important;
+    border-color: #C0650A !important;
+    box-shadow: 0 4px 0 #B35E09, 0 6px 12px rgba(230, 126, 34, 0.3) !important;
+}
+#speakButton:hover { background: linear-gradient(180deg, #FFB366 0%, #FF9A3E 100%) !important; }
+
+/* 📖 Show Definition – soft purple/violet */
+#showDefinitionButton {
+    background: linear-gradient(180deg, #B388FF 0%, #7C4DFF 100%) !important;
+    color: #fff !important;
+    border-color: #5E35B1 !important;
+    box-shadow: 0 4px 0 #4527A0, 0 6px 12px rgba(124, 77, 255, 0.3) !important;
+}
+#showDefinitionButton:hover { background: linear-gradient(180deg, #CE93D8 0%, #B388FF 100%) !important; }
+
+/* 📝 Show Sentence – sky blue */
+#showSentenceButton {
+    background: linear-gradient(180deg, #4FC3F7 0%, #0288D1 100%) !important;
+    color: #fff !important;
+    border-color: #01579B !important;
+    box-shadow: 0 4px 0 #015A9E, 0 6px 12px rgba(2, 136, 209, 0.3) !important;
+}
+#showSentenceButton:hover { background: linear-gradient(180deg, #81D4FA 0%, #4FC3F7 100%) !important; }
+
+/* ✅ Submit Answer – bright yellow/gold (largest, most prominent, like reference) */
+#submitButton {
+    background: linear-gradient(180deg, #FFD740 0%, #FFC107 100%) !important;
+    color: #5D4100 !important;
+    border-color: #F9A825 !important;
+    box-shadow: 0 5px 0 #E09100, 0 8px 16px rgba(255, 193, 7, 0.35) !important;
+    font-size: 1.1rem !important;
+    min-height: 60px !important;
+    letter-spacing: 0.04em;
+}
+#submitButton:hover { background: linear-gradient(180deg, #FFE57F 0%, #FFD740 100%) !important; }
+
+/* 🍯 Honey Hint – green (like reference lightbulb button) */
+#getHintButton {
+    background: linear-gradient(180deg, #66BB6A 0%, #43A047 100%) !important;
+    color: #fff !important;
+    border-color: #2E7D32 !important;
+    box-shadow: 0 4px 0 #1B5E20, 0 6px 12px rgba(76, 175, 80, 0.3) !important;
+}
+#getHintButton:hover { background: linear-gradient(180deg, #81C784 0%, #66BB6A 100%) !important; }
+
+/* ⏭ Skip Word – coral/red (like reference forward button) */
+#skipButton {
+    background: linear-gradient(180deg, #FF7043 0%, #E64A19 100%) !important;
+    color: #fff !important;
+    border-color: #BF360C !important;
+    box-shadow: 0 4px 0 #A13009, 0 6px 12px rgba(230, 74, 25, 0.3) !important;
+}
+#skipButton:hover { background: linear-gradient(180deg, #FF8A65 0%, #FF7043 100%) !important; }
+
+/* Emoji icons in buttons: slightly larger for kid readability */
+#quizActionButtons .action-btn .bee-icon {
+    font-size: 1.3rem;
+}
+
+/* Mobile: slightly smaller buttons but still chunky */
+@media (max-width: 480px) {
+    .actions-area.quiz-buttons .action-btn,
+    #quizActionButtons .action-btn {
+        border-radius: 22px;
+        font-size: 0.9rem;
+        min-height: 50px;
+        padding: 0.6rem 0.8rem;
+    }
+    #submitButton {
+        min-height: 54px !important;
+        font-size: 1rem !important;
+    }
+}
+
+/* ── 3. GOLDEN GAME-STYLE SCORE PANEL ── */
+.session-stats {
+    background: linear-gradient(180deg, #FFE082 0%, #FFB300 50%, #E69500 100%) !important;
+    border: 3px solid #C17900 !important;
+    border-radius: 18px !important;
+    padding: 0.6rem 1.4rem !important;
+    gap: 1.2rem !important;
+    box-shadow:
+        0 4px 0 #A06800,
+        0 6px 14px rgba(255, 152, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+}
+
+.session-stat {
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    gap: 0.3rem !important;
+    color: #4A2800 !important;
+}
+
+.session-stat > span:first-child {
+    font-size: 1.5rem;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+}
+
+.session-stat-value {
+    font-size: 1.35rem !important;
+    font-weight: 900 !important;
+    color: #fff !important;
+    text-shadow:
+        0 1px 0 #B36D00,
+        0 2px 4px rgba(0,0,0,0.25) !important;
+    min-width: 1.6rem;
+    text-align: center;
+}
+
+/* Mobile score panel */
+@media (max-width: 768px) {
+    .session-stats {
+        border-radius: 14px !important;
+        padding: 0.5rem 1.4rem 0.5rem 0.8rem !important;
+        gap: 0.8rem !important;
+    }
+    .session-stat {
+        font-size: 1rem !important;
+    }
+    .session-stat > span:first-child {
+        font-size: 1.3rem;
+    }
+    .session-stat-value {
+        font-size: 1.15rem !important;
+    }
+}
+</style>
+<style>
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MOBILE QUIZ UI/UX CLEANUP — compact, polished, kid-friendly
+     Targets phones (max-width: 600px). Desktop is untouched.
+     ═══════════════════════════════════════════════════════════ -->
+<style>
+@media (max-width: 600px) {
+
+    /* ── BACKGROUND: ensure gradient covers full viewport height ──
+         Use scroll attachment (Android-safe) but guarantee min-height fills screen.
+         The gradient is defined from 0-100% so it scales with the element height. */
+    .quiz-page {
+        background-attachment: scroll !important;
+        min-height: 100vh !important;
+        min-height: 100dvh !important;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+        padding-top: max(4px, env(safe-area-inset-top)) !important;
+        padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    }
+
+    /* ── CARD: unified background, oval corners, subtle depth ── */
+    .quiz-card {
+        margin-top: 0.25rem !important;
+        border-radius: 32px !important;
+        border-width: 1.5px !important;
+        min-height: auto !important;
+        background: rgba(255, 253, 245, 0.92) !important;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(255, 193, 7, 0.12) !important;
+        backdrop-filter: blur(6px) !important;
+        -webkit-backdrop-filter: blur(6px) !important;
+    }
+    .quiz-card .quiz-card-content {
+        background: transparent !important;
+    }
+    .card-scroll {
+        padding: 10px 10px 18px 10px !important;
+    }
+
+    /* ── CREST + AVATAR: compact inline row ── */
+    .quiz-card-crest-avatar {
+        flex-direction: row !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 10px !important;
+        padding: 6px 0 2px !important;
+    }
+    .quiz-card-crest-avatar .quiz-card-crest {
+        width: 72px !important;
+        max-height: 72px !important;
+        flex-shrink: 0;
+    }
+    .quiz-card-crest-avatar .mascot-3d-container {
+        width: 80px !important;
+        height: 80px !important;
+        max-width: 80px !important;
+        max-height: 80px !important;
+        flex-shrink: 0;
+    }
+
+    /* ── TOP CARD: reduce excess vertical spacing ── */
+    .quiz-card-top {
+        gap: 0.15rem !important;
+        padding-bottom: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+    /* ── VOICE VISUALIZER: focal point, prominent ── */
+    .voice-visualizer,
+    #voiceVisualizer {
+        padding: 0.35rem 0.5rem !important;
+        margin-bottom: 6px !important;
+        border-radius: 14px !important;
+    }
+    .voice-card.speaking-mode {
+        padding: 4px 6px 4px !important;
+        margin: 0 auto 0.15rem auto !important;
+        min-height: 32px !important;
+    }
+    .voice-header {
+        font-size: 0.85rem !important;
+        margin-bottom: 4px !important;
+    }
+    .dotwave-wrapper {
+        min-height: 60px !important;
+        padding: 2px 8px !important;
+    }
+    .dotwave-wrapper canvas {
+        height: 70px !important;
+        max-height: 70px !important;
+    }
+    /* Definition/sentence line beneath visualizer */
+    .voice-definition {
+        font-size: 0.82rem !important;
+        padding: 3px 8px !important;
+        margin-top: 0.15rem !important;
+        line-height: 1.35 !important;
+    }
+
+    /* ── SESSION STATS BAR: compact ── */
+    .session-stats {
+        padding: 0.35rem 0.8rem !important;
+        gap: 0.6rem !important;
+        border-radius: 12px !important;
+        margin: 2px 0 !important;
+    }
+    .session-stat { font-size: 0.85rem !important; }
+    .session-stat > span:first-child { font-size: 1.1rem !important; }
+    .session-stat-value { font-size: 1rem !important; }
+
+    /* ── MORPH CONTAINER: tighter ── */
+    .morph-container {
+        margin-top: 0 !important;
+    }
+    .morph-content {
+        margin-top: 0 !important;
+    }
+    /* Timer jar: slightly smaller on phone */
+    .jar-svg {
+        width: 120px !important;
+        height: 144px !important;
+    }
+    .honey-jar-wrapper .timer-number {
+        font-size: 2.6rem !important;
+    }
+    .countdown-container .honey-jar-timer {
+        margin-bottom: 0.15rem !important;
+    }
+
+    /* ── ANSWER + KEYBOARD SECTION: compact card ── */
+    .answer-and-keyboard {
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+        padding: 10px 8px 4px 8px !important;
+        border-radius: 14px !important;
+    }
+    .quiz-answer-area {
+        padding: 2px 6px !important;
+    }
+    /* Input field */
+    .bee-input input[type="text"] {
+        font-size: 16px !important;
+        padding: 10px 12px !important;
+    }
+    /* Buzzy pill and start silent */
+    .buzzy-pill {
+        max-width: 260px !important;
+        margin: 8px auto !important;
+        padding: 12px 16px !important;
+        font-size: 0.95rem !important;
+        border-radius: 999px !important;
+    }
+    #startSilentBtn {
+        max-width: 200px !important;
+        margin: 4px auto 2px !important;
+        padding: 8px 12px !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* ── DEFINITION/SENTENCE DISPLAY PANEL ── */
+    #definitionDisplay {
+        margin: 0 0 0.35rem 0 !important;
+        padding: 0.6rem 0.75rem !important;
+        border-radius: 10px !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* ── ACTION BUTTONS: 2-col grid, compact, no overlap ── */
+    .actions-area.quiz-buttons,
+    #quizActionButtons {
+        gap: 8px !important;
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    .actions-area.quiz-buttons .action-btn,
+    #quizActionButtons .action-btn {
+        min-height: 46px !important;
+        padding: 0.5rem 0.6rem !important;
+        font-size: 0.82rem !important;
+        border-radius: 18px !important;
+        box-shadow: 0 3px 0 rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08) !important;
+    }
+    #quizActionButtons .action-btn .bee-icon {
+        font-size: 1.1rem !important;
+    }
+    #submitButton {
+        min-height: 50px !important;
+        font-size: 0.95rem !important;
+    }
+
+    /* ── STAT TOGGLES: smaller pills ── */
+    .stat-toggle-controls {
+        padding-top: 0.5rem !important;
+        margin: 0.5rem 0 0.35rem !important;
+        gap: 0.35rem !important;
+    }
+    .stat-toggle-controls .action-btn.toggle-stat {
+        min-height: 36px !important;
+        padding: 0.3rem 0.5rem !important;
+        font-size: 0.72rem !important;
+        border-radius: 14px !important;
+    }
+
+    /* ── EXIT / SECONDARY BUTTONS ── */
+    .exit-button-container.secondary-buttons {
+        gap: 8px !important;
+        margin-bottom: 0.5rem !important;
+    }
+    .exit-button-container .action-btn {
+        min-height: 44px !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* ── FEEDBACK AREA ── */
+    .feedback-area {
+        font-size: 0.9rem !important;
+        padding: 0.4rem 0.6rem !important;
+        margin: 0.25rem 0 !important;
+    }
+
+    /* ── GENERIC SPACING TIGHTENING ── */
+    .quiz-container h1,
+    .quiz-container h2,
+    .quiz-container h3,
+    .quiz-container p {
+        margin-top: 0.2rem !important;
+        margin-bottom: 0.2rem !important;
+    }
+
+    /* ── HIDE ALL OVERLAY / DECORATIVE FIXED ELEMENTS ON MOBILE ── */
+    .floating-bee,
+    #beeSwarmCanvas,
+    .sparkle,
+    .buzz-dust-sparkle,
+    .star-burst,
+    .confetti,
+    .word-of-day-banner,
+    .points-popup {
+        display: none !important;
+    }
+    /* Progress tracker: hide on mobile (it floats over content) */
+    .progress-tracker {
+        display: none !important;
+    }
+    /* Mobile exit button: keep, but nothing else fixed-decorative */
+
+    /* ── LETTER HINT ── */
+    .letter-hint {
+        margin: 0.2rem 0 !important;
+        font-size: 0.9rem !important;
+    }
+}
+
+/* Extra-small phones (≤ 380px) */
+@media (max-width: 380px) {
+    .quiz-card-crest-avatar .quiz-card-crest {
+        width: 56px !important;
+        max-height: 56px !important;
+    }
+    .quiz-card-crest-avatar .mascot-3d-container {
+        width: 64px !important;
+        height: 64px !important;
+        max-width: 64px !important;
+        max-height: 64px !important;
+    }
+    .dotwave-wrapper canvas {
+        height: 56px !important;
+        max-height: 56px !important;
+    }
+    .actions-area.quiz-buttons .action-btn,
+    #quizActionButtons .action-btn {
+        min-height: 42px !important;
+        padding: 0.4rem 0.5rem !important;
+        font-size: 0.78rem !important;
+    }
+    .card-scroll {
+        padding: 8px 6px 14px 6px !important;
+    }
+}
+</style>
+
+<!-- ═══════════════════════════════════════════════════════════
+     QUIZ UX ENHANCEMENTS — animations, feedback, interactivity
+     All-screen (desktop + mobile). Purely additive.
+     ═══════════════════════════════════════════════════════════ -->
+<style>
+/* ── KEYFRAME ANIMATIONS ── */
+@keyframes cardEntrance {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes correctFlash {
+    0%   { box-shadow: 0 0 0 0 rgba(76,175,80,0.5); }
+    40%  { box-shadow: 0 0 0 12px rgba(76,175,80,0.25); }
+    100% { box-shadow: 0 0 0 0 rgba(76,175,80,0); }
+}
+@keyframes incorrectShake {
+    0%, 100% { transform: translateX(0); }
+    15%      { transform: translateX(-6px); }
+    30%      { transform: translateX(5px); }
+    45%      { transform: translateX(-4px); }
+    60%      { transform: translateX(3px); }
+    75%      { transform: translateX(-2px); }
+}
+@keyframes scalePop {
+    0%   { transform: scale(0.6); opacity: 0; }
+    60%  { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+@keyframes submitGlow {
+    0%, 100% { box-shadow: 0 5px 0 #E09100, 0 0 12px rgba(255,193,7,0.3); }
+    50%      { box-shadow: 0 5px 0 #E09100, 0 0 22px rgba(255,193,7,0.6), 0 0 40px rgba(255,193,7,0.2); }
+}
+@keyframes streakFire {
+    0%, 100% { text-shadow: 0 0 6px rgba(255,107,0,0.4); }
+    50%      { text-shadow: 0 0 14px rgba(255,107,0,0.8), 0 0 28px rgba(255,60,0,0.3); }
+}
+@keyframes streakGoldBorder {
+    0%, 100% { border-color: rgba(255,193,7,0.35); }
+    50%      { border-color: rgba(255,193,7,0.85); }
+}
+@keyframes streakLegendPulse {
+    0%, 100% { box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 0 0 0 rgba(255,215,0,0); }
+    50%      { box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 0 20px 4px rgba(255,215,0,0.25); }
+}
+@keyframes avatarBounce {
+    0%, 100% { transform: translateY(0); }
+    30%      { transform: translateY(-12px) scale(1.05); }
+    50%      { transform: translateY(-6px); }
+    70%      { transform: translateY(-3px); }
+}
+@keyframes avatarShake {
+    0%, 100% { transform: rotate(0deg); }
+    20%      { transform: rotate(-8deg); }
+    40%      { transform: rotate(6deg); }
+    60%      { transform: rotate(-4deg); }
+    80%      { transform: rotate(2deg); }
+}
+@keyframes starReveal {
+    from { transform: scale(0) rotate(-30deg); opacity: 0; }
+    to   { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* ── CARD ENTRANCE ANIMATION ── */
+.quiz-card {
+    animation: cardEntrance 0.5s ease-out;
+}
+
+/* ── BUTTON PRESS TRANSITIONS (all buttons) ── */
+.action-btn {
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.2s ease !important;
+}
+.action-btn:active {
+    transform: translateY(2px) scale(0.96) !important;
+}
+@media (hover: hover) {
+    .action-btn:hover {
+        transform: scale(1.02);
+    }
+}
+
+/* ── SESSION STATS FADE-IN ── */
+.session-stats {
+    animation: fadeInUp 0.4s ease-out;
+}
+
+/* ── SUBMIT BUTTON: glow when input has text ── */
+#submitButton.has-input {
+    animation: submitGlow 1.6s ease-in-out infinite !important;
+    opacity: 1 !important;
+    filter: none !important;
+}
+#submitButton:not(.has-input) {
+    opacity: 0.55;
+    filter: grayscale(0.3);
+}
+
+/* ── ANIMATED FEEDBACK: correct / incorrect / almost ── */
+.feedback-area.feedback-success {
+    animation: correctFlash 0.6s ease-out, fadeInUp 0.3s ease-out !important;
+}
+.feedback-area.feedback-error {
+    animation: incorrectShake 0.5s ease-out, fadeInUp 0.3s ease-out !important;
+}
+.feedback-area.feedback-almost {
+    animation: incorrectShake 0.4s ease-out, fadeInUp 0.3s ease-out !important;
+}
+.feedback-area .feedback-title {
+    display: block;
+    animation: scalePop 0.4s ease-out;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+/* ── STREAK VISUAL ESCALATION ── */
+.quiz-card.streak-hot #floatingStreak {
+    animation: streakFire 1s ease-in-out infinite;
+    color: #FF6B00 !important;
+    font-weight: 900 !important;
+}
+.quiz-card.streak-fire {
+    animation: streakGoldBorder 1.5s ease-in-out infinite !important;
+    border-color: rgba(255,193,7,0.7) !important;
+}
+.quiz-card.streak-fire .session-stats {
+    box-shadow: 0 4px 0 #A06800, 0 6px 14px rgba(255,152,0,0.35), 0 0 16px rgba(255,215,0,0.3) !important;
+}
+.quiz-card.streak-legend {
+    animation: streakLegendPulse 2s ease-in-out infinite !important;
+    border-color: #FFD700 !important;
+}
+
+/* ── AVATAR REACTIONS ── */
+.mascot-3d-container.avatar-celebrate {
+    animation: avatarBounce 0.6s ease-out;
+}
+.mascot-3d-container.avatar-shake {
+    animation: avatarShake 0.5s ease-out;
+}
+
+/* ── PROGRESS RING (SVG around crest) ── */
+.progress-ring-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.progress-ring-svg {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    pointer-events: none;
+    transform: rotate(-90deg);
+}
+.progress-ring-bg {
+    fill: none;
+    stroke: rgba(255,193,7,0.15);
+    stroke-width: 3;
+}
+.progress-ring-fg {
+    fill: none;
+    stroke: #FFB300;
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s ease;
+}
+
+/* ── LETTER-COUNT BLANKS ── */
+.letter-blanks {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin: 6px 0 2px;
+    flex-wrap: wrap;
+}
+.letter-blank {
+    width: 22px;
+    height: 28px;
+    border-bottom: 2.5px solid rgba(255,193,7,0.5);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #FFB300;
+    transition: border-color 0.2s, color 0.2s;
+}
+.letter-blank.filled {
+    border-color: #4CAF50;
+    color: #2e7d32;
+}
+
+/* ── PROGRESSIVE DISCLOSURE: hide helper buttons until first wrong ── */
+.quiz-card.helpers-hidden #showDefinitionButton,
+.quiz-card.helpers-hidden #showSentenceButton,
+.quiz-card.helpers-hidden #getHintButton,
+.quiz-card.helpers-hidden #skipButton {
+    display: none !important;
+}
+.quiz-card:not(.helpers-hidden) #showDefinitionButton,
+.quiz-card:not(.helpers-hidden) #showSentenceButton,
+.quiz-card:not(.helpers-hidden) #getHintButton,
+.quiz-card:not(.helpers-hidden) #skipButton {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+/* ── MOBILE: hide stat toggle controls → gear icon + bottom sheet ── */
+@media (max-width: 600px) {
+    .stat-toggle-controls {
+        display: none !important;
+    }
+    .stat-gear-btn {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: rgba(255,248,225,0.9);
+        border: 1.5px solid rgba(255,193,7,0.3);
+        font-size: 1.1rem;
+        cursor: pointer;
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        transition: transform 0.2s;
+    }
+    .stat-gear-btn:active { transform: scale(0.9); }
+    .stat-sheet-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.35);
+        z-index: 9998;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s;
+    }
+    .stat-sheet-overlay.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    .stat-sheet {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #FFFDF5;
+        border-radius: 20px 20px 0 0;
+        padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+        z-index: 9999;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+    }
+    .stat-sheet-overlay.open .stat-sheet {
+        transform: translateY(0);
+    }
+    .stat-sheet-handle {
+        width: 40px;
+        height: 4px;
+        background: #ccc;
+        border-radius: 2px;
+        margin: 0 auto 12px;
+    }
+    .stat-sheet-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #5d4100;
+        text-align: center;
+        margin-bottom: 12px;
+    }
+    .stat-sheet .stat-toggle-controls {
+        display: flex !important;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+    }
+    /* Keyboard always visible on mobile */
+    .keyboard-host.is-hidden,
+    .keyboard-shell.is-hidden {
+        display: block !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+    #showKeyboardBtn {
+        display: none !important;
+    }
+}
+@media (min-width: 601px) {
+    .stat-gear-btn { display: none !important; }
+    .stat-sheet-overlay { display: none !important; }
+}
+
+/* ── COMPLETION: star rating + buzzy message ── */
+.completion-stars {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 1rem 0;
+}
+.completion-star {
+    font-size: 2.5rem;
+    filter: grayscale(1) opacity(0.3);
+    transition: filter 0.3s;
+}
+.completion-star.earned {
+    filter: none;
+    animation: starReveal 0.4s ease-out backwards;
+}
+.completion-star.earned:nth-child(2) { animation-delay: 0.15s; }
+.completion-star.earned:nth-child(3) { animation-delay: 0.3s; }
+.completion-star.earned:nth-child(4) { animation-delay: 0.45s; }
+.completion-star.earned:nth-child(5) { animation-delay: 0.6s; }
+
+.buzzy-message {
+    background: linear-gradient(135deg, #FFF8E1, #FFE0B2);
+    border: 2px solid rgba(255,193,7,0.3);
+    border-radius: 16px;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-size: 1rem;
+    color: #5d4100;
+    text-align: center;
+    animation: fadeInUp 0.5s ease-out 0.8s backwards;
+}
+.buzzy-message .buzzy-avatar { font-size: 1.8rem; margin-bottom: 4px; }
 </style>
 
 {# Load 3D/avatar scripts needed by the quiz page. #}
@@ -3989,7 +4833,7 @@ if ('speechSynthesis' in window) {
         background: #fff9e6; color: #5d4100; border: 2px solid #ffd54f; border-radius: 12px;
         padding: 0.6rem 0.8rem; box-shadow: 0 6px 14px rgba(255,193,7,0.25);
 "></div>
-<div style="text-align:center; margin-bottom: 1rem;">
+<div id="quizUploadBtnContainer" style="text-align:center; margin-bottom: 1rem; display: none;">
     <button id="load-sample-btn" class="hidden" onclick="loadSampleWords()" style="
             background: linear-gradient(135deg,#FF6B35 0%, #F7931E 100%); color: white; border: none;
             border-radius: 14px; padding: 10px 16px; font-weight: 700; box-shadow: 0 4px 12px rgba(255,107,53,0.25);
@@ -4241,25 +5085,6 @@ document.addEventListener('DOMContentLoaded', () => {
 <div class="floating-bee" aria-hidden="true"></div>
 <div class="floating-bee" aria-hidden="true"></div>
 
-<!-- 🎯 Floating Session Stats Tracker (Top of screen) -->
-<div class="session-stats" id="sessionStatsBar" style="display: none;">
-    <div class="session-stat">
-        <span>📊</span>
-        <span class="session-stat-value" id="floatingWordCount">0/0</span>
-    </div>
-    <div class="session-stat">
-        <span>🍯</span>
-        <span class="session-stat-value" id="floatingPoints">0</span>
-    </div>
-    <div class="session-stat">
-        <span>🔥</span>
-        <span class="session-stat-value" id="floatingStreak">0</span>
-    </div>
-    <button class="stats-toggle-btn" id="statsToggleBtn" onclick="toggleStatsBar()" title="Hide stats bar">
-        ▲
-    </button>
-</div>
-
 <div class="quiz-container quiz-shell quiz-content quiz-page" id="quizContainer">
     <!-- Quiz Header -->
     <div class="quiz-header">
@@ -4304,14 +5129,19 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 
     <!-- Quiz Card: entire content in .card-scroll, scrolls as one stack -->
-    <div class="quiz-card" id="quizCard">
+    <div class="quiz-card helpers-hidden" id="quizCard">
+        <!-- Gear button: opens stat toggles bottom sheet (mobile only) -->
+        <button type="button" class="stat-gear-btn" id="statGearBtn" aria-label="Settings" title="Toggle stat visibility">&#9881;</button>
         <div class="quiz-content quiz-card-content" id="quizScroll">
         <div class="card-scroll">
         <!-- 1) Visualizer + Timer + Sentence (top of stack) -->
         <div class="quiz-card-top">
         <!-- Crest + user's chosen avatar (centered on card) -->
         <div class="quiz-card-crest-avatar">
+            <div class="progress-ring-wrap" id="progressRingWrap">
             <img id="quizCardCrest" class="quiz-card-crest" src="{{ url_for('static', filename='BeeSmartCrestLogo1.png') }}" alt="BeeSmart Spelling Bee" title="BeeSmart Crest">
+            <svg class="progress-ring-svg" id="progressRingSvg" width="84" height="84"><circle class="progress-ring-bg" cx="42" cy="42" r="38"/><circle class="progress-ring-fg" id="progressRingFg" cx="42" cy="42" r="38" stroke-dasharray="238.76" stroke-dashoffset="238.76"/></svg>
+            </div>
             <div id="mascotBee3D" class="mascot-3d-container" aria-label="Your avatar"></div>
             {% if user_name %}
             <div id="avatarNameBadge" style="
@@ -4438,7 +5268,23 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="dotwave-wrapper">
                                 <canvas id="dotWaveCanvas" width="860" height="260"></canvas>
                             </div>
-                            
+
+                            <!-- 🎯 Inline Session Stats (between waveform/timer and sentence) -->
+                            <div class="session-stats" id="sessionStatsBar" style="display: none;">
+                                <div class="session-stat">
+                                    <span>📊</span>
+                                    <span class="session-stat-value" id="floatingWordCount">0/0</span>
+                                </div>
+                                <div class="session-stat">
+                                    <span>🍯</span>
+                                    <span class="session-stat-value" id="floatingPoints">0</span>
+                                </div>
+                                <div class="session-stat">
+                                    <span>🔥</span>
+                                    <span class="session-stat-value" id="floatingStreak">0</span>
+                                </div>
+                            </div>
+
                             <!-- Definition display inside visualizer -->
                             <div class="voice-definition" id="voiceDefinition">
                                 🐝 Listen carefully and spell the word! 🐝
@@ -4460,10 +5306,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         text-align: center;
                         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto", sans-serif;
                         overflow: visible;
-                        min-height: 100px; /* Room for wave animation (icon removed for more vis space) */
+                        min-height: 40px; /* Room for wave animation (icon removed for more vis space) */
                     }
                     .dotwave-wrapper {
-                        min-height: 80px; /* More room for voice vis to animate (per BUG_FIXES_VOICE_VISUALIZER.md) */
+                        min-height: 50px; /* More room for voice vis to animate (per BUG_FIXES_VOICE_VISUALIZER.md) */
                     }
 
                     .voice-header {
@@ -4492,7 +5338,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         color: #5A2C15;
                         text-shadow: none;
                         padding: 4px 10px;
-                        margin-top: 4px;
+                        margin-top: 0.25rem;
                         line-height: 1.4;
                         letter-spacing: 0.01em;
                     }
@@ -4516,8 +5362,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     .dotwave-wrapper canvas {
                         width: 100%;
-                        height: 56px !important;
-                        max-height: 56px !important;
+                        height: 90px !important;
+                        max-height: 90px !important;
                                     filter:
                                         drop-shadow(0 0 4px rgba(255,255,255,0.4))
                                         drop-shadow(0 0 12px rgba(255,200,0,0.4));
@@ -4603,13 +5449,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 case 'skip': return pulse(300);
                                 case 'feedback-correct': return speak(700);
                                 case 'feedback-incorrect': return pulse(520);
-
-                                    // In resume mode, client state can be stale; ensure we always fetch a fresh next word.
-                                    // Also clear any lingering UI lock states that could make resume feel "stuck".
-                                    this.lastPronounceData = null;
-                                    if (this.spellingInput) {
-                                        this.spellingInput.value = '';
-                                    }
                                 default: return pulse(180);
                             }
                         }
@@ -4633,27 +5472,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Store smoothed amplitudes per layer
                     let layerAmplitudes = config.layers.map(() => new Array(config.points).fill(0));
 
-
-                                        // Resume can sometimes desync; try a non-destructive resume advance as a fallback.
-                                        if (this.startMode === 'resume' && typeof window.forceResumeAdvance === 'function') {
-                                            try {
-                                                window.forceResumeAdvance();
-                                            } catch (e) {
-                                                console.warn('forceResumeAdvance fallback failed after skip error:', e);
-                                            }
-                                        }
                     // Draw smooth waveform with multiple translucent layers
                     function drawHorizontalWaveform() {
                         ctx.clearRect(0, 0, W, H);
-                        
 
-                                    if (this.startMode === 'resume' && typeof window.forceResumeAdvance === 'function') {
-                                        try {
-                                            window.forceResumeAdvance();
-                                        } catch (e) {
-                                            console.warn('forceResumeAdvance fallback failed after skip exception:', e);
-                                        }
-                                    }
                         const centerY = H / 2;
                         const buffer = 40; // Increased safety buffer from edges to prevent clipping
                         const maxHeight = (H / 2) - buffer; // Max amplitude with buffer to prevent clipping
@@ -4762,12 +5584,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <!-- 2) Answer input row -->
         <div class="answer-and-keyboard">
+            <!-- Definition/Sentence Display Panel - above input for visibility -->
+            <div class="definition-display" id="definitionDisplay" style="display: none; margin: 0 0 0.5rem 0; padding: 0.75rem 1rem; background: linear-gradient(135deg, rgba(255,248,225,0.95), rgba(243,229,171,0.95)); border: 2px solid rgba(255, 193, 7, 0.3); border-radius: 12px; box-shadow: 0 2px 8px rgba(255, 193, 7, 0.15);">
+                Ready to show definition or sentence...
+            </div>
+
             <!-- Answer area: letter hint + spelling input (in-flow with keyboard) -->
             <div class="answer-area quiz-answer-area" id="answerAreaContainer">
                 <div class="letter-hint hidden" id="letterHint" aria-live="polite">
                     <span class="hint-label">💡 Hint:</span>
                     <span class="hint-letters" id="hintLetters"></span>
                 </div>
+
+                <!-- Letter count blanks (filled as user types) -->
+                <div class="letter-blanks" id="letterBlanks" style="display:none;"></div>
 
                 <!-- Answer Input Field -->
                 <div class="bee-input" id="beeInputWrapper">
@@ -4782,7 +5612,7 @@ document.addEventListener('DOMContentLoaded', () => {
                            style="font-size: 16px;">
                 </div>
                 <script>
-                (function(){ var ua = navigator.userAgent || ''; var cap = window.Capacitor; var isA = /Android/i.test(ua) || (cap && cap.getPlatform && cap.getPlatform() === 'android'); var isI = /iPad|iPhone|iPod/.test(ua); if (isA || isI) { var inp = document.getElementById('spellingInput'); if (inp) { inp.setAttribute('readonly','readonly'); inp.setAttribute('inputmode','none'); } })();
+                (function(){ var ua = navigator.userAgent || ''; var cap = window.Capacitor; var isA = /Android/i.test(ua) || (cap && cap.getPlatform && cap.getPlatform() === 'android'); var isI = /iPad|iPhone|iPod/.test(ua); if (isA || isI) { var inp = document.getElementById('spellingInput'); if (inp) { inp.setAttribute('readonly','readonly'); inp.setAttribute('inputmode','none'); } } })();
                 </script>
                 <!-- Show keyboard button (visible when keyboard is hidden so user can bring it back) -->
                 <button type="button" id="showKeyboardBtn" class="action-btn secondary quiz-show-keyboard-btn" style="display: none; margin-top: 8px; width: 100%; max-width: 260px;" aria-label="Show keyboard">
@@ -4846,11 +5676,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="phonetic-reveal hidden" id="phoneticHint" aria-live="polite"></div>
 
         <div class="feedback-area" id="feedbackArea" role="status" aria-live="polite"></div>
-
-        <!-- Definition/Sentence Display Panel -->
-        <div class="definition-display" id="definitionDisplay" style="display: none; margin: 1rem 0; padding: 1rem; background: linear-gradient(135deg, #FFF8E1, #F3E5AB); border: 2px solid rgba(255, 193, 7, 0.3); border-radius: 12px; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);">
-            Ready to show definition or sentence...
-        </div>
 
         <!-- Actions: pronounce, show sentence, submit, skip, honey hint (2 columns) -->
         <div class="actions-area quiz-buttons action-buttons" id="quizActionButtons">
@@ -5044,6 +5869,223 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- 3D Bee Swarm Canvas -->
 <canvas id="beeSwarmCanvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3;"></canvas>
+
+<!-- Stat toggles bottom sheet (mobile only) -->
+<div class="stat-sheet-overlay" id="statSheetOverlay">
+    <div class="stat-sheet">
+        <div class="stat-sheet-handle"></div>
+        <div class="stat-sheet-title">Stat Visibility</div>
+        <div class="stat-toggle-controls" id="statSheetToggles"></div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     QUIZ UX ENHANCEMENTS — JavaScript hooks
+     Submit glow, letter blanks, progressive disclosure, streak
+     escalation, avatar reactions, progress ring, gear sheet,
+     completion stars + buzzy message.
+     ═══════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+    'use strict';
+
+    // ── 1. SUBMIT BUTTON GLOW when input has text ──
+    function initSubmitGlow() {
+        var inp = document.getElementById('spellingInput');
+        var btn = document.getElementById('submitButton');
+        if (!inp || !btn) return;
+        function sync() {
+            if (inp.value.trim().length > 0) {
+                btn.classList.add('has-input');
+            } else {
+                btn.classList.remove('has-input');
+            }
+        }
+        inp.addEventListener('input', sync);
+        inp.addEventListener('change', sync);
+        inp.addEventListener('keyup', sync);
+        // Poll for programmatic changes (custom keyboard sets value directly)
+        setInterval(sync, 300);
+    }
+
+    // ── 2. LETTER BLANKS — show letter count, fill as user types ──
+    var _currentWordLength = 0;
+    window._beeSetLetterBlanks = function(wordLength) {
+        _currentWordLength = wordLength;
+        var container = document.getElementById('letterBlanks');
+        if (!container) return;
+        if (!wordLength || wordLength < 1) { container.style.display = 'none'; return; }
+        container.style.display = 'flex';
+        var html = '';
+        for (var i = 0; i < wordLength; i++) {
+            html += '<div class="letter-blank" data-idx="' + i + '"></div>';
+        }
+        container.innerHTML = html;
+    };
+
+    function syncLetterBlanks() {
+        var container = document.getElementById('letterBlanks');
+        var inp = document.getElementById('spellingInput');
+        if (!container || !inp || !_currentWordLength) return;
+        var val = inp.value || '';
+        var blanks = container.querySelectorAll('.letter-blank');
+        for (var i = 0; i < blanks.length; i++) {
+            if (i < val.length) {
+                blanks[i].textContent = val[i].toUpperCase();
+                blanks[i].classList.add('filled');
+            } else {
+                blanks[i].textContent = '';
+                blanks[i].classList.remove('filled');
+            }
+        }
+    }
+
+    function initLetterBlanks() {
+        var inp = document.getElementById('spellingInput');
+        if (!inp) return;
+        inp.addEventListener('input', syncLetterBlanks);
+        setInterval(syncLetterBlanks, 400);
+    }
+
+    // ── 3. PROGRESSIVE DISCLOSURE — reveal helpers after first wrong ──
+    window._beeRevealHelpers = function() {
+        var card = document.getElementById('quizCard');
+        if (card) card.classList.remove('helpers-hidden');
+    };
+    window._beeHideHelpers = function() {
+        var card = document.getElementById('quizCard');
+        if (card) card.classList.add('helpers-hidden');
+    };
+
+    // ── 4. STREAK VISUAL ESCALATION ──
+    window._beeUpdateStreakVisual = function(streak) {
+        var card = document.getElementById('quizCard');
+        if (!card) return;
+        card.classList.remove('streak-hot', 'streak-fire', 'streak-legend');
+        if (streak >= 10) {
+            card.classList.add('streak-legend');
+        } else if (streak >= 5) {
+            card.classList.add('streak-fire');
+        } else if (streak >= 3) {
+            card.classList.add('streak-hot');
+        }
+    };
+
+    // ── 5. AVATAR REACTIONS ──
+    window._beeAvatarReact = function(type) {
+        var avatar = document.getElementById('mascotBee3D');
+        if (!avatar) return;
+        avatar.classList.remove('avatar-celebrate', 'avatar-shake');
+        // Force reflow for re-animation
+        void avatar.offsetWidth;
+        if (type === 'correct') {
+            avatar.classList.add('avatar-celebrate');
+        } else if (type === 'incorrect' || type === 'shake') {
+            avatar.classList.add('avatar-shake');
+        }
+        setTimeout(function() {
+            avatar.classList.remove('avatar-celebrate', 'avatar-shake');
+        }, 700);
+    };
+
+    // ── 6. PROGRESS RING ──
+    window._beeUpdateProgressRing = function(current, total) {
+        var fg = document.getElementById('progressRingFg');
+        if (!fg || !total) return;
+        var circumference = 238.76; // 2 * PI * 38
+        var pct = Math.min(1, (current - 1) / total);
+        var offset = circumference * (1 - pct);
+        fg.style.strokeDashoffset = offset;
+    };
+
+    // ── 7. GEAR BUTTON + STAT SHEET (mobile) ──
+    function initStatSheet() {
+        var gearBtn = document.getElementById('statGearBtn');
+        var overlay = document.getElementById('statSheetOverlay');
+        var sheetToggles = document.getElementById('statSheetToggles');
+        if (!gearBtn || !overlay || !sheetToggles) return;
+
+        // Clone existing stat toggle buttons into the sheet
+        var origToggles = document.querySelector('.card-scroll .stat-toggle-controls');
+        if (origToggles) {
+            var clones = origToggles.cloneNode(true);
+            clones.id = '';
+            // Re-wire cloned buttons to trigger the originals
+            var cloneBtns = clones.querySelectorAll('button');
+            var origBtns = origToggles.querySelectorAll('button');
+            for (var i = 0; i < cloneBtns.length; i++) {
+                (function(idx) {
+                    cloneBtns[idx].addEventListener('click', function() {
+                        if (origBtns[idx]) origBtns[idx].click();
+                        // Sync text
+                        setTimeout(function() {
+                            var origText = origBtns[idx].querySelector('.toggle-text');
+                            var cloneText = cloneBtns[idx].querySelector('.toggle-text');
+                            if (origText && cloneText) cloneText.textContent = origText.textContent;
+                        }, 50);
+                    });
+                })(i);
+            }
+            sheetToggles.appendChild(clones);
+        }
+
+        gearBtn.addEventListener('click', function() {
+            overlay.classList.add('open');
+        });
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) overlay.classList.remove('open');
+        });
+        // Swipe down to close
+        var startY = 0;
+        var sheet = overlay.querySelector('.stat-sheet');
+        if (sheet) {
+            sheet.addEventListener('touchstart', function(e) {
+                startY = e.touches[0].clientY;
+            }, { passive: true });
+            sheet.addEventListener('touchmove', function(e) {
+                if (e.touches[0].clientY - startY > 60) {
+                    overlay.classList.remove('open');
+                }
+            }, { passive: true });
+        }
+    }
+
+    // ── 8. COMPLETION STARS + BUZZY MESSAGE ──
+    window._beeCompletionExtras = function(percentage, studentName) {
+        // Star rating: 1 star per 20% (min 0, max 5)
+        var starCount = Math.min(5, Math.max(0, Math.round(percentage / 20)));
+        var starsHTML = '<div class="completion-stars">';
+        for (var i = 0; i < 5; i++) {
+            starsHTML += '<span class="completion-star' + (i < starCount ? ' earned' : '') + '">&#11088;</span>';
+        }
+        starsHTML += '</div>';
+
+        // Buzzy message based on performance
+        var msgs = {
+            5: "Buzzy says: INCREDIBLE! You're the ultimate spelling champion! I'm so proud of you!",
+            4: "Buzzy says: WOW! You're buzzing with brilliance! Keep up the amazing work!",
+            3: "Buzzy says: Great effort! You're getting stronger with every word!",
+            2: "Buzzy says: Nice try! Every bee learns at their own pace. You're doing great!",
+            1: "Buzzy says: Keep going! Practice makes perfect, and I believe in you!",
+            0: "Buzzy says: Don't give up! Every spelling bee started just like you. Let's try again!"
+        };
+        var msg = msgs[starCount] || msgs[3];
+        var name = (studentName || '').trim();
+        if (name) msg = msg.replace("You're", name + ", you're").replace("you're", name + ", you're");
+
+        var buzzyHTML = '<div class="buzzy-message"><div class="buzzy-avatar">&#128029;</div>' + msg + '</div>';
+
+        return starsHTML + buzzyHTML;
+    };
+
+    // ── INIT on DOMContentLoaded ──
+    document.addEventListener('DOMContentLoaded', function() {
+        initSubmitGlow();
+        initLetterBlanks();
+        initStatSheet();
+    });
+})();
+</script>
 
 {% endblock %}
 
@@ -5579,16 +6621,26 @@ class BeeSoundboard {
 
             osc.start(start);
             osc.stop(start + duration + 0.01);
-
             start += __nn(step.delay, duration);
         });
     }
 
-    speakWord(word, onEndCallback = null, rate = 0.92) {
+    getPronunciationRate(word) {
+        // Slower rate for longer words so every syllable is clearly articulated.
+        // Tuned to ~125-145 wpm for multi-syllabic words.
+        const syllables = (word.match(/[aeiouy]+/gi) || []).length || 1;
+        if (syllables >= 4) return 0.78;   // long words: slow and deliberate
+        if (syllables === 3) return 0.84;  // medium words: moderate
+        return 0.90;                       // short words: near natural pace
+    }
+
+    speakWord(word, onEndCallback = null, rate = null) {
         if (!word) {
             if (onEndCallback) onEndCallback();
             return;
         }
+        // Use dynamic syllable-based rate if caller did not supply one explicitly
+        const effectiveRate = (rate !== null && rate !== undefined) ? rate : this.getPronunciationRate(word);
         var isAndroid = /Android/i.test(navigator.userAgent) || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
         var finish = () => { if (onEndCallback) onEndCallback(); };
         var visualizer = document.getElementById('voiceVisualizer');
@@ -5596,22 +6648,24 @@ class BeeSoundboard {
         var showSpeaking = () => { if (visualizer) visualizer.classList.add('speaking'); if (statusEl) { statusEl.textContent = '🔊 Speaking...'; statusEl.style.display = ''; } };
         var showReady = () => { if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing'); if (statusEl) { statusEl.textContent = '🐝 Ready'; statusEl.style.display = ''; } };
         if (isAndroid && typeof window.BeeSmartTryNativeTTS === 'function') {
-            window.BeeSmartTryNativeTTS(word, { rate: rate }).then(function(ok) {
+            window.BeeSmartTryNativeTTS(word, { rate: effectiveRate }).then(function(ok) {
                 if (ok) {
                     showSpeaking();
                     showReady();
                     finish();
                 } else {
-                    this._speakWordWeb(word, onEndCallback, rate);
+                    this._speakWordWeb(word, onEndCallback, effectiveRate);
                 }
-            }.bind(this)).catch(function() { this._speakWordWeb(word, onEndCallback, rate); }.bind(this));
+            }.bind(this)).catch(function() { this._speakWordWeb(word, onEndCallback, effectiveRate); }.bind(this));
             return;
         }
-        this._speakWordWeb(word, onEndCallback, rate);
+        this._speakWordWeb(word, onEndCallback, effectiveRate);
     }
     _speakWordWeb(word, onEndCallback, rate) {
         if (!('speechSynthesis' in window)) {
-            if (onEndCallback) onEndCallback();
+            if (window.BeeSmartAudioFallback) {
+                window.BeeSmartAudioFallback.play(word, onEndCallback);
+            } else if (onEndCallback) onEndCallback();
             return;
         }
         speechSynthesis.cancel();
@@ -5619,8 +6673,8 @@ class BeeSoundboard {
         var isAndroid = /Android/i.test(navigator.userAgent) || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
         const speak = () => {
             const utterance = new SpeechSynthesisUtterance(word);
-            utterance.pitch = 1.35;
-            utterance.rate = rate; // Use provided rate instead of fixed 0.92
+            utterance.pitch = 1.1;  // Natural adult voice — 1.35 was too high and reduced clarity
+            utterance.rate = rate;  // Dynamic syllable-based rate from getPronunciationRate()
             utterance.volume = 0.9;
             utterance.text = word;
             
@@ -5671,11 +6725,24 @@ class BeeSoundboard {
                 }
                 try { window.dispatchEvent(new CustomEvent('quiz-speech-start')); } catch (e) {}
             };
-            
+
             utterance.onboundary = (event) => {
                 try { window.dispatchEvent(new CustomEvent('quiz-speech-boundary')); } catch (e) {}
-                // Word-level micro pauses for natural cadence
-                if (event.name === 'word' || event.charLength > 0) {
+                const char = (utterance.text || '').charAt(event.charIndex || 0);
+                const isPunct = char === ',' || char === ';' || char === '.' || char === '!' || char === '?';
+
+                // True audio micro-pause via AudioContext suspend/resume (~80ms word, ~250ms punctuation)
+                const ctx = this.ctx;
+                if (ctx && ctx.state === 'running') {
+                    if (isPunct) {
+                        try { ctx.suspend().then(() => setTimeout(() => { try { ctx.resume(); } catch (_) {} }, 250)).catch(() => {}); } catch (_) {}
+                    } else if (event.name === 'word') {
+                        try { ctx.suspend().then(() => setTimeout(() => { try { ctx.resume(); } catch (_) {} }, 80)).catch(() => {}); } catch (_) {}
+                    }
+                }
+
+                // Visual feedback mirrors the audio pause
+                if (event.name === 'word' && !isPunct) {
                     if (visualizer) {
                         visualizer.classList.remove('speaking');
                         visualizer.classList.add('pausing', 'word-pulse');
@@ -5685,9 +6752,7 @@ class BeeSoundboard {
                         }, 150);
                     }
                 }
-                // Longer pause at sentence punctuation
-                const char = (utterance.text || '').charAt(event.charIndex || 0);
-                if (char === ',' || char === ';' || char === '.' || char === '!' || char === '?') {
+                if (isPunct) {
                     if (visualizer) {
                         visualizer.classList.remove('speaking');
                         visualizer.classList.add('pausing');
@@ -5698,13 +6763,13 @@ class BeeSoundboard {
                     }
                 }
             };
-            
+
             utterance.onend = () => {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                 if (statusEl) { statusEl.textContent = '🐝 Ready'; statusEl.style.display = ''; }
                 try { window.dispatchEvent(new CustomEvent('quiz-speech-end')); } catch (e) {}
             };
-            
+
             utterance.onerror = () => {
                 if (visualizer) visualizer.classList.remove('speaking', 'word-pulse', 'pausing');
                 if (statusEl) { statusEl.textContent = '⚠️ Voice error'; statusEl.style.display = ''; }
@@ -6074,7 +7139,8 @@ class BeeDelightManager {
         if (data && data.word) {
             // Speak a friendly prompt and say the word once (the old double-say sounded like a glitch)
             const phrase = `Spell the word ${data.word}.`;
-            const rate = data.rate || 0.92; // Use provided rate or default
+            // Pass null when no explicit override so speakWord uses getPronunciationRate() dynamically
+            const rate = (data.rate != null && data.rate !== 1.0) ? data.rate : null;
             this.soundboard.speakWord(phrase, onEndCallback, rate);
         } else if (onEndCallback) {
             onEndCallback();
@@ -6481,8 +7547,10 @@ class QuizManager {
             this.setupiOSKeyboardHandling();
         }
         
-        // Show green start guidance modal first (one-time per session)
-        this.showStartGuidanceModal();
+        // Guard duplicate /api/next fetches and stale duplicate payloads.
+        this._nextWordRequestInFlight = false;
+        this._introNextWordRequestInFlight = false;
+        this.currentQuestionNumber = 0;
         
         // Single "Ready to spell?" screen: one tap = voice choice + start (replaces voice modal + Play step)
         this.updateVoiceToggleUI();
@@ -6574,6 +7642,19 @@ class QuizManager {
 
         // Optional: mark mounted
         keyboardEl.dataset.mounted = "true";
+    }
+
+    // Keep custom keyboard visible once a word is loaded so typing can begin immediately.
+    ensureCustomKeyboardVisible() {
+        const keyboardHost = document.getElementById('keyboardHost');
+        if (keyboardHost) {
+            keyboardHost.classList.remove('is-hidden');
+            keyboardHost.classList.add('is-visible');
+        }
+        const showBtn = document.getElementById('showKeyboardBtn');
+        if (showBtn) showBtn.style.display = 'none';
+        const quizContainerEl = document.getElementById('quizContainer');
+        if (quizContainerEl) quizContainerEl.classList.add('kb-open');
     }
 
     // 🔁 Prevent accidental repeat announcements (within a short window)
@@ -7216,7 +8297,7 @@ class QuizManager {
                                        "Let's start spelling and fill that honey jar!";
                     const self = this;
 
-                    // Android: Web Speech is often silent in WebView – use native TTS so intro is heard, then start quiz
+                    // Android: Web Speech is often silent in WebView – use native TTS for announcer
                     if (this.isAndroid) {
                         const advance = function() {
                             if (self.quizStarted) return;
@@ -7465,6 +8546,11 @@ class QuizManager {
     // 🚑 Recovery: Used to break out of rare resume stalls on iOS Safari
     // Safe + idempotent: cancels speech and attempts to load the next word.
     async loadNextWordWithIntro() {
+        if (this._introNextWordRequestInFlight) {
+            console.log('⏭️ loadNextWordWithIntro skipped: request already in flight');
+            return;
+        }
+        this._introNextWordRequestInFlight = true;
         try {
             this.lastPronounceData = null;
             // Reset hint tracking for new word
@@ -7759,6 +8845,8 @@ class QuizManager {
         } catch (error) {
             console.error('Error loading word:', error);
             BeeSmart.showError('Error loading word. Please try again.');
+        } finally {
+            this._introNextWordRequestInFlight = false;
         }
     }
     
@@ -8970,6 +10058,11 @@ class QuizManager {
     showVoiceHelperNotification() {}
 
     async loadNextWord() {
+        if (this._nextWordRequestInFlight) {
+            console.log('⏭️ loadNextWord skipped: request already in flight');
+            return;
+        }
+        this._nextWordRequestInFlight = true;
         console.log('🔄 loadNextWord() called - starting to load next word...');
         try {
             // 🎭 MorphController removed - using CSS transitions instead
@@ -9003,16 +10096,6 @@ class QuizManager {
                 BeeSmart.showError(data.message || data.error || 'Failed to load the next word');
                 return;
             }
-
-            if (data.done) {
-                console.log('🏁 Quiz complete - showing summary');
-                // Announce quiz ending before showing report card
-                await this.announceQuizEnding();
-                this.showQuizComplete(data.summary);
-                return;
-            }
-            
-            console.log('✅ Got next word data, processing...');
 
             const questionNumber = __nn(data.index, __nn(data.number, 1));
             this.totalWords = __nn(data.total, this.totalWords);
@@ -9080,6 +10163,17 @@ class QuizManager {
 
             // Back-compat alias (older code paths referenced currentWord)
             this.currentWord = this.currentWordData;
+
+            // ── UX ENHANCEMENTS: letter blanks, progress ring, hide helpers ──
+            if (typeof window._beeSetLetterBlanks === 'function') {
+                window._beeSetLetterBlanks((data.word || '').length);
+            }
+            if (typeof window._beeUpdateProgressRing === 'function') {
+                window._beeUpdateProgressRing(questionNumber, __nn(data.total, this.totalWords));
+            }
+            if (typeof window._beeHideHelpers === 'function') {
+                window._beeHideHelpers();
+            }
             
             // Don't animate mascot on every question - keep it calm during gameplay
             // Mascot will only animate when answers are submitted
@@ -9149,6 +10243,8 @@ class QuizManager {
         } catch (error) {
             console.error('Error loading next word:', error);
             BeeSmart.showError('Failed to load the next word. Please refresh the page.');
+        } finally {
+            this._nextWordRequestInFlight = false;
         }
     }
 
@@ -9433,7 +10529,7 @@ class QuizManager {
         letterHintElement.classList.add('hidden');
     }
 
-    async pronounceWord({ refresh = false, rate = 1.0 } = {}) {
+    async pronounceWord({ refresh = false, rate = null } = {}) {
         try {
             try { if (typeof playThemedSound === 'function') playThemedSound('pronounce-word'); } catch (_) {}
             
@@ -9502,15 +10598,19 @@ class QuizManager {
     }
 
     // Direct speech synthesis fallback
-    speakDirectly(text, onDone, rate = 1.0) {
+    speakDirectly(text, onDone, rate = null) {
         const self = this;
+        // Compute dynamic syllable-based rate if caller did not supply one
+        const effectiveRate = (rate !== null && rate !== undefined)
+            ? rate
+            : (() => { const s = (text.match(/[aeiouy]+/gi) || []).length || 1; return s >= 4 ? 0.78 : s === 3 ? 0.84 : 0.90; })();
         // Android: try native TTS first; if it fails or plugin missing, fall back to Web Speech so we never get silence
         if (this.isAndroid && text && typeof window.BeeSmartTryNativeTTS === 'function') {
             var viz = document.getElementById('voiceVisualizer');
             var st = document.getElementById('voiceStatus');
             if (viz) viz.classList.add('speaking');
             if (st) st.textContent = '🗣️ Speaking...';
-            window.BeeSmartTryNativeTTS(text, { rate: rate, pitch: 1.0 }).then(function(ok) {
+            window.BeeSmartTryNativeTTS(text, { rate: effectiveRate, pitch: 1.1 }).then(function(ok) {
                 if (ok) {
                     if (onDone) onDone();
                     if (viz) viz.classList.remove('speaking', 'word-pulse', 'pausing');
@@ -9518,9 +10618,9 @@ class QuizManager {
                     return;
                 }
                 // Native TTS not available or failed – use Web Speech so user still hears audio
-                self._speakDirectlyWebSpeech(text, onDone, rate, viz, st);
+                self._speakDirectlyWebSpeech(text, onDone, effectiveRate, viz, st);
             }).catch(function() {
-                self._speakDirectlyWebSpeech(text, onDone, rate, viz, st);
+                self._speakDirectlyWebSpeech(text, onDone, effectiveRate, viz, st);
             });
             setTimeout(function() {
                 if (viz) viz.classList.remove('speaking', 'word-pulse', 'pausing');
@@ -9528,7 +10628,7 @@ class QuizManager {
             }, Math.min(15000, 500 + (String(text).length * 80)));
             return;
         }
-        this._speakDirectlyWebSpeech(text, onDone, rate, null, null);
+        this._speakDirectlyWebSpeech(text, onDone, effectiveRate, null, null);
     }
 
     _speakDirectlyWebSpeech(text, onDone, rate, vizEl, statusEl) {
@@ -9540,7 +10640,7 @@ class QuizManager {
                 var doSpeak = () => {
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.rate = rate;
-                utterance.pitch = 1.0;
+                utterance.pitch = 1.1;  // Consistent with all other TTS paths — natural adult voice
                 utterance.volume = 0.9;
                 
                 // Use single session voice (British/standard English) - same as announcements
@@ -9587,8 +10687,10 @@ class QuizManager {
                 if (onDone) onDone();
             }
         } else {
-            console.warn('Speech synthesis not supported');
-            if (onDone) onDone();
+            console.warn('Speech synthesis not supported — trying audio fallback');
+            if (window.BeeSmartAudioFallback) {
+                window.BeeSmartAudioFallback.play(text, onDone);
+            } else if (onDone) onDone();
         }
     }
 
@@ -9893,6 +10995,13 @@ class QuizManager {
             if (window.BeeVoiceViz && window.BeeVoiceViz.react) {
                 window.BeeVoiceViz.react(isCorrect ? 'feedback-correct' : (isAlmostRight ? 'feedback-incorrect' : 'feedback-incorrect'));
             }
+            // ── UX ENHANCEMENTS: avatar reaction + streak visual + reveal helpers ──
+            if (typeof window._beeAvatarReact === 'function') {
+                window._beeAvatarReact(isCorrect ? 'correct' : 'incorrect');
+            }
+            if (!isCorrect && typeof window._beeRevealHelpers === 'function') {
+                window._beeRevealHelpers();
+            }
         } catch (e) {}
         const feedbackArea = document.getElementById('feedbackArea');
         feedbackArea.style.display = 'block';
@@ -10128,8 +11237,12 @@ class QuizManager {
         if (floatingStreak) {
             floatingStreak.textContent = streak;
         }
+
+        // ── UX ENHANCEMENT: streak visual escalation ──
+        if (typeof window._beeUpdateStreakVisual === 'function') {
+            window._beeUpdateStreakVisual(streak);
+        }
         
-        // Show the floating stats bar once quiz starts
         if (sessionStatsBar && total > 0) {
             sessionStatsBar.style.display = 'flex';
         }
@@ -11005,7 +12118,13 @@ class QuizManager {
         }
         const oneWinHTML = oneWinText ? '<div class="one-win-banner" role="status">' + oneWinText + '</div>' : '';
 
+        // ── UX ENHANCEMENT: star rating + buzzy message ──
+        const completionExtrasHTML = (typeof window._beeCompletionExtras === 'function')
+            ? window._beeCompletionExtras(percentage, this.studentName)
+            : '';
+
         document.getElementById('completionStats').innerHTML = `
+            ${completionExtrasHTML}
             <div class="report-card">
                 <div class="report-header">
                     <h2>📚 ${(() => {
@@ -11383,20 +12502,26 @@ function pronounceWordFromReport(word) {
     if (!word) return;
     
     if ('speechSynthesis' in window) {
-        // Cancel any ongoing speech
         speechSynthesis.cancel();
         
         const utterance = new SpeechSynthesisUtterance(word);
         const voices = speechSynthesis.getVoices();
         
-        // Prefer US English voice
-        const enUSVoice = voices.find(v => v.lang === 'en-US') || 
-                         voices.find(v => v && v.lang && String(v.lang).toLowerCase().indexOf('en') === 0) || 
-                         null;
-        if (enUSVoice) utterance.voice = enUSVoice;
+        // Use session voice for consistency; fall back to best available en voice
+        const sessionVoice = typeof getQuizSessionVoice === 'function' ? getQuizSessionVoice() : null;
+        if (sessionVoice) {
+            utterance.voice = sessionVoice;
+        } else {
+            const enUSVoice = voices.find(v => v.lang === 'en-US') ||
+                             voices.find(v => v && v.lang && String(v.lang).toLowerCase().indexOf('en') === 0) ||
+                             null;
+            if (enUSVoice) utterance.voice = enUSVoice;
+        }
         
-        utterance.rate = 0.85;  // Slow for clarity
-        utterance.pitch = 1.0;
+        // Dynamic syllable-based rate — same logic as BeeSoundboard.getPronunciationRate()
+        const syllables = (word.match(/[aeiouy]+/gi) || []).length || 1;
+        utterance.rate = syllables >= 4 ? 0.78 : syllables === 3 ? 0.84 : 0.90;
+        utterance.pitch = 1.1;  // Consistent with all other TTS paths
         utterance.volume = 1.0;
         
         speechSynthesis.speak(utterance);

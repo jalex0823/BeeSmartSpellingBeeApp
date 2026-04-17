@@ -1502,6 +1502,41 @@ function buildThumbnailFallbacks(avatar, initialUrl) {
     return candidates;
 }
 
+// Check if WebGL is supported
+// We do NOT create a test canvas/context here — doing so consumes one of the
+// browser's limited WebGL context slots and will fail when near the limit,
+// producing a false negative.  The actual WebGLRenderer creation inside
+// load3DAvatarGLB is wrapped in its own try/catch and is the real gate.
+// Here we only verify the API is present (not disabled by browser flags).
+function isWebGLSupported() {
+    // Cached positive result from a previous successful SmartyBee3D or picker render.
+    if (window.__webglConfirmedAvailable) return true;
+    // Hard negative: WebGL API not present at all (very old browser / disabled flag).
+    if (typeof window.WebGLRenderingContext === 'undefined') return false;
+    // API present — assume supported and let the renderer creation prove otherwise.
+    return true;
+}
+
+// Dispose existing WebGL context to prevent "too many contexts" error
+function disposeExistingRenderer() {
+    if (avatarViewerState.renderer) {
+        try {
+            // forceContextLoss tells the GPU driver to actually release the slot.
+            if (typeof avatarViewerState.renderer.forceContextLoss === 'function') {
+                avatarViewerState.renderer.forceContextLoss();
+            }
+            avatarViewerState.renderer.dispose();
+            const canvas = avatarViewerState.renderer.domElement;
+            if (canvas && canvas.parentNode) {
+                canvas.parentNode.removeChild(canvas);
+            }
+        } catch (e) {
+            console.warn('Error disposing existing renderer:', e);
+        }
+        avatarViewerState.renderer = null;
+    }
+}
+
 // Load GLB 3D model with progress tracking
 function load3DAvatarGLB(avatar, containerId) {
     const container = document.getElementById(containerId);
@@ -1509,25 +1544,61 @@ function load3DAvatarGLB(avatar, containerId) {
         console.error('❌ Container not found:', containerId);
         return;
     }
-    
+
+    // Check WebGL support first
+    if (!isWebGLSupported()) {
+        console.warn('WebGL not supported on this device');
+        throw new Error('WebGL not supported');
+    }
+
+    // Clean up any existing WebGL context
+    disposeExistingRenderer();
+
     const width = container.clientWidth || 250;
     const height = container.clientHeight || 250;
-    
+
     console.log(`🔄 Loading GLB: ${avatar.name}, container: ${width}x${height}`);
     updatePreviewProgress(10, 'Initializing 3D viewer...');
-    
+
     // Three.js setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+
+    // Create renderer with error handling
+    let renderer;
+    try {
+        renderer = new THREE.WebGLRenderer({
+            alpha: true,
+            antialias: true,
+            powerPreference: 'high-performance',
+            failIfMajorPerformanceCaveat: false
+        });
+        window.__webglConfirmedAvailable = true;
+    } catch (e) {
+        console.error('Failed to create WebGL renderer:', e);
+        throw new Error('WebGL context creation failed');
+    }
+
+    // Handle context loss
+    renderer.domElement.addEventListener('webglcontextlost', function(event) {
+        event.preventDefault();
+        console.warn('WebGL context lost');
+    }, false);
+
+    renderer.domElement.addEventListener('webglcontextrestored', function() {
+        console.log('WebGL context restored');
+    }, false);
+
     // Color management for r128
     if (typeof THREE.sRGBEncoding !== 'undefined') {
         renderer.outputEncoding = THREE.sRGBEncoding;
     }
-    
+
     renderer.setSize(width, height);
     renderer.setClearColor(0x000000, 0);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
     container.appendChild(renderer.domElement);
+
     // Save viewer state for controls
     avatarViewerState.scene = scene;
     avatarViewerState.camera = camera;
@@ -1824,7 +1895,16 @@ function updatePreview(avatar) {
             // Load 3D model (GLB-only, all avatars are GLB format)
             if (avatar.glb_url && typeof THREE.GLTFLoader !== 'undefined') {
                 console.log('📦 Loading GLB model:', avatar.name);
-                load3DAvatarGLB(avatar, previewId);
+                try {
+                    load3DAvatarGLB(avatar, previewId);
+                } catch (e) {
+                    console.warn('⚠️ 3D avatar failed to load:', e.message);
+                    // Show thumbnail fallback when WebGL fails
+                    if (avatar.thumbnail) {
+                        console.log('🖼️ Falling back to thumbnail for:', avatar.name);
+                        previewContainer.innerHTML = `<img src="${avatar.thumbnail}" style="width: 100%; height: 100%; object-fit: contain;" alt="${avatar.name}">`;
+                    }
+                }
             } else if (avatar.thumbnail) {
                 // Fallback to large thumbnail
                 console.log('🖼️ Using thumbnail fallback for:', avatar.name);

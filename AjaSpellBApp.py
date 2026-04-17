@@ -49,7 +49,7 @@ app = Flask(__name__)
 # When enabled, we provide a reviewer-friendly path for Apple App Review to access
 # core premium flows without creating an account or relying on fragile demo creds.
 APP_REVIEW_MODE = os.environ.get('APP_REVIEW_MODE', '0').strip() == '1'
-from PIL import Image
+from PIL import Image, ImageOps
 from sqlalchemy import inspect, exc as sa_exc, or_, and_, not_, text
 from sqlalchemy.exc import DisconnectionError, OperationalError, SQLAlchemyError
 
@@ -118,7 +118,7 @@ print("="*70)
 
 # Build/release version (surfaced via /health)
 # Keep this in sync with the public app version used by validation scripts.
-APP_VERSION = "34"
+APP_VERSION = "35"
 
 # Base directory for resolving relative data paths (added to silence linter undefined warning)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -209,11 +209,21 @@ def load_simple_wiktionary():
                     try:
                         entry = json.loads(line.strip())
                         word = entry.get('word', '').lower().strip()
+                        if not word:
+                            continue
+
+                        try:
+                            is_safe_word, _ = is_kid_friendly(word)
+                            if not is_safe_word:
+                                continue
+                        except Exception:
+                            pass
 
                         # Extract definition and example
                         senses = entry.get('senses', [])
                         if senses and word:
                             first_sense = senses[0]
+
                             glosses = first_sense.get('glosses', [])
                             examples = first_sense.get('examples', [])
 
@@ -221,11 +231,15 @@ def load_simple_wiktionary():
                             example_obj = examples[0] if examples else {}
                             example = example_obj.get('text', '') if isinstance(example_obj, dict) else ""
                             if definition:  # Only store words with definitions
+                                has_bad_text, _ = _text_contains_inappropriate_content(f"{definition} {example}")
+                                if has_bad_text:
+                                    continue
                                 words[word] = {
                                     "definition": definition,
                                     "example": example,
                                     "source": "simple-wiktionary"
                                 }
+
                     except json.JSONDecodeError:
                         continue  # Skip malformed lines
                     except Exception:
@@ -561,6 +575,23 @@ def api_wordbank_get():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+def _block_student_library_access():
+    """Return a 403 JSON response if the current user is a student role attempting
+    to access the word library (Dictionary Search / Random Play).
+    Students enter their own words via upload or manual entry instead.
+    Returns None if access is allowed.
+    """
+    try:
+        if current_user.is_authenticated and getattr(current_user, 'role', '') == 'student':
+            return jsonify({
+                'status': 'error',
+                'error': 'student_library_restricted',
+                'message': 'Dictionary Search and Random Play use the word library. Ask your teacher or parent to assign words, or type/upload your own!'
+            }), 403
+    except Exception:
+        pass
+    return None
+
 @app.route('/api/wordbank', methods=['POST'])
 def api_wordbank_set():
     try:
@@ -607,7 +638,7 @@ def api_wordbank_clear():
     try:
         clear_wordbank()
     except Exception as e:
-        print(f"️ api_wordbank_clear: non-fatal error: {e}")
+        print(f" api_wordbank_clear: non-fatal error: {e}")
     return jsonify({'status': 'success'})
 
 @app.route('/api/wordbank/import-text', methods=['POST'])
@@ -1026,6 +1057,11 @@ def home_root_direct():
     except Exception:
         avatar_product_ids = {}
     show_groups_join_tiles = current_app.config.get('ENABLE_SCHOOL_TILES', False)
+    try:
+        _role = str(getattr(current_user, 'role', '') or '')
+        is_student = current_user.is_authenticated and _role == 'student'
+    except Exception:
+        is_student = False
     return render_template(
         'unified_menu.html',
         user_avatar=user_avatar_data,
@@ -1037,6 +1073,7 @@ def home_root_direct():
         is_premium=is_premium,
         avatar_product_ids=avatar_product_ids,
         show_groups_join_tiles=show_groups_join_tiles,
+        is_student=is_student,
     )
 
 # Favicon route to prevent 404 errors
@@ -1264,8 +1301,46 @@ def load_dictionary_cache():
             with open(DICTIONARY_CACHE_FILE, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 words = data.get('words', {})
-                print(f" Loaded dictionary cache with {len(words)} words from {DICTIONARY_CACHE_FILE}")
-                return words
+                sanitized_words = {}
+                dropped = 0
+                for key, payload in (words or {}).items():
+                    word_key = str(key or '').strip().lower()
+                    if not word_key:
+                        dropped += 1
+                        continue
+
+                    try:
+                        is_safe_word, _ = is_kid_friendly(word_key)
+                    except Exception:
+                        is_safe_word = True
+                    if not is_safe_word:
+                        dropped += 1
+                        continue
+
+                    if isinstance(payload, dict):
+                        definition = str(payload.get('definition') or '').strip()
+                        example = str(payload.get('example') or '').strip()
+                        source = str(payload.get('source') or 'cache').strip() or 'cache'
+                    else:
+                        definition = str(payload or '').strip()
+                        example = ''
+                        source = 'cache'
+
+                    has_bad_text, _ = _text_contains_inappropriate_content(f"{definition} {example}")
+                    if has_bad_text:
+                        dropped += 1
+                        continue
+
+                    sanitized_words[word_key] = {
+                        'definition': definition,
+                        'example': example,
+                        'source': source,
+                    }
+
+                if dropped:
+                    print(f" Sanitized dictionary cache: removed {dropped} unsafe entries")
+                print(f" Loaded dictionary cache with {len(sanitized_words)} safe words from {DICTIONARY_CACHE_FILE}")
+                return sanitized_words
         else:
             print(f"️ Dictionary cache file not found: {DICTIONARY_CACHE_FILE}")
     except Exception as e:
@@ -1385,12 +1460,30 @@ def api_avatars():
     # Build role-aware list
     result = []
 
+    # Determine which hidden/award avatars this user has unlocked via entitlements.
+    # Hidden avatars (hidden=True in catalog) are excluded from the picker unless the
+    # user holds the matching UserEntitlement record.
+    user_unlocked_hidden_slugs = set()
+    if user is not None:
+        try:
+            from models import UserEntitlement as _UE
+            ents = _UE.query.filter_by(user_id=user.id, entitlement_type='avatar').all()
+            for _e in (ents or []):
+                k = str(getattr(_e, 'entitlement_key', '') or '').strip()
+                if k.startswith('avatar.'):
+                    user_unlocked_hidden_slugs.add(k[len('avatar.'):].replace('_', '-'))
+        except Exception:
+            pass
+
     # Registration scope: never expose the full catalog; only allow the default-free avatars.
-    catalog_iter = AVATAR_CATALOG
+    catalog_iter = [
+        e for e in AVATAR_CATALOG
+        if not e.get('hidden') or (str(e.get('id') or '').strip().lower() in user_unlocked_hidden_slugs)
+    ]
     if registration_scope:
         try:
             catalog_iter = [
-                e for e in AVATAR_CATALOG
+                e for e in catalog_iter
                 if bool(e.get('is_default_free')) or (str(e.get('tier') or '').strip().lower() == 'default_free')
             ]
         except Exception:
@@ -2359,7 +2452,8 @@ def get_word_info(word):
     if word_lower in WORD_INFO_CACHE:
         global _WORD_INFO_HITS
         _WORD_INFO_HITS += 1
-        return WORD_INFO_CACHE[word_lower]
+        cached = WORD_INFO_CACHE[word_lower]
+        return _enforce_safe_prompt_text(cached)
     global _WORD_INFO_MISSES
     _WORD_INFO_MISSES += 1
 
@@ -2384,6 +2478,7 @@ def get_word_info(word):
                 definition = sanitize_kid_friendly_text(_filter_definition(definition, word))
                 formatted = f"{definition}. Fill in the blank: Can you spell _____ correctly?"
                 print(f" (indexed) '{word}' → wiktionary (no example)")
+            formatted = _enforce_safe_prompt_text(formatted)
             _cache_word_info(word_lower, formatted)
             return formatted
 
@@ -2401,6 +2496,7 @@ def get_word_info(word):
                 definition = sanitize_kid_friendly_text(_filter_definition(definition, word))
                 formatted = f"{definition}. Fill in the blank: Can you spell _____ correctly?"
             print(f" Cache hit '{word}'")
+            formatted = _enforce_safe_prompt_text(formatted)
             _cache_word_info(word_lower, formatted)
             return formatted
     
@@ -2411,6 +2507,7 @@ def get_word_info(word):
         example = sanitize_kid_friendly_text(_blank_word(fb.get("example", "Can you spell _____ correctly?"), word))
         formatted = f"{definition}. Fill in the blank: {example}"
         print(f" Fallback '{word}' ({fb.get('source','fallback')})")
+        formatted = _enforce_safe_prompt_text(formatted)
         _cache_word_info(word_lower, formatted)
         return formatted
     except Exception as _e:
@@ -2418,6 +2515,19 @@ def get_word_info(word):
         _cache_word_info(word_lower, formatted)
         print(f"️ Fallback failed for '{word}': {_e}")
         return formatted
+
+def _enforce_safe_prompt_text(text: str) -> str:
+    """Guarantee no inappropriate text leaks into quiz prompts."""
+    candidate = str(text or '').strip()
+    if not candidate:
+        return "Listen carefully and spell _____ correctly."
+    try:
+        contains_bad, _ = _text_contains_inappropriate_content(candidate)
+        if contains_bad:
+            return "Listen carefully and spell _____ correctly."
+    except Exception:
+        pass
+    return candidate
 
 def get_word_of_the_day():
     """
@@ -3411,7 +3521,10 @@ DEV_RESET_TOKEN_CACHE: Dict[int, str] = {}  # user_id -> last raw token
 # --- Config ------------------------------------------------------------------
 DATA_KEY = "wordbank_v1"
 QUIZ_STATE_KEY = "quiz_state_v1"
-ALLOWED_EXTENSIONS = {".csv", ".txt", ".docx", ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff"}
+ALLOWED_EXTENSIONS = {
+    ".csv", ".txt", ".docx", ".pdf", ".xlsx", ".xls",
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".heic", ".heif",
+}
 MAX_RECORDS = 500  # safety cap; your typical lists are ~50
 
 # Progress tracking for upload processing with bee theme
@@ -3801,36 +3914,172 @@ def normalize(s: str) -> str:
 
 # Kid-Friendly Word Filter - Blocks inappropriate content for children
 INAPPROPRIATE_WORDS = {
-    # Profanity and vulgar terms
-    "damn", "damned", "hell", "hells", "crap", "sucks", "piss", "pissed",
-    "shit", "shits", "fuck", "fucks", "fucker", "fuckers", "fuckhead", "fuckheads", "motherfucker", "motherfuckers",
-    "bitch", "bitches", "asshole", "assholes", "bastard", "bastards", "dumbass", "dumbasses",
-    # Sexual/adult content - CRITICAL: Block all adult/child abuse terms
-    "sex", "sexy", "porn", "orgasm", "penis", "vagina", "breast", "breasts",
-    "ejaculation", "ejaculations", "erection", "masturbate", "prostitute",
-    "pedophile", "pedophiles", "pedophilia", "pedophilic", "paedophile", "paedophilia",
+    # --- Profanity and vulgar terms ---
+    "damn", "damned", "crap", "crappy", "sucks", "piss", "pissed",
+    "shit", "shits", "shitty", "bullshit",
+    "fuck", "fucks", "fucker", "fuckers", "fucked", "fucking", "fuckhead", "fuckheads",
+    "motherfucker", "motherfuckers", "motherfucking",
+    "bitch", "bitches", "bitchy",
+    "ass", "asses", "asshole", "assholes", "jackass", "jackasses", "smartass", "dumbass", "dumbasses",
+    "bastard", "bastards",
+    "dick", "dicks", "cock", "cocks", "prick", "pricks",
+    "cunt", "cunts", "twat", "twats",
+    "slut", "sluts", "slutty", "whore", "whores", "whorish",
+    "boob", "boobs", "tit", "tits", "titty", "titties",
+    "arse", "arses",
+    "douche", "douchebag", "douchebags",
+    "turd", "turds", "fart", "farts",
+    # --- Sexual / adult content ---
+    "sex", "sexy", "porn", "pornography", "pornographic",
+    "orgasm", "orgasms", "penis", "vagina", "vulva",
+    "breast", "breasts", "nipple", "nipples",
+    "ejaculation", "ejaculations", "erection", "masturbate", "masturbation",
+    "prostitute", "prostitution", "prostitutes",
+    "pedophile", "pedophiles", "pedophilia", "pedophilic",
+    "paedophile", "paedophiles", "paedophilia",
     "molest", "molestation", "molester", "molesting", "molesters",
-    "rape", "rapist", "raping", "rapes", "raped",
-    "incest", "incestuous", "abuse", "abuser", "abusive", "abusing",
-    "predator", "predators", "groom", "grooming", "groomer", "groomers",
+    "rape", "rapist", "rapists", "raping", "rapes", "raped",
+    "incest", "incestuous",
+    "abuse", "abuser", "abusers", "abusive", "abusing",
+    "groom", "grooming", "groomer", "groomers",
     "statutory", "underage", "preteen", "preteens", "tweener", "tweeners",
-    "victim", "victims", "exploit", "exploitation", "exploiting",
-    "assault", "assaulting", "assaults", "assaulted",
-    "harass", "harassment", "harassing",
-    "nude", "naked", "horny", "arousal", "climax", "intercourse",
-    "erotic", "sexuality", "genitals", "genital",
-    # Violence/weapons
-    "kill", "killing", "killer", "murder", "murderer", "suicide", "weapon", 
-    "gun", "shoot", "shooting", "bomb", "explosive",
-    # Drugs/alcohol
-    "drug", "drugs", "cocaine", "marijuana", "heroin", "meth", "drunk", "alcohol",
-    # Hate speech
-    "racist", "sexist", "nazi", "hate",
-    # Other inappropriate
-    "death", "die", "dying", "blood", "bloody", "torture",
-    # Disturbing / age-inappropriate concepts
-    "sadism", "sadist", "sadistic"
+    "exploit", "exploitation", "exploiting", "exploiter", "exploiters",
+    "assault", "assaults", "assaulting", "assaulted",
+    "harass", "harassment", "harassing", "harasser",
+    "nude", "nudity", "naked",
+    "horny", "arousal", "aroused",
+    "intercourse", "erotic", "erotica",
+    "sexuality", "genitals", "genital",
+    "fetish", "fetishes", "pervert", "perverts", "perverted",
+    "fornicate", "fornication",
+    "seduce", "seduction", "seducing",
+    "obscene", "obscenity",
+    # --- Violence / weapons ---
+    "kill", "killing", "killer", "killers",
+    "murder", "murderer", "murderers", "murdering",
+    "suicide", "suicidal",
+    "rifle", "rifles", "pistol", "pistols", "shotgun", "shotguns",
+    "shoot", "shooting", "shootings", "shooter", "shooters",
+    "stab", "stabbing", "stabbings", "stabbed",
+    "bomb", "bombs", "bombing", "bombings", "explosive", "explosives",
+    "grenade", "grenades",
+    "offing", "offed",
+    "violent", "violence",
+    "slay", "slaying", "slayings", "slaughter", "slaughtered", "slaughtering",
+    "bloodshed",
+    "corpse", "corpses",
+    "sadism", "sadist", "sadistic",
+    "gore", "gory",
+    "cannibal", "cannibalism",
+    "necrophilia",
+    "self-harm", "selfharm",
+    "decapitate", "decapitation",
+    "strangle", "strangling", "strangled",
+    "terrorism", "terrorist", "terrorists",
+    "hostage", "hostages",
+    "genocide",
+    # --- Drugs / alcohol / substance abuse ---
+    "cocaine",
+    "marijuana", "cannabis",
+    "heroin", "meth", "methamphetamine",
+    "overdose", "overdosed", "overdosing",
+    "addiction", "addicted", "addictive",
+    "hallucinate", "hallucination", "hallucinations",
+    "drunk", "drunken", "drunkenness",
+    "alcohol", "alcoholic", "alcoholism",
+    "beer", "liquor", "whiskey", "vodka", "tequila",
+    "cigarette", "cigarettes",
+    "tobacco",
+    "vape", "vaping", "vaper",
+    "narcotic", "narcotics",
+    "opium", "opioid", "opioids",
+    "ecstasy",
+    "lsd",
+    # --- Hate speech / slurs / derogatory ---
+    "racist", "racism",
+    "sexist", "sexism",
+    "nazi", "nazis",
+    "nigger", "niggers", "nigga", "niggas",
+    "chink", "chinks",
+    "spic", "spics",
+    "kike", "kikes",
+    "gook", "gooks",
+    "wetback", "wetbacks",
+    "cracker",
+    "honky", "honkies",
+    "fag", "fags", "faggot", "faggots",
+    "dyke", "dykes",
+    "retard", "retards", "retarded",
+    "cripple", "cripples",
+    "bigot", "bigots", "bigoted", "bigotry",
+    "extremist", "extremists", "extremism",
+    "supremacist", "supremacists",
+    "homophobic", "homophobia",
+    "transphobic", "transphobia",
+    "xenophobic", "xenophobia",
+    # --- Disturbing / age-inappropriate concepts ---
+    "self-harm", "selfharm",
+    # --- Religious terms (requested filter scope) ---
+    "god", "gods", "goddess", "goddesses",
+    "jesus", "christ", "christian", "christians", "christianity",
+    "allah", "islam", "muslim", "muslims",
+    "jew", "jews", "jewish", "judaism",
+    "hindu", "hindus", "hinduism",
+    "buddha", "buddhist", "buddhists", "buddhism",
+    "sikh", "sikhs", "sikhism",
+    "church", "churches", "mosque", "mosques", "temple", "temples", "synagogue", "synagogues",
+    "bible", "quran", "koran", "torah", "gospel", "scripture", "scriptures",
+    "prayer", "prayers", "pray", "praying",
+    "pastor", "pastors", "priest", "priests", "rabbi", "rabbis", "imam", "imams",
+    # --- Spam / inappropriate internet slang ---
+    "wtf", "stfu", "gtfo", "omfg",
+    "thot",
+    "simp",
+    "sexting",
 }
+
+STRICT_BLOCKED_PHRASES = {
+    "offing someone",
+    "kill someone",
+    "murder someone",
+    "shoot someone",
+    "hurt someone",
+}
+
+def _collect_all_inappropriate_words():
+    """Return merged blocklist from local + guardian filters."""
+    blocked = set(INAPPROPRIATE_WORDS)
+    try:
+        from content_filter_guardian import ALL_INAPPROPRIATE_WORDS as _ALL
+        blocked.update({str(w or '').strip().lower() for w in (_ALL or set()) if str(w or '').strip()})
+    except Exception:
+        pass
+    return {w for w in blocked if w}
+
+def _text_contains_inappropriate_content(text: str):
+    """Check free-form text for profanity/violent/inappropriate content."""
+    value = (text or '').strip().lower()
+    if not value:
+        return False, ''
+
+    if "sex" in value:
+        return True, "contains restricted substring 'sex'"
+
+    for phrase in STRICT_BLOCKED_PHRASES:
+        if phrase in value:
+            return True, f"contains blocked phrase '{phrase}'"
+
+    blocked_words = _collect_all_inappropriate_words()
+    tokens = re.findall(r"[a-z]+", value)
+    for token in tokens:
+        if token in blocked_words:
+            return True, f"contains blocked word '{token}'"
+
+    for bad in blocked_words:
+        if len(bad) > 4 and bad in value:
+            return True, f"contains blocked substring '{bad}'"
+
+    return False, ''
 
 def is_kid_friendly(word: str) -> tuple[bool, str]:
     """
@@ -3924,40 +4173,32 @@ def _filter_records_excluding_inappropriate_text(records: List[Dict[str, str]]):
       - Block if any token matches an inappropriate word exactly (case-insensitive)
       - Block if any inappropriate word of length > 4 appears as a substring
     """
-    # Acquire inappropriate vocabulary from enhanced filter if available, else fallback
-    try:
-        from content_filter_guardian import ALL_INAPPROPRIATE_WORDS as _ALL
-        inappropriate_words = set(_ALL)
-    except Exception:
-        # Fallback to base set already in this module
-        inappropriate_words = set(INAPPROPRIATE_WORDS)
-
     filtered: List[Dict[str, str]] = []
     blocked: List[Dict[str, str]] = []
 
     for r in records:
+        word = (r.get("word") or "").strip()
+        if not word:
+            blocked.append({"word": "", "reason": "missing word value"})
+            continue
+
+        is_safe_word, word_reason = is_kid_friendly(word)
+        if not is_safe_word:
+            blocked.append({"word": word, "reason": word_reason})
+            continue
+
         sentence = (r.get("sentence") or "")
         hint = (r.get("hint") or "")
-        combined = f"{sentence} {hint}".lower()
-
-        # Rule 1: special-case substring 'sex'
-        if "sex" in combined:
-            blocked.append({"word": r.get("word", ""), "reason": "definition/hint contains restricted substring 'sex'"})
+        contains_bad_text, text_reason = _text_contains_inappropriate_content(f"{sentence} {hint}")
+        if contains_bad_text:
+            blocked.append({"word": word, "reason": f"definition/hint {text_reason}"})
             continue
 
-        # Tokenize to check exact matches (avoid false positives like 'class')
-        tokens = re.findall(r"[a-z]+", combined)
-        token_set = set(tokens)
-        if any(tok in inappropriate_words for tok in token_set):
-            blocked.append({"word": r.get("word", ""), "reason": "definition/hint contains profanity or inappropriate words"})
-            continue
-
-        # Substring rule for longer inappropriate words (>4 chars)
-        if any(len(bad) > 4 and bad in combined for bad in inappropriate_words):
-            blocked.append({"word": r.get("word", ""), "reason": "definition/hint contains inappropriate content"})
-            continue
-
-        filtered.append(r)
+        filtered.append({
+            "word": word,
+            "sentence": sentence,
+            "hint": hint,
+        })
 
     return filtered, blocked
 
@@ -4093,7 +4334,7 @@ def parse_csv(file_bytes: bytes, filename: str) -> List[Dict[str, str]]:
             hint = (rec.get("hint") or rec.get("Hint") or "").strip()
             records.append({"word": word, "sentence": sentence, "hint": hint})
     else:
-        # No headerΓÇötreat columns positionally
+        # No header—treat columns positionally
         row0 = peek
         if row0:
             records.append({
@@ -4109,6 +4350,64 @@ def parse_csv(file_bytes: bytes, filename: str) -> List[Dict[str, str]]:
                 "sentence": row[1].strip() if len(row) > 1 else "",
                 "hint": row[2].strip() if len(row) > 2 else "",
             })
+    return records
+
+def parse_excel(file_bytes: bytes, filename: str) -> List[Dict[str, str]]:
+    """Parse Excel files (.xlsx/.xls) into word records."""
+    ext = os.path.splitext((filename or "").lower())[1]
+    rows_matrix: List[List[str]] = []
+
+    if ext != ".xls":
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
+            ws = wb.active
+            for row in ws.iter_rows(values_only=True):
+                vals = ["" if v is None else str(v).strip() for v in row]
+                if any(vals):
+                    rows_matrix.append(vals)
+            wb.close()
+        except Exception:
+            rows_matrix = []
+
+    if not rows_matrix:
+        try:
+            import pandas as pd
+            df = pd.read_excel(io.BytesIO(file_bytes), dtype=str)
+            header = [str(c).strip() for c in list(df.columns)]
+            rows_matrix.append(header)
+            for rec in df.fillna("").astype(str).to_dict(orient="records"):
+                rows_matrix.append([str(rec.get(c, "")).strip() for c in header])
+        except Exception:
+            raise RuntimeError("Excel parsing requires openpyxl or pandas. Please upload .xlsx, .csv, or .txt.")
+
+    if not rows_matrix:
+        return []
+
+    header_row = [c.strip().lower() for c in (rows_matrix[0] or [])]
+    has_word_header = "word" in header_row
+    records: List[Dict[str, str]] = []
+
+    if has_word_header:
+        word_idx = header_row.index("word")
+        sentence_idx = header_row.index("sentence") if "sentence" in header_row else None
+        hint_idx = header_row.index("hint") if "hint" in header_row else None
+        for row in rows_matrix[1:]:
+            word = (row[word_idx] if word_idx < len(row) else "").strip()
+            if not word:
+                continue
+            sentence = (row[sentence_idx] if sentence_idx is not None and sentence_idx < len(row) else "").strip()
+            hint = (row[hint_idx] if hint_idx is not None and hint_idx < len(row) else "").strip()
+            records.append({"word": word, "sentence": sentence, "hint": hint})
+    else:
+        for row in rows_matrix:
+            word = (row[0] if len(row) > 0 else "").strip()
+            if not word:
+                continue
+            sentence = (row[1] if len(row) > 1 else "").strip()
+            hint = (row[2] if len(row) > 2 else "").strip()
+            records.append({"word": word, "sentence": sentence, "hint": hint})
+
     return records
 
 def parse_docx(file_bytes: bytes) -> List[Dict[str, str]]:
@@ -4148,30 +4447,97 @@ def parse_image_ocr(file_bytes: bytes) -> List[Dict[str, str]]:
     """Extract text from image using OCR and parse as word list"""
     if not TESSERACT_AVAILABLE:
         raise RuntimeError("Image processing requires Tesseract OCR. Please install pytesseract and tesseract-ocr.")
-    
+
     try:
-        # Open image from bytes
-        image = Image.open(io.BytesIO(file_bytes))
-        
-        # Convert to RGB if necessary
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-        
-        # Extract text using OCR
-        text = pytesseract.image_to_string(image)
-        
-        # Process OCR text into word list
+        configured_cmd = (os.environ.get("TESSERACT_CMD") or "").strip()
+        if configured_cmd:
+            pytesseract.pytesseract.tesseract_cmd = configured_cmd
+        else:
+            discovered_cmd = shutil.which("tesseract")
+            if discovered_cmd:
+                pytesseract.pytesseract.tesseract_cmd = discovered_cmd
+
+        try:
+            _ = pytesseract.get_tesseract_version()
+        except Exception as e:
+            configured = getattr(pytesseract.pytesseract, "tesseract_cmd", "<default>")
+            raise RuntimeError(
+                f"Tesseract OCR engine was not found (cmd={configured}). Install tesseract-ocr and ensure it is on PATH."
+            ) from e
+
+        image = None
+        try:
+            image = Image.open(io.BytesIO(file_bytes))
+            image.load()
+        except Exception:
+            image = None
+
+        if image is None:
+            try:
+                import pillow_heif
+                pillow_heif.register_heif_opener()
+                image = Image.open(io.BytesIO(file_bytes))
+                image.load()
+            except Exception as e:
+                raise RuntimeError(
+                    "Could not decode uploaded image. If this is HEIC/HEIF, install pillow-heif."
+                ) from e
+
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
+        gray = ImageOps.grayscale(image)
+        enhanced = ImageOps.autocontrast(gray)
+
+        def _run_ocr_variants(img_obj) -> List[str]:
+            texts: List[str] = []
+            for cfg in ["--oem 3 --psm 6", "--oem 3 --psm 11", "--oem 3 --psm 3"]:
+                try:
+                    candidate = pytesseract.image_to_string(img_obj, config=cfg)
+                    if candidate and candidate.strip():
+                        texts.append(candidate)
+                except Exception:
+                    continue
+            return texts
+
+        ocr_text_candidates: List[str] = []
+        ocr_text_candidates.extend(_run_ocr_variants(enhanced))
+
+        # Retry with a larger image; phone photos often OCR better when upscaled.
+        try:
+            upscaled = enhanced.resize((max(1, enhanced.width * 2), max(1, enhanced.height * 2)), Image.LANCZOS)
+            ocr_text_candidates.extend(_run_ocr_variants(upscaled))
+        except Exception:
+            pass
+
+        text = "\n".join(t for t in ocr_text_candidates if t and t.strip())
+
         lines = [line.strip() for line in text.splitlines() if line.strip()]
-        
-        # Clean up OCR artifacts
         cleaned_lines = []
         for line in lines:
-            # Remove common OCR artifacts
-            cleaned = re.sub(r'[^\w\s|,-]', '', line)  # Keep word chars, spaces, pipes, commas, hyphens
-            if cleaned.strip() and len(cleaned.strip()) > 1:  # Avoid single character OCR errors
-                cleaned_lines.append(cleaned.strip())
-        
-        return _records_from_lines(cleaned_lines)
+            cleaned = re.sub(r"[^\w\s|,-]", " ", line)
+            cleaned = re.sub(r"\s+", " ", cleaned).strip()
+            if cleaned and len(cleaned) > 1:
+                cleaned_lines.append(cleaned)
+
+        records = _records_from_lines(cleaned_lines)
+        if records:
+            return records
+
+        candidates = re.findall(r"[A-Za-z][A-Za-z'\-]{1,24}", text)
+        seen = set()
+        extracted: List[Dict[str, str]] = []
+        for token in candidates:
+            word = re.sub(r"[^A-Za-z]", "", token).strip()
+            if len(word) < 2:
+                continue
+            key = word.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            extracted.append({"word": word, "sentence": "", "hint": ""})
+
+        return extracted
     except Exception as e:
         raise RuntimeError(f"OCR processing failed: {str(e)}")
 
@@ -4210,7 +4576,7 @@ def api_upload_image():
             # Kid-friendly filter
             filtered_records, blocked = [], []
             if deduped_records:
-                print(f"️ Running enhanced kid-friendly filter on {len(deduped_records)} words...")
+                print(f" Running enhanced kid-friendly filter on {len(deduped_records)} words...")
                 filtered_records, blocked = _filter_records_excluding_inappropriate_text(deduped_records)
                 print(f" {len(filtered_records)} words passed kid-friendly filter")
             
@@ -4385,17 +4751,45 @@ def get_wordbank() -> List[Dict[str, str]]:
     try:
         words = WordBankStorage.load_wordbank(storage_id)
         if words:
-            print(f" get_wordbank: Loaded {len(words)} words from PostgreSQL database (storage_id={storage_id})")
-            session["wordbank_count"] = len(words)
-            return list(words)  # Return copy to prevent modification
+            words = list(words)
+            sanitized_words, blocked_rows = _sanitize_wordbank_rows(words)
+            if blocked_rows:
+                print(f" get_wordbank: Removed {len(blocked_rows)} unsafe row(s) from active library")
+                try:
+                    owner_id = current_user.id if getattr(current_user, 'is_authenticated', False) else None
+                except Exception:
+                    owner_id = None
+                try:
+                    WordBankStorage.save_wordbank(storage_id, sanitized_words, owner_id)
+                except Exception as persist_err:
+                    print(f" get_wordbank: failed to persist sanitized rows: {persist_err}")
+
+            print(f" get_wordbank: Loaded {len(sanitized_words)} words from PostgreSQL database (storage_id={storage_id})")
+            session["wordbank_count"] = len(sanitized_words)
+            return list(sanitized_words)  # Return copy to prevent modification
         else:
-            print(f"️ get_wordbank: storage_id={storage_id} not found in PostgreSQL database")
+            print(f" get_wordbank: storage_id={storage_id} not found in PostgreSQL database")
             session["wordbank_count"] = 0
             return []
     except Exception as e:
         print(f" get_wordbank: Database error: {e}")
         session["wordbank_count"] = 0
         return []
+
+def _sanitize_wordbank_rows(rows: List[Dict[str, str]]):
+    """Normalize + kid-safe sanitize rows before save/readback."""
+    prepared = rows or []
+    try:
+        prepared = deduplicate_words(prepared)
+    except Exception:
+        pass
+
+    try:
+        sanitized, blocked = _filter_records_excluding_inappropriate_text(prepared)
+        return sanitized, blocked
+    except Exception as e:
+        print(f" _sanitize_wordbank_rows fallback due to filter error: {e}")
+        return list(prepared), []
 
 def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
     """Save wordbank to PostgreSQL database (ONLY storage location).
@@ -4412,6 +4806,10 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
         print(f"DEBUG set_wordbank: Created new storage_id={storage_id}")
     else:
         print(f"DEBUG set_wordbank: Reusing existing storage_id={storage_id}")
+
+    rows, blocked_rows = _sanitize_wordbank_rows(rows or [])
+    if blocked_rows:
+        print(f" set_wordbank: Filtered {len(blocked_rows)} unsafe row(s) before save")
     
     # CRITICAL FIX: Ensure old data is completely deleted before writing new data
     # This prevents race conditions where quiz reads old data during upload
@@ -4419,7 +4817,7 @@ def set_wordbank(rows: List[Dict[str, str]], is_user_upload: bool = False):
         # If storage_id already exists, delete it first to ensure clean slate
         existing_wordbank = WordBankStorage.query.filter_by(storage_id=storage_id).first()
         if existing_wordbank:
-            print(f"️ set_wordbank: Deleting existing wordbank for storage_id={storage_id}")
+            print(f" set_wordbank: Deleting existing wordbank for storage_id={storage_id}")
             db.session.delete(existing_wordbank)
             db.session.flush()  # Ensure delete happens before insert
     except Exception as e:
@@ -4579,12 +4977,115 @@ try:
 except Exception as e:
     print(f"️ Battle API registration failed: {e}")
 
+# Register Coloring Book QR Challenge API Blueprint
+print(" Registering Coloring Book API...")
+_coloring_book_loaded = False
+try:
+    import traceback as _tb
+    from coloring_book_api import coloring_book_bp, coloring_book_qr_bp, seed_word_sets
+    app.register_blueprint(coloring_book_bp, url_prefix='/api/children/me')
+    app.register_blueprint(coloring_book_qr_bp)  # no prefix — routes at /q/coloring/*
+    _coloring_book_loaded = True
+    print(" Coloring Book API registered successfully - Routes at /api/children/me/* and /q/coloring/*")
+except Exception as e:
+    import traceback as _tb
+    print(f"COLORING BOOK API REGISTRATION FAILED: {e}")
+    print(_tb.format_exc())
+
+# Seed A–Z word sets (idempotent — safe on every startup)
+try:
+    with app.app_context():
+        seed_word_sets()
+except Exception as _seed_err:
+    import traceback as _tb2
+    print(f"COLORING BOOK SEED FAILED: {_seed_err}")
+    print(_tb2.format_exc())
+
+# ---------------------------------------------------------------------------
+# Fallback direct route for /q/coloring/<set_id>
+# Registered here in the main app so it works even if the blueprint import
+# above fails on the live server. Blueprint route takes precedence if loaded.
+# ---------------------------------------------------------------------------
+if not _coloring_book_loaded:
+    print(" Registering fallback /q/coloring/<set_id> route directly in main app")
+
+    @app.route('/q/coloring/<set_id>', methods=['GET'])
+    def qr_coloring_fallback(set_id):
+        from flask import redirect, flash, session as _sess
+        from flask_login import current_user as _cu
+        try:
+            from coloring_book_api import (
+                _ensure_coloring_book_schema, _extract_set_id_from_qr,
+                seed_word_sets as _seed
+            )
+            from models import WordSet, ColoringBookList, ColoringBookListItem
+            clean = _extract_set_id_from_qr(set_id)
+            if not clean:
+                flash('Invalid QR code.', 'error')
+                return redirect('/word-lists')
+            if not _cu.is_authenticated:
+                _sess['pending_coloring_set_id'] = clean
+                flash('Please log in to save your Coloring Book word list!', 'info')
+                return redirect('/auth/login?next=/q/coloring/' + clean)
+            _ensure_coloring_book_schema()
+            _seed()
+            ws = WordSet.query.filter_by(set_id=clean, active=True).first()
+            if not ws:
+                flash(f'Word set "{clean}" not found.', 'error')
+                return redirect('/word-lists')
+            lst = ColoringBookList.query.filter_by(user_id=_cu.id, source_set_id=clean).first()
+            if not lst:
+                from models import db as _db
+                from datetime import datetime as _dt
+                letter = str(getattr(ws, 'letter', '') or '').strip().upper() or clean[:1].upper()
+                lst = ColoringBookList(user_id=_cu.id, source_set_id=clean,
+                                       title=f'Coloring Book - {letter}', status='active')
+                _db.session.add(lst)
+                _db.session.flush()
+                words = [str(w).strip() for w in (getattr(ws, 'words_json', []) or []) if str(w or '').strip()][:5]
+                for w in words:
+                    _db.session.add(ColoringBookListItem(list_id=lst.id, word=w, is_completed=False))
+                _db.session.commit()
+                flash(f'Coloring Book - {letter} word list added to your Word Lists!', 'success')
+            else:
+                letter = str(getattr(ws, 'letter', '') or '').strip().upper() or clean[:1].upper()
+                flash(f'Coloring Book - {letter} is already in your Word Lists.', 'info')
+        except Exception as _fe:
+            import traceback as _ftb
+            print(f'FALLBACK /q/coloring/{set_id} error: {_fe}')
+            print(_ftb.format_exc())
+            flash('Something went wrong. Please try again.', 'error')
+        return redirect('/word-lists')
+
 # --- Routes: Health Check for API Debugging ----------------------------------
 
 @app.route("/api/debug/health", methods=["GET"])
 def api_debug_health():
     """Simple health check endpoint to test basic API functionality without complex dependencies."""
-    return jsonify({"status": "healthy"})
+    return jsonify({"status": "healthy", "version": 35})
+
+@app.route("/q/test", methods=["GET"])
+def q_path_test():
+    """Probe route — confirms /q/* paths reach Flask on the live server."""
+    return jsonify({"status": "ok", "message": "/q/ paths reach Flask", "version": 35})
+
+@app.route("/api/debug/routes", methods=["GET"])
+def api_debug_routes():
+    """List all registered routes — used to verify blueprint registration on live server."""
+    rules = []
+    for rule in app.url_map.iter_rules():
+        rules.append({
+            "endpoint": rule.endpoint,
+            "methods": sorted(list(rule.methods - {"HEAD", "OPTIONS"})),
+            "rule": str(rule),
+        })
+    rules.sort(key=lambda r: r["rule"])
+    coloring = [r for r in rules if "coloring" in r["rule"] or "/q/" in r["rule"]]
+    return jsonify({
+        "total_routes": len(rules),
+        "coloring_routes": coloring,
+        "all_routes": rules,
+    })
 
 @app.route("/api/debug/session", methods=["GET"])
 def api_debug_session():
@@ -5990,11 +6491,13 @@ def upload_to_saved_list():
             words = parse_csv(file_bytes, filename)
         elif filename.endswith('.txt'):
             words = parse_txt(file_bytes)
+        elif filename.endswith('.xlsx') or filename.endswith('.xls'):
+            words = parse_excel(file_bytes, filename)
         elif filename.endswith('.docx'):
             words = parse_docx(file_bytes)
         elif filename.endswith('.pdf'):
             words = parse_pdf(file_bytes)
-        elif any(filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp']):
+        elif any(filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.heic', '.heif']):
             if not TESSERACT_AVAILABLE:
                 return jsonify({"ok": False, "error": "Image processing requires Tesseract OCR installation"}), 400
             words = parse_image_ocr(file_bytes)
@@ -6846,36 +7349,44 @@ def migrate_avatar_columns():
             "error": str(e)
         }), 500
 
-#  TEST ENDPOINT REMOVED - No external dictionary API
 # The app now uses only Simple English Wiktionary (50K+ words built-in)
 # For testing definitions, use /api/wordbank or Random Words feature
 
 # --- Random Play Helper Functions -------------------------------------------
 def calculate_word_difficulty(word: str) -> int:
     """
-    Calculate difficulty level (1-5) for a word based on multiple factors.
-    Enhanced algorithm for unique and challenging spelling experience.
-    
-    1 = Easy (3-4 letters, common patterns, phonetic)
-    2 = Medium-Easy (5-6 letters, mostly phonetic)
-    3 = Medium (7-8 letters, some tricky patterns)
-    4 = Medium-Hard (9-11 letters, complex patterns, silent letters)
-    5 = Hard (12+ letters, very complex, multiple tricks)
+    Calculate difficulty level (1-8) for a word based on length and complexity.
+    Grade-aligned scale matching the 8-tier word pool system.
+
+    1 = Kindergarten        (1-3 letters, CVC patterns)
+    2 = Grades 1-2          (4 letters, phonetic)
+    3 = Grades 3-4          (5 letters, blends/digraphs)
+    4 = Grades 5-6          (6-7 letters, multisyllabic)
+    5 = Grades 7-8          (8 letters, academic vocab)
+    6 = Grades 9-10         (9-11 letters, AWL Tier 1-5)
+    7 = Grades 11-12        (12-14 letters, AP/AWL advanced)
+    8 = SAT / College Prep  (complex patterns at any length)
     """
     word_lower = word.lower()
     length = len(word_lower)
-    
-    # Base difficulty from length (revised scale)
-    if length <= 4:
+
+    # Base difficulty from length (8-tier grade-aligned scale)
+    if length <= 3:
         base_difficulty = 1.0
-    elif length <= 6:
+    elif length <= 4:
         base_difficulty = 2.0
-    elif length <= 8:
+    elif length <= 5:
         base_difficulty = 3.0
-    elif length <= 11:
+    elif length <= 7:
         base_difficulty = 4.0
-    else:
+    elif length <= 8:
         base_difficulty = 5.0
+    elif length <= 11:
+        base_difficulty = 6.0
+    elif length <= 14:
+        base_difficulty = 7.0
+    else:
+        base_difficulty = 8.0
     
     # Complexity scoring system
     complexity_score = 0.0
@@ -6995,8 +7506,8 @@ def calculate_word_difficulty(word: str) -> int:
     elif complexity_score >= 0.5:
         final_difficulty += 0.5
     
-    # Cap at 1-5 range
-    final_difficulty = max(1.0, min(5.0, final_difficulty))
+    # Cap at 1-8 range
+    final_difficulty = max(1.0, min(8.0, final_difficulty))
     
     # Round to nearest integer
     return int(round(final_difficulty))
@@ -7006,9 +7517,9 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
     """
     Get random words from Simple Wiktionary filtered by difficulty level.
     Enhanced with quality filters for unique, challenging spelling experience.
-    
+
     Args:
-        difficulty: Level 1-5 (1=easy, 5=hard)
+        difficulty: Level 1-8 (1=Kindergarten … 8=SAT/College Prep)
         count: Number of words to return (default 10)
     
     Returns:
@@ -7038,6 +7549,14 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
     
     for word, data in wiktionary.items():
         word_lower = word.lower()
+
+        # Safety gate: random-play dictionary words must be kid-friendly.
+        try:
+            ok, _reason = is_kid_friendly(word_lower)
+            if not ok:
+                continue
+        except Exception:
+            pass
         
         # Kid-safety filter: never include inappropriate words in Random Play
         try:
@@ -7051,12 +7570,31 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
         # SKIP CONDITIONS (quality filters)
         # ══════════════════════════════════════════════════════════════
         
-        # Difficulty 1 should be only 2-3 letter words; higher difficulties require >=3 letters
-        if difficulty == 1:
-            if len(word) < 2 or len(word) > 3:
+        # Length gates per grade band
+        wlen = len(word)
+        if difficulty == 1:        # K: 1-3 letters
+            if wlen < 1 or wlen > 3:
                 continue
-        else:
-            if len(word) < 3:
+        elif difficulty == 2:      # Gr 1-2: 4 letters
+            if wlen < 4 or wlen > 4:
+                continue
+        elif difficulty == 3:      # Gr 3-4: 5 letters
+            if wlen < 5 or wlen > 5:
+                continue
+        elif difficulty == 4:      # Gr 5-6: 6-7 letters
+            if wlen < 6 or wlen > 7:
+                continue
+        elif difficulty == 5:      # Gr 7-8: 8 letters
+            if wlen < 8 or wlen > 8:
+                continue
+        elif difficulty == 6:      # Gr 9-10: 9-11 letters
+            if wlen < 9 or wlen > 11:
+                continue
+        elif difficulty == 7:      # Gr 11-12: 12-14 letters
+            if wlen < 12 or wlen > 14:
+                continue
+        else:                      # SAT (8): any length, complexity drives selection
+            if wlen < 5:
                 continue
         
         # Skip words with non-alphabetic characters
@@ -7085,7 +7623,7 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
         word_difficulty = calculate_word_difficulty(word)
         
         # For difficulty 1-2: Accept exact match only (keep it simple)
-        # For difficulty 3-5: Accept ±1 level for variety
+        # For difficulty 3-8: Accept ±1 level for variety
         tolerance = 1 if difficulty >= 3 else 0
         
         if abs(word_difficulty - difficulty) <= tolerance:
@@ -7176,14 +7714,17 @@ def get_random_words_by_difficulty(difficulty: int, count: int = 10) -> List[Dic
 def api_random_words():
     """
     Generate a random word list based on difficulty level.
-    Expects JSON: {"difficulty": 1-5, "count": 10}
+    Expects JSON: {"difficulty": 1-8, "count": 10}
     """
+    blocked = _block_student_library_access()
+    if blocked is not None:
+        return blocked
     try:
         data = request.get_json(silent=True)
         if not data or not isinstance(data, dict):
             return jsonify({
                 "status": "error",
-                "message": "Invalid or missing JSON body. Send {\"difficulty\": 1-5, \"count\": 10}"
+                "message": "Invalid or missing JSON body. Send {\"difficulty\": 1-8, \"count\": 10}"
             }), 400
         try:
             difficulty = data.get("difficulty", 3)
@@ -7195,14 +7736,14 @@ def api_random_words():
         except (TypeError, ValueError):
             return jsonify({
                 "status": "error",
-                "message": "difficulty and count must be numbers (1-5 and 1-50)"
+                "message": "difficulty and count must be numbers (1-8 and 1-50)"
             }), 400
         difficulty = difficulty if difficulty is not None else 3
         count = count if count is not None else 10
-        if difficulty < 1 or difficulty > 5:
+        if difficulty < 1 or difficulty > 8:
             return jsonify({
                 "status": "error",
-                "message": "Difficulty must be between 1 and 5"
+                "message": "Difficulty must be between 1 and 8"
             }), 400
         if count < 1 or count > 50:
             return jsonify({
@@ -8331,13 +8872,12 @@ def api_upload_progress(session_id):
         return jsonify({"error": "Session not found"}), 404
     
     return jsonify(progress)
-
-def process_upload_with_progress(session_id, request_obj):
     """Background function to process upload with progress updates"""
     try:
         # Parse the request to get initial data
         rows: List[Dict[str, str]] = []
-        
+        ext = ""
+
         # Handle the request similar to original upload but with progress tracking
         with request_obj.environ['werkzeug.request'].application_context():
             # Copy form data and files from original request
@@ -8386,7 +8926,9 @@ def process_upload_with_progress(session_id, request_obj):
                     rows = parse_docx(content)
                 elif ext == ".pdf":
                     rows = parse_pdf(content)
-                elif ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff"]:
+                elif ext in [".xlsx", ".xls"]:
+                    rows = parse_excel(content, filename)
+                elif ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".heic", ".heif"]:
                     update_upload_progress(session_id, "ocr", "Bees are reading text from image...", "bees_reading_image", 25)
                     rows = parse_image_ocr(content)
                 
@@ -8592,6 +9134,7 @@ def api_upload():
         app.logger.warning(f"Error logging upload request details: {e}")
     
     rows: List[Dict[str, str]] = []
+    ext = ""
 
     # JSON payload path
     if request.content_type and "application/json" in request.content_type:
@@ -8637,10 +9180,9 @@ def api_upload():
                     rows = parse_docx(content)
                 elif ext == ".pdf":
                     rows = parse_pdf(content)
-                elif ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff"]:
-                    # Guests cannot use OCR-based image upload
-                    if not current_user.is_authenticated:
-                        return jsonify({"error": "Login required for image uploads (OCR)", "auth_required": True}), 403
+                elif ext in [".xlsx", ".xls"]:
+                    rows = parse_excel(content, filename)
+                elif ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".heic", ".heif"]:
                     rows = parse_image_ocr(content)
             else:
                 # Fallback: attempt CSV, then TXT, then DOCX, then PDF
@@ -8668,11 +9210,24 @@ def api_upload():
                     return jsonify({"error": f"Unable to parse file. Tried: {', '.join(tried)}"}), 400
         except RuntimeError as e:
             # e.g., missing dependency for docx/pdf
-            return jsonify({"error": str(e)}), 400
+            err_msg = str(e)
+            if ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".heic", ".heif"]:
+                err_lower = err_msg.lower()
+                if (
+                    "tesseract ocr engine was not found" in err_lower
+                    or "image processing requires tesseract ocr" in err_lower
+                    or "ocr (image upload) is not available on this server" in err_lower
+                ):
+                    return jsonify({"error": err_msg, "error_code": "ocr_unavailable"}), 503
+            return jsonify({"error": err_msg}), 400
         except Exception as e:
             return jsonify({"error": f"Failed to parse file: {e}"}), 400
 
+    is_image_upload = ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".heic", ".heif"]
+
     if not rows:
+        if is_image_upload:
+            return jsonify({"error": "Could not detect readable words in the image.", "error_code": "ocr_no_words"}), 400
         return jsonify({"error": "No words parsed"}), 400
 
     # Trim and deduplicate
@@ -8692,6 +9247,8 @@ def api_upload():
             })
 
     if not deduped:
+        if is_image_upload:
+            return jsonify({"error": "Could not detect readable words in the image.", "error_code": "ocr_no_words"}), 400
         return jsonify({"error": "No valid 'word' entries found"}), 400
 
     # ENHANCED KID-FRIENDLY FILTER: Block inappropriate words with guardian tracking
@@ -9114,11 +9671,90 @@ def api_upload_manual_words():
         
         if len(verify_wb) != len(enriched):
             print(f"WARNING /api/upload-manual-words: Wordbank size mismatch! Set {len(enriched)}, got {len(verify_wb)}")
-        
+
         return jsonify({"ok": True, "count": len(enriched)})
-        
+
     except Exception as e:
         return jsonify({"ok": False, "error": f"Processing error: {str(e)}"}), 500
+
+# ── Coloring Book QR Scanner Word Sets (A-Z alphabet pages) ──────────────────
+# One entry per letter. QR code on each coloring book page encodes the letter.
+# 10 kid-friendly spelling words per letter, all starting with that letter.
+_COLORING_BOOK_SETS = {
+    "a": {"title": "Letter A Words", "words": ["apple", "ant", "arrow", "angel", "anchor", "album", "acorn", "almond", "apron", "axe"]},
+    "b": {"title": "Letter B Words", "words": ["ball", "bear", "bird", "book", "boat", "brush", "bread", "brick", "bridge", "butterfly"]},
+    "c": {"title": "Letter C Words", "words": ["cat", "cake", "cloud", "clock", "chair", "crown", "candle", "crayon", "castle", "carrot"]},
+    "d": {"title": "Letter D Words", "words": ["dog", "duck", "drum", "door", "daisy", "diamond", "dragon", "dress", "desk", "dolphin"]},
+    "e": {"title": "Letter E Words", "words": ["egg", "eagle", "earth", "elf", "engine", "elbow", "easel", "empty", "email", "exit"]},
+    "f": {"title": "Letter F Words", "words": ["fish", "frog", "flag", "flower", "flute", "feather", "fence", "forest", "fox", "fruit"]},
+    "g": {"title": "Letter G Words", "words": ["goat", "grape", "gift", "globe", "glove", "grass", "guitar", "ghost", "giraffe", "golden"]},
+    "h": {"title": "Letter H Words", "words": ["hat", "heart", "horse", "house", "honey", "hammer", "harp", "helmet", "hill", "hummingbird"]},
+    "i": {"title": "Letter I Words", "words": ["ice", "igloo", "iris", "iron", "island", "insect", "inch", "ink", "ivy", "invite"]},
+    "j": {"title": "Letter J Words", "words": ["jar", "jet", "jewel", "jungle", "juggle", "jacket", "jump", "jelly", "journal", "jaguar"]},
+    "k": {"title": "Letter K Words", "words": ["kite", "king", "kitten", "knife", "knight", "koala", "kettle", "kernel", "kayak", "kingdom"]},
+    "l": {"title": "Letter L Words", "words": ["lion", "leaf", "lamp", "lemon", "ladder", "lizard", "lantern", "letter", "lighthouse", "library"]},
+    "m": {"title": "Letter M Words", "words": ["moon", "map", "mouse", "mirror", "music", "mango", "medal", "mountain", "magnet", "monarch"]},
+    "n": {"title": "Letter N Words", "words": ["nest", "night", "nose", "nurse", "needle", "napkin", "noodle", "nugget", "network", "notebook"]},
+    "o": {"title": "Letter O Words", "words": ["owl", "ocean", "orange", "oven", "olive", "orbit", "onion", "outfit", "oxen", "oyster"]},
+    "p": {"title": "Letter P Words", "words": ["pig", "pen", "pizza", "planet", "parrot", "pumpkin", "pencil", "puzzle", "palace", "penguin"]},
+    "q": {"title": "Letter Q Words", "words": ["queen", "quilt", "quail", "quest", "quiet", "quarter", "quick", "quote", "quarry", "qualify"]},
+    "r": {"title": "Letter R Words", "words": ["rain", "rose", "rabbit", "rocket", "river", "rainbow", "ribbon", "ruler", "robot", "radish"]},
+    "s": {"title": "Letter S Words", "words": ["sun", "star", "snake", "snow", "sheep", "shell", "spider", "sword", "strawberry", "submarine"]},
+    "t": {"title": "Letter T Words", "words": ["tree", "tiger", "train", "turtle", "torch", "trophy", "trumpet", "thunder", "tomato", "telescope"]},
+    "u": {"title": "Letter U Words", "words": ["umbrella", "unicorn", "uniform", "universe", "uncle", "useful", "unique", "uphill", "urgent", "umpire"]},
+    "v": {"title": "Letter V Words", "words": ["violin", "vine", "volcano", "village", "vessel", "violet", "vase", "vapor", "valley", "voyage"]},
+    "w": {"title": "Letter W Words", "words": ["wolf", "whale", "wagon", "water", "witch", "wizard", "window", "wreath", "walrus", "waterfall"]},
+    "x": {"title": "Letter X Words", "words": ["xylophone", "x-ray", "xenon", "xerox", "xbox", "xylem", "x-axis", "xenia", "xebec", "xenial"]},
+    "y": {"title": "Letter Y Words", "words": ["yarn", "yak", "yoga", "yolk", "yacht", "yellow", "yield", "yogurt", "yodel", "yearbook"]},
+    "z": {"title": "Letter Z Words", "words": ["zebra", "zoo", "zero", "zipper", "zombie", "zeppelin", "zucchini", "zigzag", "zenith", "zodiac"]},
+}
+
+@app.route('/wordlists/from-set', methods=['POST'])
+@login_required
+def wordlists_from_set():
+    """Load a coloring book word set into the session wordbank via QR code.
+
+    Expects JSON body: { "set_id": "a-set-01" }
+    Returns the word list on success, or an error code on failure.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        set_id = str(data.get('set_id', '')).strip().lower()
+
+        if not set_id:
+            return jsonify({'error': 'missing_set_id', 'message': 'No set_id provided.'}), 400
+
+        word_set = _COLORING_BOOK_SETS.get(set_id)
+        if not word_set:
+            return jsonify({'error': 'set_not_found', 'message': f'Word set "{set_id}" not found.'}), 404
+
+        title = word_set['title']
+        raw_words = word_set['words']
+
+        # Build wordbank rows compatible with set_wordbank()
+        rows = [{'word': w, 'sentence': '', 'hint': ''} for w in raw_words if w]
+
+        # Check if user already has this exact set loaded
+        existing_wb = get_wordbank() or []
+        existing_words = {r.get('word', '').lower() for r in existing_wb}
+        set_words = {w.lower() for w in raw_words}
+        already_loaded = set_words == existing_words
+
+        if not already_loaded:
+            set_wordbank(rows, is_user_upload=True)
+
+        return jsonify({
+            'ok': True,
+            'created': not already_loaded,
+            'list': {'title': title, 'set_id': set_id},
+            'words': raw_words,
+        })
+
+    except Exception as e:
+        print(f"ERROR /wordlists/from-set: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'server_error', 'message': 'Something went wrong. Please try again.'}), 500
 
 @app.route('/api/next', methods=['POST'])
 def api_next():
@@ -14012,18 +14648,56 @@ def login():
 
         db.session.commit()
 
-        # Redirect based on role
-        try:
-            if user.role == 'teacher' or user.role == 'parent':
-                redirect_url = url_for('teacher_dashboard') if user.role == 'teacher' else url_for('parent_dashboard')
-            elif user.role == 'admin':
-                redirect_url = url_for('admin_dashboard')
+        # Process any pending coloring book QR scan immediately after login
+        # so we never redirect back to /q/coloring/* (avoids redirect loops)
+        pending_set_id = session.pop('pending_coloring_set_id', None)
+        if pending_set_id:
+            try:
+                from coloring_book_api import _ensure_coloring_book_schema, seed_word_sets as _seed_ws
+                from models import WordSet, ColoringBookList, ColoringBookListItem
+                _ensure_coloring_book_schema()
+                _seed_ws()
+                ws = WordSet.query.filter_by(set_id=pending_set_id, active=True).first()
+                if ws:
+                    lst = ColoringBookList.query.filter_by(user_id=user.id, source_set_id=pending_set_id).first()
+                    if not lst:
+                        letter = str(getattr(ws, 'letter', '') or '').strip().upper() or pending_set_id[:1].upper()
+                        lst = ColoringBookList(user_id=user.id, source_set_id=pending_set_id,
+                                               title=f'Coloring Book - {letter}', status='active')
+                        db.session.add(lst)
+                        db.session.flush()
+                        words = [str(w).strip() for w in (getattr(ws, 'words_json', []) or []) if str(w or '').strip()][:5]
+                        for w in words:
+                            db.session.add(ColoringBookListItem(list_id=lst.id, word=w, is_completed=False))
+                        db.session.commit()
+                        print(f"✅ Login: created coloring book word list for {pending_set_id} user={user.id}")
+            except Exception as _ce:
+                print(f"⚠️ Login: could not process pending coloring set {pending_set_id}: {_ce}")
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+            redirect_url = '/word-lists'
+        else:
+            # Honor ?next= for post-login redirect (e.g. QR code scans)
+            next_url = request.args.get('next') or data.get('next') or ''
+            next_url = next_url.strip()
+            # Only allow relative paths (no external redirects)
+            if next_url and next_url.startswith('/') and not next_url.startswith('//') and next_url != '/auth/login':
+                redirect_url = next_url
             else:
-                redirect_url = url_for('student_dashboard')
-        except Exception as e:
-            app.logger.error(f"Failed to generate redirect URL for role {user.role}: {e}")
-            redirect_url = url_for('home')  # Fallback to home
-        
+                # Redirect based on role
+                try:
+                    if user.role == 'teacher' or user.role == 'parent':
+                        redirect_url = url_for('teacher_dashboard') if user.role == 'teacher' else url_for('parent_dashboard')
+                    elif user.role == 'admin':
+                        redirect_url = url_for('admin_dashboard')
+                    else:
+                        redirect_url = url_for('student_dashboard')
+                except Exception as e:
+                    app.logger.error(f"Failed to generate redirect URL for role {user.role}: {e}")
+                    redirect_url = url_for('home')
+
         # Ensure redirect_url is valid
         if not redirect_url or redirect_url == '':
             app.logger.warning(f"Redirect URL was empty for role {user.role}, using home")
