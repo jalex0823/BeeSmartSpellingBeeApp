@@ -46,14 +46,24 @@ public class GooglePayPlugin extends Plugin {
     private static final String TAG = "GooglePayPlugin";
     private static final int LOAD_PAYMENT_DATA_REQUEST_CODE = 991;
 
-    // ── REPLACE these with your real payment gateway values ──────────────────
-    private static final String GATEWAY = "example";
-    private static final String GATEWAY_MERCHANT_ID = "exampleMerchantId";
+    // ── Payment gateway ───────────────────────────────────────────────────────
+    // TODO (before Play Store submission):
+    //   1. Set GOOGLE_PAY_GATEWAY in your CI/build secrets (e.g. "stripe")
+    //   2. Set GOOGLE_PAY_GATEWAY_MERCHANT_ID to your gateway account ID
+    //      (for Stripe this is your acct_XXXX Stripe account ID)
+    //   3. Add to android/app/build.gradle defaultConfig:
+    //        buildConfigField "String", "GOOGLE_PAY_GATEWAY", "\"${System.getenv('GOOGLE_PAY_GATEWAY') ?: 'example'}\""
+    //        buildConfigField "String", "GOOGLE_PAY_GATEWAY_MERCHANT_ID", "\"${System.getenv('GOOGLE_PAY_GATEWAY_MERCHANT_ID') ?: 'exampleMerchantId'}\""
+    //   Then replace the two lines below with:
+    //        private static final String GATEWAY = BuildConfig.GOOGLE_PAY_GATEWAY;
+    //        private static final String GATEWAY_MERCHANT_ID = BuildConfig.GOOGLE_PAY_GATEWAY_MERCHANT_ID;
+    private static final String GATEWAY = "example";               // TODO: replace — see above
+    private static final String GATEWAY_MERCHANT_ID = "exampleMerchantId"; // TODO: replace — see above
     private static final String MERCHANT_NAME = "BeeSmart Spelling";
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Use ENVIRONMENT_TEST during development; switch to ENVIRONMENT_PRODUCTION
-    // only after your Google Pay Business Profile is approved.
+    // TODO: Switch to ENVIRONMENT_PRODUCTION after your Google Pay Business Profile
+    // is approved at pay.google.com/business/console
     private static final int WALLET_ENVIRONMENT = WalletConstants.ENVIRONMENT_TEST;
 
     private PaymentsClient paymentsClient;

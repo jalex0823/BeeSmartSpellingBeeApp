@@ -24,3 +24,5 @@ google-auth==2.35.0
 google-api-python-client==2.154.0
 pytest==8.2.0
 openpyxl==3.1.2
+# Google Pay gateway — uncomment the line below when STRIPE_SECRET_KEY is set on the server
+# stripe==10.5.0
