@@ -40,6 +40,9 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+
+    // Google Pay / Google Wallet
+    implementation "com.google.android.gms:play-services-wallet:19.4.0"
 }
 
 apply from: 'capacitor.build.gradle'
