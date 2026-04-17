@@ -12579,8 +12579,34 @@ def _entitlements_summary(user: User) -> dict:
     pb = getattr(user, 'purchased_bundles', [])
     if not isinstance(pb, list):
         pb = []
+
+    is_active = _safe_is_premium(user)
+
+    # Expiry timestamp (ISO string) — used by frontend to display "until <date>"
+    expires_at = None
+    try:
+        exp = getattr(user, 'subscription_expires_at', None)
+        if exp is not None:
+            expires_at = exp.isoformat() if hasattr(exp, 'isoformat') else str(exp)
+    except Exception:
+        expires_at = None
+
+    # Owned product ids — frontend checks these as a fallback
+    owned_products = []
+    try:
+        pid = getattr(user, 'subscription_product_id', None)
+        if pid:
+            owned_products = [str(pid)]
+        elif is_active:
+            owned_products = [SUBSCRIPTION_PRODUCT_IDS.get('monthly', 'com.beesmart.premium.monthly')]
+    except Exception:
+        owned_products = []
+
     return {
-        "premium_member": _safe_is_premium(user),
+        "premium_member": is_active,
+        "subscription_active": is_active,
+        "premium_expires_at": expires_at,
+        "owned_products": owned_products,
         "purchased_avatars": list(pa or []),
         "purchased_bundles": list(pb or []),
         "unlocked_avatars": unlocked,

@@ -926,6 +926,10 @@
             }
         }
 
+        // Seed IS_REAL_AUTH immediately from server-side auth flag so the purchase
+        // button is not blocked before the async reconcile resolves.
+        window.IS_REAL_AUTH = window.IS_REAL_AUTH || ({{ 'true' if current_user.is_authenticated else 'false' }});
+
         function _isPremiumActiveFromEntitlements(ent) {
             try {
                 if (!ent || typeof ent !== 'object') return false;
@@ -1044,9 +1048,14 @@
 
                 const statusEl = document.getElementById('subscription-status');
                 if (statusEl) {
-                    statusEl.textContent = looksPremium
-                        ? '✅ Premium is active.'
-                        : 'Premium is not active yet.';
+                    if (looksPremium) {
+                        const exp = ent.premium_expires_at || ent.premium_until || ent.subscription_expires_at || null;
+                        const expMs = exp ? Date.parse(exp) : null;
+                        const expText = expMs && isFinite(expMs) ? (' (until ' + new Date(expMs).toLocaleDateString() + ')') : '';
+                        statusEl.textContent = '✅ Premium Active' + expText;
+                    } else {
+                        statusEl.textContent = 'Premium not active.';
+                    }
                 }
 
                 try {
