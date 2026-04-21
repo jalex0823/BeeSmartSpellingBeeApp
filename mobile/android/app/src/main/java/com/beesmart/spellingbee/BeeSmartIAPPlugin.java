@@ -213,7 +213,7 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
 
         billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
             if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                call.reject("query_product_failed: " + billingResult.getDebugMessage());
+                call.reject("query_product_failed:" + billingResult.getResponseCode() + ":" + billingResult.getDebugMessage());
                 return;
             }
 
@@ -222,7 +222,7 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
                     queryAndReturnProductDetails(call, productId, BillingClient.ProductType.INAPP, false);
                     return;
                 }
-                call.reject("product_not_found");
+                call.reject("product_not_found:" + productType + ":" + productId);
                 return;
             }
 
@@ -297,7 +297,7 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
 
         billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
             if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                call.reject("query_product_failed: " + billingResult.getDebugMessage());
+                call.reject("query_product_failed:" + billingResult.getResponseCode() + ":" + billingResult.getDebugMessage());
                 return;
             }
 
@@ -308,7 +308,7 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
                     return;
                 }
 
-                call.reject("product_not_found");
+                call.reject("product_not_found:" + productType + ":" + productId);
                 return;
             }
 
@@ -348,7 +348,7 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
             if (launchResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
                 pendingPurchaseCall = null;
                 pendingPurchaseProductId = null;
-                call.reject("launch_failed: " + launchResult.getDebugMessage());
+                call.reject("launch_failed:" + launchResult.getResponseCode() + ":" + launchResult.getDebugMessage());
             }
         });
     }
@@ -376,7 +376,7 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
         }
 
         if (code != BillingClient.BillingResponseCode.OK || purchases == null || purchases.isEmpty()) {
-            call.reject("purchase_failed: " + billingResult.getDebugMessage());
+            call.reject("purchase_failed:" + code + ":" + billingResult.getDebugMessage());
             return;
         }
 

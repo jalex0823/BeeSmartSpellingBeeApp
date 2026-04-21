@@ -797,6 +797,37 @@
                 }
             }
 
+            function _friendlyAndroidBillingErrorMessage(err, pid) {
+                try {
+                    const raw = (err && (err.message || err)) ? String(err.message || err) : '';
+                    const s = raw.toLowerCase();
+                    const product = pid ? String(pid) : '';
+
+                    if (s.includes('product_not_found')) {
+                        return 'This subscription is not available in Google Play for this build.\n\nPlease confirm:\n- The app was installed from the Play Store (Internal testing)\n- The subscription product exists and is active: ' + product + '\n- The tester Google account has access to the track.';
+                    }
+                    if (s.includes('billing_unavailable') || s.includes('service_unavailable')) {
+                        return 'Google Play Billing is unavailable right now.\n\nPlease check your internet connection and that you are signed into the Play Store, then try again.';
+                    }
+                    if (s.includes('item_unavailable')) {
+                        return 'This item is unavailable for purchase on this device/account.\n\nPlease confirm the tester account and region can access: ' + product + '.';
+                    }
+                    if (s.includes('developer_error')) {
+                        return 'Google Play Billing could not start due to a configuration error.\n\nMost common causes:\n- Wrong package name in Play Console\n- Installing via sideload instead of Play Store\n- Product not created/activated.';
+                    }
+                    if (s.includes('launch_failed')) {
+                        return 'Could not open Google Play purchase screen.\n\nPlease make sure you are signed into the Play Store and installed the app from the Play Store internal testing link.';
+                    }
+                    if (s.includes('purchase_timeout')) {
+                        return 'Google Play is taking too long to respond. Please check your connection and try again.';
+                    }
+
+                    return null;
+                } catch (e) {
+                    return null;
+                }
+            }
+
             function burst(x, y) {
                 for (let i = 0; i < 18; i++) {
                     particles.push(makeParticle(x + rand(-10, 10), y + rand(-10, 10), true));
@@ -1940,6 +1971,18 @@ function showRestoreDialog(title, message, isSuccess) {
                 } catch (_e) { /* ignore */ }
                 var _purchaseErrIsAndroid = /Android/i.test(navigator.userAgent || '');
                 try { if (window.Capacitor && window.Capacitor.getPlatform() === 'android') _purchaseErrIsAndroid = true; } catch (e) {}
+
+                try {
+                    if (_purchaseErrIsAndroid) {
+                        const friendly = _friendlyAndroidBillingErrorMessage(e, productId);
+                        if (friendly) {
+                            alert(friendly);
+                            _applyPremiumUiState();
+                            return;
+                        }
+                    }
+                } catch (_e) { /* ignore */ }
+
                 var extra = (window.__beesmartStoreCopy && window.__beesmartStoreCopy.purchaseErrorExtra) ? window.__beesmartStoreCopy.purchaseErrorExtra() : (_purchaseErrIsAndroid ? 'If you already subscribed with this Google Play account, try Restore Purchases.' : 'If you already subscribed on this Apple ID, try Restore Purchases.');
                 const msg = (!window.IS_REAL_AUTH)
                     ? 'Purchase could not be completed. ' + extra + ' Registration is optional for cross-device access.'
