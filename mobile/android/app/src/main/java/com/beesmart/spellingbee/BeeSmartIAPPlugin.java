@@ -37,8 +37,11 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
 
     private static final String PREFS_INSTALL_ID = "beesmart_install_id_v1";
 
+    private static final String TAG = "BILLING";
+
     private BillingClient billingClient;
     private volatile boolean ready = false;
+    private volatile boolean connecting = false;
 
     private PluginCall pendingPurchaseCall;
     private String pendingPurchaseProductId;
@@ -62,21 +65,49 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
             if (afterConnected != null) afterConnected.run();
             return;
         }
-
+        if (connecting) {
+            Log.d(TAG, "already connecting — queuing callback");
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> connectIfNeeded(afterConnected), 500);
+            return;
+        }
+        connecting = true;
         billingClient.startConnection(new BillingClientStateListener() {
             @Override
             public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
-                Log.d("BILLING", "setup code=" + billingResult.getResponseCode() + ", msg=" + billingResult.getDebugMessage());
+                connecting = false;
                 ready = billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK;
+                Log.d(TAG, "setup code=" + billingResult.getResponseCode() + ", msg=" + billingResult.getDebugMessage() + ", ready=" + ready);
                 if (ready && afterConnected != null) afterConnected.run();
             }
 
             @Override
             public void onBillingServiceDisconnected() {
-                Log.d("BILLING", "service disconnected — auto-reconnect will retry");
+                connecting = false;
                 ready = false;
+                Log.d(TAG, "service disconnected — auto-reconnect will retry");
             }
         });
+    }
+
+    private String friendlyError(int code, String debugMsg) {
+        switch (code) {
+            case BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE:
+                return "Billing not ready — check your internet connection and Google Play account.";
+            case BillingClient.BillingResponseCode.BILLING_UNAVAILABLE:
+                return "Google Play Billing is unavailable on this device.";
+            case BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED:
+                return "Purchase already owned — use Restore Purchases.";
+            case BillingClient.BillingResponseCode.ITEM_NOT_OWNED:
+                return "This item is not owned by your account.";
+            case BillingClient.BillingResponseCode.ITEM_UNAVAILABLE:
+                return "No products found — check product IDs in Play Console.";
+            case BillingClient.BillingResponseCode.DEVELOPER_ERROR:
+                return "Developer error — product ID or base plan may be inactive.";
+            case BillingClient.BillingResponseCode.NETWORK_ERROR:
+                return "Network error — please check your connection and try again.";
+            default:
+                return "Billing error (" + code + "): " + debugMsg;
+        }
     }
 
     @PluginMethod
@@ -92,12 +123,87 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
         call.resolve(out);
     }
 
-    /** On Android there is no OS-level sync; resolve so the web layer runs reconcile (getOwnedProducts + server). */
+    /**
+     * restorePurchases — queries Google Play for all PURCHASED subscriptions and in-app purchases.
+     * Returns isPremiumActive=true if any active subscription is found.
+     * The web layer (native-iap-bridge.js) uses the returned subscriptions array to verify
+     * tokens server-side and apply entitlements.
+     */
     @PluginMethod
     public void restorePurchases(final PluginCall call) {
-        JSObject out = new JSObject();
-        out.put("success", true);
-        call.resolve(out);
+        Log.d(TAG, "restorePurchases called");
+        connectIfNeeded(() -> {
+            final JSArray restoredSubs = new JSArray();
+            final JSArray restoredInapp = new JSArray();
+            final boolean[] isPremium = {false};
+
+            QueryPurchasesParams subsParams = QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.SUBS)
+                .build();
+
+            billingClient.queryPurchasesAsync(subsParams, (result1, subsList) -> {
+                if (result1.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                    Log.e(TAG, "restore subs query failed: " + result1.getDebugMessage());
+                    call.reject(friendlyError(result1.getResponseCode(), result1.getDebugMessage()));
+                    return;
+                }
+
+                for (Purchase p : subsList) {
+                    if (p.getPurchaseState() != Purchase.PurchaseState.PURCHASED) continue;
+                    isPremium[0] = true;
+                    Log.d(TAG, "restore: found active sub token=" + p.getPurchaseToken());
+                    for (String pid : p.getProducts()) {
+                        try {
+                            JSObject o = new JSObject();
+                            o.put("productId", pid);
+                            o.put("purchaseToken", p.getPurchaseToken());
+                            o.put("orderId", p.getOrderId());
+                            o.put("acknowledged", p.isAcknowledged());
+                            o.put("purchaseState", p.getPurchaseState());
+                            restoredSubs.put(o);
+                        } catch (Exception ignored) {}
+                    }
+                    // Auto-acknowledge unacknowledged active purchases
+                    if (!p.isAcknowledged()) {
+                        AcknowledgePurchaseParams ack = AcknowledgePurchaseParams.newBuilder()
+                            .setPurchaseToken(p.getPurchaseToken()).build();
+                        billingClient.acknowledgePurchase(ack, br ->
+                            Log.d(TAG, "restore ack result: " + br.getResponseCode()));
+                    }
+                }
+
+                QueryPurchasesParams inappParams = QueryPurchasesParams.newBuilder()
+                    .setProductType(BillingClient.ProductType.INAPP)
+                    .build();
+
+                billingClient.queryPurchasesAsync(inappParams, (result2, inappList) -> {
+                    if (result2.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                        for (Purchase p : inappList) {
+                            if (p.getPurchaseState() != Purchase.PurchaseState.PURCHASED) continue;
+                            for (String pid : p.getProducts()) {
+                                try {
+                                    JSObject o = new JSObject();
+                                    o.put("productId", pid);
+                                    o.put("purchaseToken", p.getPurchaseToken());
+                                    o.put("orderId", p.getOrderId());
+                                    o.put("acknowledged", p.isAcknowledged());
+                                    o.put("purchaseState", p.getPurchaseState());
+                                    restoredInapp.put(o);
+                                } catch (Exception ignored) {}
+                            }
+                        }
+                    }
+
+                    Log.d(TAG, "restorePurchases complete — isPremium=" + isPremium[0]);
+                    JSObject out = new JSObject();
+                    out.put("success", true);
+                    out.put("isPremiumActive", isPremium[0]);
+                    out.put("subscriptions", restoredSubs);
+                    out.put("inapp", restoredInapp);
+                    call.resolve(out);
+                });
+            });
+        });
     }
 
     @PluginMethod
@@ -113,11 +219,13 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
 
             billingClient.queryPurchasesAsync(subsParams, (billingResult, purchasesList) -> {
                 if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                    call.reject("query_subs_failed: " + billingResult.getDebugMessage());
+                    Log.e(TAG, "getOwnedProducts subs failed: " + billingResult.getDebugMessage());
+                    call.reject(friendlyError(billingResult.getResponseCode(), billingResult.getDebugMessage()));
                     return;
                 }
 
                 for (Purchase p : purchasesList) {
+                    if (p.getPurchaseState() != Purchase.PurchaseState.PURCHASED) continue;
                     productIds.addAll(p.getProducts());
                     try {
                         if (p.getProducts() != null) {
@@ -140,11 +248,13 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
 
                 billingClient.queryPurchasesAsync(inappParams, (billingResult2, purchasesList2) -> {
                     if (billingResult2.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                        call.reject("query_inapp_failed: " + billingResult2.getDebugMessage());
+                        Log.e(TAG, "getOwnedProducts inapp failed: " + billingResult2.getDebugMessage());
+                        call.reject(friendlyError(billingResult2.getResponseCode(), billingResult2.getDebugMessage()));
                         return;
                     }
 
                     for (Purchase p : purchasesList2) {
+                        if (p.getPurchaseState() != Purchase.PurchaseState.PURCHASED) continue;
                         productIds.addAll(p.getProducts());
                         try {
                             if (p.getProducts() != null) {
@@ -166,10 +276,14 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
                         arr.put(pid);
                     }
 
+                    boolean hasPremium = subsPurchases.length() > 0;
+                    Log.d(TAG, "getOwnedProducts done — productIds=" + arr.length() + " isPremiumActive=" + hasPremium);
+
                     JSObject out = new JSObject();
                     out.put("productIds", arr);
                     out.put("subscriptions", subsPurchases);
                     out.put("inapp", inappPurchases);
+                    out.put("isPremiumActive", hasPremium);
                     call.resolve(out);
                 });
             });
@@ -190,6 +304,9 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
             return;
         }
 
+        if (!billingClient.isReady()) {
+            Log.d(TAG, "purchase called — billing not ready, connecting first");
+        }
         connectIfNeeded(() -> queryAndLaunchBillingFlow(call, productId, BillingClient.ProductType.SUBS, true));
     }
 
@@ -218,7 +335,8 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
 
         billingClient.queryProductDetailsAsync(params, (billingResult, queryResult) -> {
             if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                call.reject("query_product_failed:" + billingResult.getResponseCode() + ":" + billingResult.getDebugMessage());
+                Log.e(TAG, "getProductDetails failed: " + billingResult.getDebugMessage());
+                call.reject(friendlyError(billingResult.getResponseCode(), billingResult.getDebugMessage()));
                 return;
             }
 
@@ -228,10 +346,12 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
                     queryAndReturnProductDetails(call, productId, BillingClient.ProductType.INAPP, false);
                     return;
                 }
-                call.reject("product_not_found:" + productType + ":" + productId);
+                Log.e(TAG, "product_not_found: " + productType + ":" + productId);
+                call.reject(friendlyError(BillingClient.BillingResponseCode.ITEM_UNAVAILABLE, productId));
                 return;
             }
 
+            Log.d(TAG, "getProductDetails found: " + productId);
             ProductDetails details = productDetailsList.get(0);
 
             JSObject out = new JSObject();
@@ -303,19 +423,19 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
 
         billingClient.queryProductDetailsAsync(params, (billingResult, queryResult) -> {
             if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                call.reject("query_product_failed:" + billingResult.getResponseCode() + ":" + billingResult.getDebugMessage());
+                Log.e(TAG, "queryAndLaunchBillingFlow failed: " + billingResult.getDebugMessage());
+                call.reject(friendlyError(billingResult.getResponseCode(), billingResult.getDebugMessage()));
                 return;
             }
 
             List<ProductDetails> productDetailsList = queryResult.getProductDetailsList();
             if (productDetailsList == null || productDetailsList.isEmpty()) {
                 if (allowFallbackToInapp && BillingClient.ProductType.SUBS.equals(productType)) {
-                    // Some environments treat certain products as INAPP.
                     queryAndLaunchBillingFlow(call, productId, BillingClient.ProductType.INAPP, false);
                     return;
                 }
-
-                call.reject("product_not_found:" + productType + ":" + productId);
+                Log.e(TAG, "product not found for purchase: " + productId);
+                call.reject(friendlyError(BillingClient.BillingResponseCode.ITEM_UNAVAILABLE, productId));
                 return;
             }
 
@@ -351,11 +471,13 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
             pendingPurchaseCall = call;
             pendingPurchaseProductId = productId;
 
+            Log.d(TAG, "launching billing flow for: " + productId);
             BillingResult launchResult = billingClient.launchBillingFlow(activity, flowParams);
             if (launchResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
                 pendingPurchaseCall = null;
                 pendingPurchaseProductId = null;
-                call.reject("launch_failed:" + launchResult.getResponseCode() + ":" + launchResult.getDebugMessage());
+                Log.e(TAG, "launchBillingFlow failed: " + launchResult.getDebugMessage());
+                call.reject(friendlyError(launchResult.getResponseCode(), launchResult.getDebugMessage()));
             }
         });
     }
@@ -383,7 +505,8 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
         }
 
         if (code != BillingClient.BillingResponseCode.OK || purchases == null || purchases.isEmpty()) {
-            call.reject("purchase_failed:" + code + ":" + billingResult.getDebugMessage());
+            Log.e(TAG, "onPurchasesUpdated failed: code=" + code + " msg=" + billingResult.getDebugMessage());
+            call.reject(friendlyError(code, billingResult.getDebugMessage()));
             return;
         }
 
