@@ -1,10 +1,12 @@
 package com.beesmart.spellingbee;
 
 import android.app.Activity;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 
 import com.android.billingclient.api.AcknowledgePurchaseParams;
+import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
@@ -46,8 +48,9 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
         super.load();
 
         billingClient = BillingClient.newBuilder(getContext())
-            .enablePendingPurchases()
             .setListener(this)
+            .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+            .enableAutoServiceReconnection()
             .build();
 
         connectIfNeeded(null);
@@ -63,12 +66,14 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
         billingClient.startConnection(new BillingClientStateListener() {
             @Override
             public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
+                Log.d("BILLING", "setup code=" + billingResult.getResponseCode() + ", msg=" + billingResult.getDebugMessage());
                 ready = billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK;
                 if (ready && afterConnected != null) afterConnected.run();
             }
 
             @Override
             public void onBillingServiceDisconnected() {
+                Log.d("BILLING", "service disconnected — auto-reconnect will retry");
                 ready = false;
             }
         });
@@ -211,12 +216,13 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
             .setProductList(products)
             .build();
 
-        billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
+        billingClient.queryProductDetailsAsync(params, (billingResult, queryResult) -> {
             if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
                 call.reject("query_product_failed:" + billingResult.getResponseCode() + ":" + billingResult.getDebugMessage());
                 return;
             }
 
+            List<ProductDetails> productDetailsList = queryResult.getProductDetailsList();
             if (productDetailsList == null || productDetailsList.isEmpty()) {
                 if (allowFallbackToInapp && BillingClient.ProductType.SUBS.equals(productType)) {
                     queryAndReturnProductDetails(call, productId, BillingClient.ProductType.INAPP, false);
@@ -295,12 +301,13 @@ public class BeeSmartIAPPlugin extends Plugin implements PurchasesUpdatedListene
             .setProductList(products)
             .build();
 
-        billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
+        billingClient.queryProductDetailsAsync(params, (billingResult, queryResult) -> {
             if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
                 call.reject("query_product_failed:" + billingResult.getResponseCode() + ":" + billingResult.getDebugMessage());
                 return;
             }
 
+            List<ProductDetails> productDetailsList = queryResult.getProductDetailsList();
             if (productDetailsList == null || productDetailsList.isEmpty()) {
                 if (allowFallbackToInapp && BillingClient.ProductType.SUBS.equals(productType)) {
                     // Some environments treat certain products as INAPP.
