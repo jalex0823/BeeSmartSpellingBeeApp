@@ -2212,43 +2212,30 @@ window.BeeSmartAudioFallback = (function() {
         max-height: none;
     }
     
-    /* Layered content - stack visualizer and timer in SAME POSITION using CSS Grid */
+    /* Layered content - stack visualizer and timer in SAME POSITION */
     .morph-content {
         position: relative;
         width: 100%;
-        display: grid;
-        grid-template-columns: 1fr;
-        grid-template-areas: "overlap";
-        align-items: start;
-        justify-items: center;
     }
     
     /* Voice visualizer layer */
     .morph-content .voice-visualizer {
-        grid-area: overlap;
-        grid-column: 1;
-        grid-row: 1;
         position: relative;
         opacity: 1;
         transform: scale(1);
         transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: auto;
-        width: 100%;
     }
     
-    /* Timer layer - grid overlapping prevents layout shifts */
+    /* Timer layer - STATIC positioned to maintain sentence position */
     .morph-content .countdown-container {
-        grid-area: overlap;
-        grid-column: 1;
-        grid-row: 1;
-        position: relative !important;
+        position: static;
         opacity: 0;
         transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: none;
-        display: flex !important;
-        margin: 0;
+        display: flex !important; /* Override hidden class */
+        margin: 0 0 10px 0; /* Reserve stable slot above sentence so text does not jump */
         min-height: 120px;
-        width: 100%;
     }
     
     /* When morphing to timer mode */
@@ -9756,7 +9743,13 @@ class QuizManager {
 
     // Show green start guidance modal (one-time per session)
     showStartGuidanceModal() {
-        // ALWAYS show modal on load (even after refresh) to capture the required user gesture for iOS audio.
+        // Check if already shown this session
+        if (sessionStorage.getItem('startGuidanceShown') === 'true') {
+            // Skip modal, go straight to combined start screen
+            this.showCombinedStartScreen();
+            return;
+        }
+        
         const modal = document.getElementById('startGuidanceModal');
         if (!modal) {
             // Modal not found, fallback to combined start screen
