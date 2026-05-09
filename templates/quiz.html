@@ -476,7 +476,7 @@ window.BeeSmartAudioFallback = (function() {
 
     /* Card takes remaining height automatically (no 72px / 64px) */
     .quiz-container {
-        flex: 1;
+        flex: 1 0 auto;
         min-height: 0;
         overflow: visible;
         display: flex;
@@ -591,7 +591,7 @@ window.BeeSmartAudioFallback = (function() {
 
     /* A) Edge-to-edge card – theme cream (match menu card from style guide) */
     .quiz-card {
-        flex: 1 1 auto;
+        flex: 1 0 auto;
         min-height: 600px;
         display: flex;
         flex-direction: column;
@@ -610,13 +610,13 @@ window.BeeSmartAudioFallback = (function() {
         min-height: 0;
         display: flex;
         flex-direction: column;
-        flex: 1;
+        flex: 1 0 auto;
         overflow: hidden;
         background: transparent;
     }
     /* Card content should not trap scroll; let the page scroll */
     .card-scroll {
-        flex: 1 1 auto;
+        flex: 1 0 auto;
         min-height: 0;
         overflow: visible !important;
         padding: max(14px, env(safe-area-inset-top)) 12px 28px 12px; /* Extra bottom padding so Exit is never clipped */
@@ -2212,30 +2212,43 @@ window.BeeSmartAudioFallback = (function() {
         max-height: none;
     }
     
-    /* Layered content - stack visualizer and timer in SAME POSITION */
+    /* Layered content - stack visualizer and timer in SAME POSITION using CSS Grid */
     .morph-content {
         position: relative;
         width: 100%;
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-areas: "overlap";
+        align-items: start;
+        justify-items: center;
     }
     
     /* Voice visualizer layer */
     .morph-content .voice-visualizer {
+        grid-area: overlap;
+        grid-column: 1;
+        grid-row: 1;
         position: relative;
         opacity: 1;
         transform: scale(1);
-        transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
+        transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: auto;
+        width: 100%;
     }
     
-    /* Timer layer - STATIC positioned to maintain sentence position */
+    /* Timer layer - grid overlapping prevents layout shifts */
     .morph-content .countdown-container {
-        position: static;
+        grid-area: overlap;
+        grid-column: 1;
+        grid-row: 1;
+        position: relative !important;
         opacity: 0;
-        transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); /* SLOWED DOWN */
+        transition: opacity 1.2s ease, transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: none;
-        display: flex !important; /* Override hidden class */
-        margin: 0 0 10px 0; /* Reserve stable slot above sentence so text does not jump */
+        display: flex !important;
+        margin: 0;
         min-height: 120px;
+        width: 100%;
     }
     
     /* When morphing to timer mode */
@@ -4212,12 +4225,13 @@ window.BeeSmartAudioFallback = (function() {
     .quiz-card {
         margin-top: 0.25rem !important;
         border-radius: 32px !important;
-        border-width: 1.5px !important;
+        border: 2px solid rgba(255, 193, 7, 0.8) !important; /* Prominent gold border */
         min-height: auto !important;
         background: rgba(255, 253, 245, 0.92) !important;
         box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(255, 193, 7, 0.12) !important;
         backdrop-filter: blur(6px) !important;
         -webkit-backdrop-filter: blur(6px) !important;
+        overflow: hidden !important; /* Ensure content strictly clips to the rounded edges */
     }
     .quiz-card .quiz-card-content {
         background: transparent !important;
@@ -4226,18 +4240,19 @@ window.BeeSmartAudioFallback = (function() {
         padding: 10px 10px 18px 10px !important;
     }
 
-    /* ── CREST + AVATAR: compact inline row ── */
+    /* ── CREST + AVATAR: vertically stacked ── */
     .quiz-card-crest-avatar {
-        flex-direction: row !important;
+        flex-direction: column !important;
         justify-content: center !important;
         align-items: center !important;
-        gap: 10px !important;
+        gap: 4px !important;
         padding: 6px 0 2px !important;
     }
     .quiz-card-crest-avatar .quiz-card-crest {
         width: 72px !important;
         max-height: 72px !important;
         flex-shrink: 0;
+        margin-bottom: 4px !important;
     }
     .quiz-card-crest-avatar .mascot-3d-container {
         width: 80px !important;
@@ -6629,9 +6644,9 @@ class BeeSoundboard {
         // Slower rate for longer words so every syllable is clearly articulated.
         // Tuned to ~125-145 wpm for multi-syllabic words.
         const syllables = (word.match(/[aeiouy]+/gi) || []).length || 1;
-        if (syllables >= 4) return 0.78;   // long words: slow and deliberate
-        if (syllables === 3) return 0.84;  // medium words: moderate
-        return 0.90;                       // short words: near natural pace
+        if (syllables >= 4) return 0.65;   // long words: very slow and deliberate
+        if (syllables === 3) return 0.72;  // medium words: slow
+        return 0.82;                       // short words: moderately slow
     }
 
     speakWord(word, onEndCallback = null, rate = null) {
@@ -9567,19 +9582,19 @@ class QuizManager {
                 try { if (window.BeeVoiceViz && window.BeeVoiceViz.react) window.BeeVoiceViz.react('button'); } catch (e) {}
                 try {
                     if (this.isAndroid) {
-                        this.pronounceWord({ refresh: true, rate: 0.7 });
+                        this.pronounceWordSlow({ refresh: true });
                     } else {
                         const w = (this.currentWordData && this.currentWordData.word) || (this.currentWord && this.currentWord.word) || '';
                         if (w) {
                             this.speakAnnouncement(`Please spell: ${w}`).then(() => {
-                                this.pronounceWord({ refresh: true, rate: 0.7 });
+                                this.pronounceWordSlow({ refresh: true });
                             });
                         } else {
-                            this.pronounceWord({ refresh: true, rate: 0.7 });
+                            this.pronounceWordSlow({ refresh: true });
                         }
                     }
                 } catch (_e) {
-                    this.pronounceWord({ refresh: true, rate: 0.7 });
+                    this.pronounceWordSlow({ refresh: true });
                 }
             };
             speakButton.addEventListener('click', () => {
@@ -10603,7 +10618,7 @@ class QuizManager {
         // Compute dynamic syllable-based rate if caller did not supply one
         const effectiveRate = (rate !== null && rate !== undefined)
             ? rate
-            : (() => { const s = (text.match(/[aeiouy]+/gi) || []).length || 1; return s >= 4 ? 0.78 : s === 3 ? 0.84 : 0.90; })();
+            : (() => { const s = (text.match(/[aeiouy]+/gi) || []).length || 1; return s >= 4 ? 0.65 : s === 3 ? 0.72 : 0.82; })();
         // Android: try native TTS first; if it fails or plugin missing, fall back to Web Speech so we never get silence
         if (this.isAndroid && text && typeof window.BeeSmartTryNativeTTS === 'function') {
             var viz = document.getElementById('voiceVisualizer');
@@ -10695,8 +10710,8 @@ class QuizManager {
     }
 
     // Pronounce word at slower speed for learning
-    async pronounceWordSlow() {
-        return await this.pronounceWord({ rate: 0.7 });
+    async pronounceWordSlow(opts = {}) {
+        return await this.pronounceWord({ ...opts, rate: 0.55 });
     }
 
     // Repeat word at normal speed
@@ -12520,7 +12535,7 @@ function pronounceWordFromReport(word) {
         
         // Dynamic syllable-based rate — same logic as BeeSoundboard.getPronunciationRate()
         const syllables = (word.match(/[aeiouy]+/gi) || []).length || 1;
-        utterance.rate = syllables >= 4 ? 0.78 : syllables === 3 ? 0.84 : 0.90;
+        utterance.rate = syllables >= 4 ? 0.65 : syllables === 3 ? 0.72 : 0.82;
         utterance.pitch = 1.1;  // Consistent with all other TTS paths
         utterance.volume = 1.0;
         
