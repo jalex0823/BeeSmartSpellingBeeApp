@@ -1067,7 +1067,7 @@
     
     <!-- Global Effects Toggle (floating) -->
     <button id="globalEffectsToggle" aria-label="Toggle Celebrations"
-        style="position: fixed; bottom: 16px; right: 16px; z-index: 11000; border: 3px solid #FFA000; background: linear-gradient(135deg, #FFD54F, #FFB300); color: #5A2C15; font-weight: 800; border-radius: 999px; padding: 10px 16px; box-shadow: 0 8px 18px rgba(255,165,0,0.3); cursor: pointer;">
+        style="position: fixed; bottom: 16px; right: 16px; z-index: 11000; border: 3px solid #FFA000; background: linear-gradient(135deg, #FFD54F, #FFB300); color: #5A2C15; font-weight: 800; border-radius: 999px; padding: 10px 16px; box-shadow: 0 8px 18px rgba(255,165,0,0.3); cursor: pointer; transition: opacity 1s ease-out, visibility 1s;">
         ✨ Effects On
     </button>
 
@@ -1082,6 +1082,11 @@
                     btn.textContent = on ? '✨ Effects On' : '✨ Effects Off';
                 } catch(_){}
             }
+            function fadeOutBtn(btn) {
+                btn.style.opacity = '0';
+                btn.style.pointerEvents = 'none';
+                setTimeout(() => { btn.style.visibility = 'hidden'; }, 1000);
+            }
             function init(){
                 const btn = document.getElementById('globalEffectsToggle');
                 if (!btn) return;
@@ -1093,8 +1098,29 @@
                         sync();
                         // toast feedback if available
                         try { if (window.BeeSmart && window.BeeSmart.showToast) window.BeeSmart.showToast(!current ? '✨ Celebrations enabled' : '✨ Celebrations disabled', 'success'); } catch(_){}
+                        
+                        // Fade out when clicked
+                        fadeOutBtn(btn);
                     } catch(_){}
                 });
+
+                // Auto-fade out when quiz starts
+                function checkQuizStart() {
+                    if (btn.style.opacity === '0') return; // Already faded
+                    
+                    const qm = window.quizManager || window.spellingQuiz;
+                    const isStarted = qm && qm.quizStarted;
+                    
+                    const timer = document.getElementById('countdownContainer');
+                    const isTimerActive = timer && !timer.classList.contains('hidden');
+                    
+                    if (isStarted || isTimerActive) {
+                        fadeOutBtn(btn);
+                    } else {
+                        setTimeout(checkQuizStart, 1000);
+                    }
+                }
+                setTimeout(checkQuizStart, 1000);
             }
             if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
             else init();
