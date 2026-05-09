@@ -4222,7 +4222,7 @@ window.BeeSmartAudioFallback = (function() {
     }
 
     /* ── CARD: unified background, oval corners, subtle depth ── */
-    .quiz-card {
+    body.route-quiz .quiz-page .quiz-card {
         margin-top: 0.25rem !important;
         border-radius: 32px !important;
         border: 2px solid rgba(255, 193, 7, 0.8) !important; /* Prominent gold border */
@@ -4231,10 +4231,11 @@ window.BeeSmartAudioFallback = (function() {
         box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(255, 193, 7, 0.12) !important;
         backdrop-filter: blur(6px) !important;
         -webkit-backdrop-filter: blur(6px) !important;
-        overflow: hidden !important; /* Ensure content strictly clips to the rounded edges */
+        overflow: hidden !important; /* Specificity wins, strictly clips to the rounded edges */
     }
-    .quiz-card .quiz-card-content {
+    body.route-quiz .quiz-page .quiz-card .quiz-card-content {
         background: transparent !important;
+        overflow: hidden !important;
     }
     .card-scroll {
         padding: 10px 10px 18px 10px !important;
