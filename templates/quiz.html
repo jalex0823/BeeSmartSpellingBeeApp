@@ -6700,8 +6700,11 @@ class BeeSoundboard {
             const visualizer = document.getElementById('voiceVisualizer');
             const statusEl = document.getElementById('voiceStatus');
             
-            // Android: onend/onerror may never fire - add safety timeout so pronounceWord Promise resolves
+            // Android/iOS: onend/onerror may never fire - add safety timeout so pronounceWord Promise resolves
             var isAndroid = /Android/i.test(navigator.userAgent) || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android');
+            // 🍎 iOS FIX: utterance.onend frequently stops firing after Q1 on iOS Safari/WebKit.
+            // Same pattern that fixed Android (isAndroid safetyTimer) — now applied to iOS too.
+            var isIOSSpeech = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
             var done = false;
             var finish = () => {
                 if (done) return;
@@ -6709,8 +6712,9 @@ class BeeSoundboard {
                 if (safetyTimer) clearTimeout(safetyTimer);
                 if (onEndCallback) onEndCallback();
             };
-            // 10s for word pronunciation to avoid cutting off long words
-            var safetyTimer = isAndroid ? setTimeout(finish, 10000) : null;
+            // Safety timeout: 10s Android, 8s iOS/Safari, none for desktop
+            var safetyMs = isAndroid ? 10000 : isIOSSpeech ? 8000 : null;
+            var safetyTimer = safetyMs ? setTimeout(finish, safetyMs) : null;
 
             if (onEndCallback) {
                 if (typeof utterance.addEventListener === 'function') {
@@ -7994,12 +7998,18 @@ class QuizManager {
             // Small delay for iOS to process cancellation
             return new Promise(resolve => {
                 setTimeout(() => {
-                    this.speakAnnouncementInternal(text).then(resolve);
+                    // 🛡️ P1 FIX: Promise.race caps total announcement wait at 9s.
+                    // Prevents any single speakAnnouncementInternal call from
+                    // permanently blocking the quiz if onend never fires.
+                    const timeout = new Promise(r => setTimeout(r, 9000));
+                    Promise.race([this.speakAnnouncementInternal(text), timeout]).then(resolve);
                 }, 100);
             });
         }
         
-        return this.speakAnnouncementInternal(text);
+        // 🛡️ P1 FIX: Promise.race caps total announcement wait at 9s (desktop + iOS non-speaking path)
+        const _timeout = new Promise(r => setTimeout(r, 9000));
+        return Promise.race([this.speakAnnouncementInternal(text), _timeout]);
     }
     
     speakAnnouncementInternal(text) {
@@ -8114,7 +8124,7 @@ class QuizManager {
                     // ⚠️ NO morphing here - only morph after "timer starts now" announcement
                 };
                 
-                // Done helper: resolve once, prevent blocking on Android where onend/onerror may never fire
+                // Done helper: resolve once, prevent blocking on Android/iOS where onend/onerror may never fire
                 var done = false;
                 var finish = () => {
                     if (done) return;
@@ -8126,7 +8136,10 @@ class QuizManager {
                     }
                     resolve();
                 };
-                var safetyTimer = this.isAndroid ? setTimeout(finish, 10000) : null;
+                // 🍎 iOS FIX: utterance.onend stops firing after Q1 on iOS Safari/WebKit.
+                // Android already had a 10s safetyTimer — iOS now gets an 8s equivalent.
+                var safetyMs = this.isAndroid ? 10000 : (this.isIOS || this.isSafari) ? 8000 : null;
+                var safetyTimer = safetyMs ? setTimeout(finish, safetyMs) : null;
 
                 utterance.onend = () => {
                     console.log('✅ Speech finished');
@@ -10082,6 +10095,14 @@ class QuizManager {
         }
         this._nextWordRequestInFlight = true;
         console.log('🔄 loadNextWord() called - starting to load next word...');
+        // 🛡️ P1 FIX: Watchdog — force-release the in-flight guard after 15s so the quiz
+        // can always recover even if the speech Promise never resolves (iOS edge case).
+        const _nextWordWatchdog = setTimeout(() => {
+            if (this._nextWordRequestInFlight) {
+                console.warn('⚠️ loadNextWord watchdog: releasing in-flight flag after 15s timeout');
+                this._nextWordRequestInFlight = false;
+            }
+        }, 15000);
         try {
             // 🎭 MorphController removed - using CSS transitions instead
             
@@ -10262,6 +10283,7 @@ class QuizManager {
             console.error('Error loading next word:', error);
             BeeSmart.showError('Failed to load the next word. Please refresh the page.');
         } finally {
+            clearTimeout(_nextWordWatchdog);
             this._nextWordRequestInFlight = false;
         }
     }
